@@ -1,18 +1,25 @@
 <?php
 
+use App\Mail\PasswordResetOtpMail;
 use App\Models\Barangay;
 use App\Models\Consultation;
 use App\Models\InboxMessage;
 use App\Models\MedicalRecord;
 use App\Models\ResidentRequest;
 use App\Models\User;
+use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -27,40 +34,150 @@ Route::middleware('guest')->group(function () {
     Route::view('/register', 'auth.register')->name('register');
     Route::redirect('/regester', '/register');
 
-    Route::post('/login', function (Request $request) {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+    Route::get('/forgot-password', function () {
+        return view('auth.forgot-password');
+    })->name('password.request');
+
+    Route::post('/forgot-password', function (Request $request) {
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
         ]);
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        $normalized = mb_strtolower(trim($validated['email']));
+
+        $user = User::query()
+            ->whereRaw('LOWER(email) = ?', [$normalized])
+            ->first();
+
+        if ($user === null) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => __('passwords.user')]);
+        }
+
+        $throttleKey = 'forgot-password-otp:'.$normalized;
+        if (RateLimiter::tooManyAttempts($throttleKey, 3)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => 'Too many attempts. Try again in '.$seconds.' seconds.']);
+        }
+
+        RateLimiter::hit($throttleKey, 60);
+
+        $otp = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
+
+        $cacheKey = 'password_reset_otp:'.hash('sha256', mb_strtolower($user->email));
+        Cache::put($cacheKey, Hash::make($otp), now()->addMinutes(15));
+
+        try {
+            Mail::to($user->email)->send(new PasswordResetOtpMail($otp, $user->email));
+        } catch (Throwable $e) {
+            report($e);
+            Cache::forget($cacheKey);
+            RateLimiter::clear($throttleKey);
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'We could not send the code. Check your mail settings or try again later.',
+                ]);
+        }
+
+        $request->session()->put('password_reset_email', $user->email);
+
+        return redirect()->route('password.reset')
+            ->with('status', 'We sent a 6-digit code to your email. Enter it below with your new password.');
+    })->name('password.email');
+
+    Route::get('/reset-password', function (Request $request) {
+        $email = $request->session()->get('password_reset_email');
+        if (! $email) {
+            return redirect()->route('password.request')
+                ->with('error', 'Request a reset code first.');
+        }
+
+        return view('auth.reset-password', ['email' => $email]);
+    })->name('password.reset');
+
+    Route::post('/reset-password', function (Request $request) {
+        $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+            'otp' => ['required', 'digits:6'],
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+        ]);
+
+        $sessionEmail = $request->session()->get('password_reset_email');
+        if (! $sessionEmail || mb_strtolower($sessionEmail) !== mb_strtolower($request->input('email'))) {
+            return back()->withErrors(['email' => 'Invalid session. Start over from forgot password.']);
+        }
+
+        $user = User::query()
+            ->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($request->input('email')))])
+            ->first();
+
+        if ($user === null) {
+            return back()->withErrors(['email' => __('passwords.user')]);
+        }
+
+        $cacheKey = 'password_reset_otp:'.hash('sha256', mb_strtolower($user->email));
+        $hash = Cache::get($cacheKey);
+
+        if (! $hash || ! Hash::check($request->input('otp'), $hash)) {
+            return back()->withErrors(['otp' => 'Invalid or expired code. Request a new code from forgot password.']);
+        }
+
+        $user->forceFill([
+            'password' => $request->input('password'),
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        Cache::forget($cacheKey);
+        $request->session()->forget('password_reset_email');
+
+        event(new PasswordReset($user));
+
+        return redirect()->route('login')->with('status', __('passwords.reset'));
+    })->name('password.update');
+
+    Route::post('/login', function (Request $request) {
+        $credentials = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+            'password' => ['required', 'string'],
+        ]);
+
+        if (! Auth::attempt(
+            ['email' => $credentials['email'], 'password' => $credentials['password']],
+            $request->boolean('remember')
+        )) {
             return back()->withErrors([
-                'email' => 'Invalid credentials.',
+                'email' => 'These credentials do not match our records.',
             ])->onlyInput('email');
         }
 
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard');
+        return redirect()->route('dashboard')->with('status', 'You are signed in.');
     })->name('login.perform');
 
     Route::post('/register', function (Request $request) {
         $data = $request->validate([
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', 'min:8'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
         ]);
 
         $user = User::create([
             'name' => strstr($data['email'], '@', true) ?: $data['email'],
             'email' => $data['email'],
             'role' => 'users',
-            'password' => Hash::make($data['password']),
+            'password' => $data['password'],
         ]);
 
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard');
+        return redirect()->route('dashboard')->with('status', 'Welcome! Your account has been created.');
     })->name('register.perform');
 });
 
@@ -70,7 +187,7 @@ Route::post('/logout', function (Request $request) {
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 
-    return redirect()->route('login');
+    return redirect()->route('login')->with('status', 'You have been signed out.');
 })->middleware('auth')->name('logout');
 
 Route::middleware('auth')->group(function () {
@@ -715,7 +832,6 @@ Route::middleware('auth')->group(function () {
 
         return redirect()->route('barangay-captain.settings')->with('status', 'Profile updated successfully.');
     })->name('barangay-captain.settings.update');
-
 
     Route::get('/bns', function () {
         return Auth::user()->role === 'BNS'

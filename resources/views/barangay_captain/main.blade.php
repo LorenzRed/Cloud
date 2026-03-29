@@ -149,6 +149,7 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+@include('partials.app-flash')
 <div class="main-container">
     <!-- Mobile menu button -->
     <div class="md:hidden fixed top-4 left-4 z-50">

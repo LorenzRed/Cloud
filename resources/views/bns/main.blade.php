@@ -125,6 +125,7 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+@include('partials.app-flash')
 <div class="main-container">
     <div class="md:hidden fixed top-4 left-4 z-50">
         <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">

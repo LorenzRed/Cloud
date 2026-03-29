@@ -110,6 +110,7 @@
     </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-[#0e1b13] dark:text-gray-200">
+    @include('partials.app-flash')
     @php
         $user = Auth::user();
         $displayName = $user->full_name ?: $user->name;

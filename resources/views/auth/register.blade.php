@@ -10,87 +10,7 @@
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&amp;family=Nunito+Sans:opsz,wght@6..12,400;6..12,700;6..12,900&amp;display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-    <style>
-        .material-symbols-outlined {
-            font-variation-settings:
-                'FILL' 0,
-                'wght' 400,
-                'GRAD' 0,
-                'opsz' 24
-        }
-
-        /* Hide native browser password toggle icons */
-        input[type="password"]::-ms-reveal,
-        input[type="password"]::-ms-clear {
-            display: none;
-        }
-
-        input[type="password"]::-webkit-inner-spin-button,
-        input[type="password"]::-webkit-outer-spin-button,
-        input[type="password"]::-webkit-search-cancel-button,
-        input[type="password"]::-webkit-search-decoration,
-        input[type="password"]::-webkit-clear-button {
-            display: none;
-        }
-
-        input[type="password"]::-webkit-password-toggle-button {
-            display: none !important;
-        }
-
-        /* Prevent blue autofill highlight */
-        :is(input, textarea, select):is(:-webkit-autofill, :-webkit-autofill:hover, :-webkit-autofill:focus) {
-            -webkit-text-fill-color: #333333;
-            caret-color: #333333;
-            box-shadow: 0 0 0 1000px #F4F7F6 inset;
-            transition: background-color 5000s ease-in-out 0s;
-        }
-
-        .dark :is(input, textarea, select):is(:-webkit-autofill, :-webkit-autofill:hover, :-webkit-autofill:focus) {
-            -webkit-text-fill-color: #E5E7EB;
-            caret-color: #E5E7EB;
-            box-shadow: 0 0 0 1000px #1F2937 inset;
-        }
-
-        /* Floating Label Styles */
-        .floating-label-group {
-            position: relative;
-            width: 100%;
-        }
-
-        .floating-label {
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #A9A9A9;
-            font-size: 16px;
-            transition: all 0.3s ease;
-            pointer-events: none;
-            background: transparent;
-            padding: 0 4px;
-        }
-
-        .dark .floating-label {
-            color: #9CA3AF;
-        }
-
-        .floating-input {
-            padding-left: 16px !important;
-        }
-
-        .floating-input::placeholder {
-            color: transparent;
-        }
-
-        /* When input has focus or value */
-        .floating-label-group:focus-within .floating-label,
-        .floating-label-group.has-value .floating-label {
-            top: 6px;
-            font-size: 12px;
-            color: #4A90E2;
-            font-weight: 500;
-        }
-    </style>
+    @include('partials.auth-input-styles')
     <script id="tailwind-config">
         tailwind.config = {
             darkMode: "class",
@@ -125,6 +45,7 @@
 </head>
 
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+    @include('partials.auth-alerts')
     <div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden" style="width: 100%;">
         <div class="layout-container flex h-full grow flex-col">
             <main class="flex min-h-screen w-full">
@@ -163,21 +84,41 @@
                                         </a>
                                     </div>
                                 </div>
-                                <form class="space-y-6" method="POST" action="{{ route('register.perform') }}">
+                                <form id="registerForm" class="space-y-5" method="POST" action="{{ route('register.perform') }}" novalidate>
                                     @csrf
-                                    <div class="floating-label-group">
-                                        <input id="emailInput" name="email" class="floating-input form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-text-light dark:text-text-dark focus:outline-0 focus:ring-2 focus:ring-primary/50 focus:border-primary border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark h-12 text-base font-normal leading-normal" type="email" value="{{ old('email') }}" required />
-                                        <label for="emailInput" class="floating-label">Email</label>
+                                    <div class="auth-field">
+                                        <div @class([
+                                            'auth-field-control border bg-background-light dark:bg-background-dark focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary',
+                                            'border-border-light dark:border-border-dark' => ! $errors->has('email'),
+                                            'border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('email'),
+                                        ])>
+                                            <input id="emailInput" name="email" type="email" autocomplete="email" maxlength="255"
+                                                class="auth-field-input text-text-light dark:text-text-dark"
+                                                value="{{ old('email') }}"
+                                                aria-invalid="{{ $errors->has('email') ? 'true' : 'false' }}" />
+                                            <label for="emailInput" class="auth-field-label">Email</label>
+                                        </div>
                                     </div>
-                                    <div class="floating-label-group">
-                                        <div class="flex w-full flex-1 items-stretch rounded-lg relative border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary">
-                                            <input id="passwordInput" name="password" class="floating-input form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden text-text-light dark:text-text-dark focus:outline-0 focus:ring-0 border-0 bg-transparent h-12 pr-2 text-base font-normal leading-normal" type="password" required />
-                                            <button id="togglePassword" class="text-border-light dark:text-border-dark flex items-center justify-center px-3 bg-transparent hover:text-primary dark:hover:text-primary" type="button">
-                                                <svg id="passwordEyeOpen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5">
+                                    @error('email')
+                                        <p class="-mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ $message }}</p>
+                                    @enderror
+                                    <p id="regEmailClientError" class="-mt-1 hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
+                                    <div class="auth-field">
+                                        <div @class([
+                                            'auth-field-control auth-field-control--affix border bg-background-light dark:bg-background-dark focus-within:ring-2',
+                                            'border-border-light dark:border-border-dark focus-within:ring-primary/50 focus-within:border-primary' => ! $errors->has('password'),
+                                            'border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('password'),
+                                        ])>
+                                            <input id="passwordInput" name="password" type="password" autocomplete="new-password" minlength="8"
+                                                class="auth-field-input text-text-light dark:text-text-dark"
+                                                aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}" />
+                                            <label for="passwordInput" class="auth-field-label">Password</label>
+                                            <button id="togglePassword" class="auth-field-affix" type="button" aria-label="Show password" aria-pressed="false">
+                                                <svg id="passwordEyeOpen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z" />
                                                     <circle cx="12" cy="12" r="3" />
                                                 </svg>
-                                                <svg id="passwordEyeClosed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 hidden">
+                                                <svg id="passwordEyeClosed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 hidden" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.584 10.587A2.998 2.998 0 0 0 12 15a2.998 2.998 0 0 0 2.413-1.416" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A10.94 10.94 0 0 1 12 4.5c6 0 9.75 7.5 9.75 7.5a19.23 19.23 0 0 1-3.21 4.24" />
@@ -185,17 +126,27 @@
                                                 </svg>
                                             </button>
                                         </div>
-                                        <label for="passwordInput" class="floating-label">Password</label>
                                     </div>
-                                    <div class="floating-label-group">
-                                        <div class="flex w-full flex-1 items-stretch rounded-lg relative border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary">
-                                            <input id="confirmPasswordInput" name="password_confirmation" class="floating-input form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden text-text-light dark:text-text-dark focus:outline-0 focus:ring-0 border-0 bg-transparent h-12 pr-2 text-base font-normal leading-normal" type="password" required />
-                                            <button id="toggleConfirmPassword" class="text-border-light dark:text-border-dark flex items-center justify-center px-3 bg-transparent hover:text-primary dark:hover:text-primary" type="button">
-                                                <svg id="confirmPasswordEyeOpen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5">
+                                    @error('password')
+                                        <p class="text-sm text-red-600 dark:text-red-400" role="alert">{{ $message }}</p>
+                                    @enderror
+                                    <p id="regPasswordClientError" class="hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
+                                    <div class="auth-field">
+                                        <div @class([
+                                            'auth-field-control auth-field-control--affix border bg-background-light dark:bg-background-dark focus-within:ring-2',
+                                            'border-border-light dark:border-border-dark focus-within:ring-primary/50 focus-within:border-primary' => ! $errors->has('password'),
+                                            'border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('password'),
+                                        ])>
+                                            <input id="confirmPasswordInput" name="password_confirmation" type="password" autocomplete="new-password" minlength="8"
+                                                class="auth-field-input text-text-light dark:text-text-dark"
+                                                aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}" />
+                                            <label for="confirmPasswordInput" class="auth-field-label">Confirm password</label>
+                                            <button id="toggleConfirmPassword" class="auth-field-affix" type="button" aria-label="Show password" aria-pressed="false">
+                                                <svg id="confirmPasswordEyeOpen" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-7.5 9.75-7.5 9.75 7.5 9.75 7.5-3.75 7.5-9.75 7.5S2.25 12 2.25 12Z" />
                                                     <circle cx="12" cy="12" r="3" />
                                                 </svg>
-                                                <svg id="confirmPasswordEyeClosed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 hidden">
+                                                <svg id="confirmPasswordEyeClosed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 hidden" aria-hidden="true">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.584 10.587A2.998 2.998 0 0 0 12 15a2.998 2.998 0 0 0 2.413-1.416" />
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A10.94 10.94 0 0 1 12 4.5c6 0 9.75 7.5 9.75 7.5a19.23 19.23 0 0 1-3.21 4.24" />
@@ -203,8 +154,8 @@
                                                 </svg>
                                             </button>
                                         </div>
-                                        <label for="confirmPasswordInput" class="floating-label">Confirm Password</label>
                                     </div>
+                                    <p id="regConfirmClientError" class="-mt-1 hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
                                     <button class="w-full bg-primary text-white font-bold h-12 rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/80 dark:focus:ring-offset-background-dark transition-colors duration-300" type="submit">
                                         Register
                                     </button>
@@ -224,49 +175,92 @@
         const emailInput = document.getElementById('emailInput');
         const passwordInput = document.getElementById('passwordInput');
         const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+        const registerForm = document.getElementById('registerForm');
+        const regEmailClientError = document.getElementById('regEmailClientError');
+        const regPasswordClientError = document.getElementById('regPasswordClientError');
+        const regConfirmClientError = document.getElementById('regConfirmClientError');
 
-        function updateFloatingLabel(input) {
-            const group = input.closest('.floating-label-group');
-            if (!group) {
-                return;
-            }
-
-            if (input.value) {
-                group.classList.add('has-value');
-            } else {
-                group.classList.remove('has-value');
-            }
+        function clearRegClientErrors() {
+            [regEmailClientError, regPasswordClientError, regConfirmClientError].forEach(function (el) {
+                if (el) {
+                    el.textContent = '';
+                    el.classList.add('hidden');
+                }
+            });
         }
 
-        emailInput.addEventListener('input', () => updateFloatingLabel(emailInput));
-        passwordInput.addEventListener('input', () => updateFloatingLabel(passwordInput));
-        confirmPasswordInput.addEventListener('input', () => updateFloatingLabel(confirmPasswordInput));
-        emailInput.addEventListener('blur', () => updateFloatingLabel(emailInput));
-        passwordInput.addEventListener('blur', () => updateFloatingLabel(passwordInput));
-        confirmPasswordInput.addEventListener('blur', () => updateFloatingLabel(confirmPasswordInput));
+        function showRegError(el, message) {
+            if (!el) return;
+            el.textContent = message;
+            el.classList.remove('hidden');
+        }
 
-        // Toggle password visibility
+        const regEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        registerForm.addEventListener('submit', function (e) {
+            clearRegClientErrors();
+            let ok = true;
+            const emailVal = (emailInput.value || '').trim();
+            if (!emailVal) {
+                showRegError(regEmailClientError, 'Please enter your email address.');
+                ok = false;
+            } else if (!regEmailPattern.test(emailVal)) {
+                showRegError(regEmailClientError, 'Please enter a valid email address.');
+                ok = false;
+            }
+            const pw = passwordInput.value || '';
+            if (pw.length < 8) {
+                showRegError(regPasswordClientError, 'Password must be at least 8 characters.');
+                ok = false;
+            } else if (!/[a-zA-Z]/.test(pw)) {
+                showRegError(regPasswordClientError, 'Password must include at least one letter.');
+                ok = false;
+            } else if (!/[0-9]/.test(pw)) {
+                showRegError(regPasswordClientError, 'Password must include at least one number.');
+                ok = false;
+            }
+            if (pw !== confirmPasswordInput.value) {
+                showRegError(regConfirmClientError, 'Passwords do not match.');
+                ok = false;
+            }
+            if (!ok) {
+                e.preventDefault();
+            }
+        });
+
+        function onRegInput() {
+            clearRegClientErrors();
+        }
+        emailInput.addEventListener('input', onRegInput);
+        passwordInput.addEventListener('input', onRegInput);
+        confirmPasswordInput.addEventListener('input', onRegInput);
+
         const togglePassword = document.getElementById('togglePassword');
         const passwordEyeOpen = document.getElementById('passwordEyeOpen');
         const passwordEyeClosed = document.getElementById('passwordEyeClosed');
 
         togglePassword.addEventListener('click', () => {
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            passwordEyeOpen.classList.toggle('hidden', type === 'text');
-            passwordEyeClosed.classList.toggle('hidden', type !== 'text');
+            const isHidden = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isHidden ? 'text' : 'password');
+            const nowVisible = passwordInput.getAttribute('type') === 'text';
+            togglePassword.setAttribute('aria-pressed', nowVisible ? 'true' : 'false');
+            togglePassword.setAttribute('aria-label', nowVisible ? 'Hide password' : 'Show password');
+            passwordEyeOpen.classList.toggle('hidden', nowVisible);
+            passwordEyeClosed.classList.toggle('hidden', !nowVisible);
         });
 
-        // Toggle confirm password visibility
         const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
         const confirmPasswordEyeOpen = document.getElementById('confirmPasswordEyeOpen');
         const confirmPasswordEyeClosed = document.getElementById('confirmPasswordEyeClosed');
 
         toggleConfirmPassword.addEventListener('click', () => {
-            const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            confirmPasswordInput.setAttribute('type', type);
-            confirmPasswordEyeOpen.classList.toggle('hidden', type === 'text');
-            confirmPasswordEyeClosed.classList.toggle('hidden', type !== 'text');
+            const isHidden = confirmPasswordInput.getAttribute('type') === 'password';
+            confirmPasswordInput.setAttribute('type', isHidden ? 'text' : 'password');
+            const nowVisible = confirmPasswordInput.getAttribute('type') === 'text';
+            toggleConfirmPassword.setAttribute('aria-pressed', nowVisible ? 'true' : 'false');
+            toggleConfirmPassword.setAttribute('aria-label', nowVisible ? 'Hide password' : 'Show password');
+            confirmPasswordEyeOpen.classList.toggle('hidden', nowVisible);
+            confirmPasswordEyeClosed.classList.toggle('hidden', !nowVisible);
         });
     </script>
 </body>
