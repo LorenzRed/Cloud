@@ -3,20 +3,25 @@
 use App\Mail\PasswordResetOtpMail;
 use App\Models\Barangay;
 use App\Models\Consultation;
+use App\Models\Event;
 use App\Models\InboxMessage;
 use App\Models\MedicalRecord;
+use App\Models\Purok;
 use App\Models\ResidentRequest;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password as PasswordRule;
@@ -171,6 +176,8 @@ Route::middleware('guest')->group(function () {
             'name' => strstr($data['email'], '@', true) ?: $data['email'],
             'email' => $data['email'],
             'role' => 'users',
+            'municipality' => 'Victoria',
+            'province' => 'Oriental Mindoro',
             'password' => $data['password'],
         ]);
 
@@ -249,6 +256,26 @@ Route::middleware('auth')->group(function () {
             ->limit(6)
             ->get();
 
+        // Fetch events for the user's barangay
+        $barangayName = $residentRequest->barangay ?? null;
+        $barangay = $barangayName ? Barangay::where('name', $barangayName)->first() : null;
+        
+        $events = $verificationStatus === 'accepted' && $barangay
+            ? Event::query()
+                ->where('barangay_id', $barangay->id)
+                ->whereNull('disabled_at')
+                ->where('event_date', '>=', today())
+                ->orderBy('event_date')
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $announcements = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->latest()
+            ->limit(10)
+            ->get();
+
         $nextConsultation = $upcomingConsultations->first();
         $nextCheckupLabel = $nextConsultation
             ? $nextConsultation->scheduled_at?->format('M d')
@@ -259,14 +286,159 @@ Route::middleware('auth')->group(function () {
             : 'N/A';
 
         return $hasRequest
-            ? view('users.main', compact('unreadInboxCount', 'verificationStatus', 'upcomingConsultations', 'nextCheckupLabel', 'lastCheckupLabel', 'medicalSummaryRecords'))
+            ? view('users.main', compact('unreadInboxCount', 'verificationStatus', 'upcomingConsultations', 'nextCheckupLabel', 'lastCheckupLabel', 'medicalSummaryRecords', 'events', 'announcements'))
             : redirect()->route('users.verification');
     })->name('users.main');
+
+    Route::get('/users/events', function () {
+        if (Auth::user()->role !== 'users') {
+            return redirect()->route('dashboard');
+        }
+
+        $unreadInboxCount = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->count();
+
+        $residentRequest = ResidentRequest::query()
+            ->where('user_id', Auth::id())
+            ->latest('created_at')
+            ->first();
+
+        if (! $residentRequest) {
+            return redirect()->route('users.verification');
+        }
+
+        $verificationStatus = $residentRequest->status ?? 'unverified';
+
+        $barangayName = $residentRequest->barangay ?? null;
+        $barangay = $barangayName ? Barangay::where('name', $barangayName)->first() : null;
+
+        $events = $verificationStatus === 'accepted' && $barangay
+            ? tap(Event::query(), function ($q) use ($barangay) {
+                $today = today()->toDateString();
+                $nowTime = now()->format('H:i:s');
+
+                $q->select('events.*')
+                    ->selectSub(function ($subQuery) {
+                        $subQuery->from('event_registrations')
+                            ->selectRaw('COUNT(*)')
+                            ->whereColumn('event_registrations.event_id', 'events.id');
+                    }, 'registration_count')
+                    ->where('barangay_id', $barangay->id)
+                    ->whereNull('disabled_at')
+                    ->where(function ($sub) use ($today, $nowTime) {
+                        $sub->where('event_date', '>', $today)
+                            ->orWhere(function ($s2) use ($today, $nowTime) {
+                                $s2->where('event_date', $today)
+                                   ->where(function ($s3) use ($nowTime) {
+                                       $s3->whereNull('end_time')
+                                          ->orWhere('end_time', '>=', $nowTime);
+                                   });
+                            });
+                    })
+                    ->orderByDesc('event_date')
+                    ->orderByDesc('start_time');
+            })->get()
+            : collect();
+
+        $registeredEventIds = DB::table('event_registrations')
+            ->where('user_id', Auth::id())
+            ->pluck('event_id')
+            ->all();
+
+        return view('users.events', compact('events', 'barangayName', 'unreadInboxCount', 'registeredEventIds', 'verificationStatus'));
+    })->name('users.events');
+
+    Route::post('/users/events/{event}/register', function (Request $request, Event $event) {
+        if (Auth::user()->role !== 'users') {
+            return redirect()->route('dashboard');
+        }
+
+        $residentRequest = ResidentRequest::query()
+            ->where('user_id', Auth::id())
+            ->latest('created_at')
+            ->first();
+
+        if (! $residentRequest) {
+            return redirect()->route('users.verification');
+        }
+
+        $barangayName = $residentRequest->barangay ?? null;
+        $barangay = $barangayName ? Barangay::where('name', $barangayName)->first() : null;
+
+        abort_unless($barangay && $event->barangay_id === $barangay->id && $event->category === 'event' && is_null($event->disabled_at), 404);
+
+        if ($event->registration_limit !== null) {
+            $registrationCount = DB::table('event_registrations')
+                ->where('event_id', $event->id)
+                ->count();
+
+            if ($registrationCount >= $event->registration_limit) {
+                return redirect()->route('users.events')->with('status', 'This event is already full.');
+            }
+        }
+
+        DB::table('event_registrations')->updateOrInsert(
+            [
+                'user_id' => Auth::id(),
+                'event_id' => $event->id,
+            ],
+            [
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
+
+        return redirect()->route('users.events')->with('status', 'Registered for event successfully.');
+    })->name('users.events.register');
+
+    Route::get('/users/announcements', function () {
+        if (Auth::user()->role !== 'users') {
+            return redirect()->route('dashboard');
+        }
+
+        $unreadInboxCount = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->count();
+
+        $residentRequest = ResidentRequest::query()
+            ->where('user_id', Auth::id())
+            ->latest('created_at')
+            ->first();
+
+        if (! $residentRequest) {
+            return redirect()->route('users.verification');
+        }
+
+        $barangayName = $residentRequest->barangay ?? null;
+        $barangay = $barangayName ? Barangay::where('name', $barangayName)->first() : null;
+
+        $announcements = $barangay
+            ? Event::query()
+                ->where('barangay_id', $barangay->id)
+                ->where('category', 'announcement')
+                ->whereNull('disabled_at')
+                ->orderByDesc('event_date')
+                ->orderByDesc('start_time')
+                ->get()
+            : collect();
+
+        return view('users.announcements', compact('announcements', 'unreadInboxCount'));
+    })->name('users.announcements');
 
     Route::get('/users/notifications', function () {
         if (Auth::user()->role !== 'users') {
             return redirect()->route('dashboard');
         }
+
+        InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->update([
+                'read_at' => now(),
+            ]);
 
         $notifications = InboxMessage::query()
             ->where('user_id', Auth::id())
@@ -298,10 +470,113 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('dashboard');
         }
 
+        $unreadInboxCount = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->count();
+
         return view('users.profile', [
             'user' => Auth::user(),
+            'unreadInboxCount' => $unreadInboxCount,
         ]);
     })->name('users.profile');
+
+    Route::get('/users/profile/details', function () {
+        if (Auth::user()->role !== 'users') {
+            return redirect()->route('dashboard');
+        }
+
+        $unreadInboxCount = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->count();
+
+        return view('users.profile-details', [
+            'user' => Auth::user(),
+            'unreadInboxCount' => $unreadInboxCount,
+        ]);
+    })->name('users.profile.details');
+
+    Route::get('/users/profile/chat-support', function () {
+        if (Auth::user()->role !== 'users') {
+            return redirect()->route('dashboard');
+        }
+
+        $unreadInboxCount = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->count();
+
+        return view('users.chat-support', [
+            'user' => Auth::user(),
+            'unreadInboxCount' => $unreadInboxCount,
+        ]);
+    })->name('users.profile.chat-support');
+
+    Route::post('/users/profile/chat-support', function (Request $request) {
+        if (Auth::user()->role !== 'users') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $validated = $request->validate([
+            'message' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $apiKey = config('services.openai.key');
+        $model = config('services.openai.model', 'gpt-4o-mini');
+
+        if (! $apiKey) {
+            return response()->json([
+                'message' => 'AI chat is not configured yet. Add OPENAI_API_KEY to your .env file.',
+            ], 503);
+        }
+
+        $history = session()->get('users_chat_history', []);
+        if (! is_array($history)) {
+            $history = [];
+        }
+
+        $history[] = [
+            'role' => 'user',
+            'content' => $validated['message'],
+        ];
+
+        $messages = array_merge([
+            [
+                'role' => 'system',
+                'content' => 'You are Bantay Kalusugan, a concise and helpful health support assistant for residents. Help with appointments, registration, notifications, and medical records. Do not claim to be a doctor. If the user describes severe symptoms or an emergency, tell them to contact local emergency services or a health worker immediately.',
+            ],
+        ], array_slice($history, -10));
+
+        $response = Http::withToken($apiKey)
+            ->acceptJson()
+            ->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $model,
+                'messages' => $messages,
+                'temperature' => 0.4,
+            ]);
+
+        if (! $response->successful()) {
+            report(new \RuntimeException('OpenAI chat request failed: '.$response->body()));
+
+            return response()->json([
+                'message' => 'The AI chat service is unavailable right now.',
+            ], 502);
+        }
+
+        $reply = data_get($response->json(), 'choices.0.message.content', 'Sorry, I could not generate a reply.');
+
+        $history[] = [
+            'role' => 'assistant',
+            'content' => $reply,
+        ];
+
+        session()->put('users_chat_history', array_slice($history, -20));
+
+        return response()->json([
+            'message' => $reply,
+        ]);
+    })->name('users.profile.chat-support.send');
 
     Route::post('/users/profile', function (Request $request) {
         if (Auth::user()->role !== 'users') {
@@ -310,7 +585,7 @@ Route::middleware('auth')->group(function () {
 
         $user = User::query()->findOrFail(Auth::id());
 
-        $data = $request->validate([
+        $validator = Validator::make($request->all(), [
             'full_name' => ['nullable', 'string', 'max:255'],
             'gender' => ['nullable', 'string', 'max:50'],
             'date_of_birth' => ['nullable', 'date', 'before_or_equal:today'],
@@ -323,6 +598,14 @@ Route::middleware('auth')->group(function () {
             'province' => ['nullable', 'string', 'max:255'],
             'profile_picture' => ['nullable', 'image', 'max:2048'],
         ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('users.profile.details')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $data = $validator->validated();
 
         $profilePicturePath = $user->profile_picture_path;
 
@@ -344,13 +627,68 @@ Route::middleware('auth')->group(function () {
             'email' => $data['email'],
             'barangay' => $data['barangay'] ?: null,
             'household_no' => $data['household_no'] ?: null,
-            'municipality' => $data['municipality'] ?: null,
-            'province' => $data['province'] ?: null,
+            'municipality' => $data['municipality'] ?: 'Victoria',
+            'province' => $data['province'] ?: 'Oriental Mindoro',
             'profile_picture_path' => $profilePicturePath,
         ]);
 
-        return redirect()->route('users.profile')->with('status', 'Profile updated successfully.');
+        return redirect()->route('users.profile.details')->with('status', 'Profile updated successfully.');
     })->name('users.profile.update');
+
+    Route::post('/users/profile/avatar', function (Request $request) {
+        if (Auth::user()->role !== 'users') {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        $user = User::query()->findOrFail(Auth::id());
+
+        $validator = Validator::make($request->all(), [
+            'profile_picture' => ['required', 'image', 'max:2048'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()->all()], 422);
+        }
+
+        $profilePicturePath = $user->profile_picture_path;
+
+        if ($request->hasFile('profile_picture')) {
+            if ($profilePicturePath && Storage::disk('public')->exists($profilePicturePath)) {
+                Storage::disk('public')->delete($profilePicturePath);
+            }
+
+            $profilePicturePath = $request->file('profile_picture')->store('profile-pictures', 'public');
+            $user->update(['profile_picture_path' => $profilePicturePath]);
+        }
+
+        $url = route('profile.picture', ['user' => $user->id, 'v' => optional($user->updated_at)->timestamp]);
+
+        return response()->json(['status' => 'ok', 'url' => $url]);
+    })->name('users.profile.avatar');
+
+    Route::get('/users/medical-records', function () {
+        if (Auth::user()->role !== 'users') {
+            return redirect()->route('dashboard');
+        }
+
+        $unreadInboxCount = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->count();
+
+        $hasRequest = ResidentRequest::where('user_id', Auth::id())->exists();
+        
+        if (!$hasRequest) {
+            return redirect()->route('users.verification');
+        }
+
+        $medicalRecords = MedicalRecord::query()
+            ->where('user_id', Auth::id())
+            ->latest()
+            ->get();
+
+        return view('users.medical-records', compact('medicalRecords', 'unreadInboxCount'));
+    })->name('users.medical-records');
 
     Route::get('/users/verification', function () {
         if (Auth::user()->role !== 'users') {
@@ -359,6 +697,15 @@ Route::middleware('auth')->group(function () {
 
         $existingRequest = ResidentRequest::where('user_id', Auth::id())->first();
         $showSentState = session('request_sent_state', false);
+        $barangayBoundaries = Barangay::query()
+            ->whereNotNull('boundary_geojson')
+            ->orderBy('name')
+            ->get(['name', 'boundary_geojson'])
+            ->map(fn (Barangay $barangay) => [
+                'name' => $barangay->name,
+                'geometry' => $barangay->boundary_geojson,
+            ])
+            ->values();
 
         if ($existingRequest && ! $showSentState) {
             return redirect()->route('users.main');
@@ -367,6 +714,7 @@ Route::middleware('auth')->group(function () {
         return view('users.verification', [
             'requestSent' => (bool) $existingRequest,
             'residentRequest' => $existingRequest,
+            'barangayBoundaries' => $barangayBoundaries,
         ]);
     })->name('users.verification');
 
@@ -401,12 +749,123 @@ Route::middleware('auth')->group(function () {
             $middleSegment,
             trim((string) $data['last_name']),
         ])));
+        $submittedBarangay = trim((string) $data['barangay']);
+        $coordinateString = trim((string) ($data['address'] ?? ''));
+        $geoPoint = null;
+
+        if ($coordinateString !== '' && preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/', $coordinateString, $matches)) {
+            $geoPoint = [
+                'lat' => (float) $matches[1],
+                'lng' => (float) $matches[2],
+            ];
+        }
+
+        $pointInRing = static function (float $lat, float $lng, array $ring): bool {
+            $inside = false;
+            $vertexCount = count($ring);
+
+            if ($vertexCount < 3) {
+                return false;
+            }
+
+            for ($i = 0, $j = $vertexCount - 1; $i < $vertexCount; $j = $i++) {
+                $current = $ring[$i] ?? [];
+                $previous = $ring[$j] ?? [];
+
+                $xi = (float) ($current[0] ?? 0);
+                $yi = (float) ($current[1] ?? 0);
+                $xj = (float) ($previous[0] ?? 0);
+                $yj = (float) ($previous[1] ?? 0);
+
+                $intersects = (($yi > $lat) !== ($yj > $lat))
+                    && ($lng < (($xj - $xi) * ($lat - $yi) / (($yj - $yi) !== 0.0 ? ($yj - $yi) : 0.0000001)) + $xi);
+
+                if ($intersects) {
+                    $inside = ! $inside;
+                }
+            }
+
+            return $inside;
+        };
+
+        $geometryContainsPoint = null;
+        $geometryContainsPoint = static function (array $geometry, float $lat, float $lng) use (&$geometryContainsPoint, $pointInRing): bool {
+            $geometryType = $geometry['type'] ?? '';
+            $coordinates = $geometry['coordinates'] ?? [];
+
+            if ($geometryType === 'FeatureCollection') {
+                foreach ($geometry['features'] ?? [] as $feature) {
+                    if ($geometryContainsPoint($feature, $lat, $lng)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            if ($geometryType === 'Feature') {
+                return $geometryContainsPoint($geometry['geometry'] ?? [], $lat, $lng);
+            }
+
+            if ($geometryType === 'Polygon') {
+                $rings = is_array($coordinates) ? $coordinates : [];
+                $outerRing = $rings[0] ?? [];
+
+                if (! $pointInRing($lat, $lng, $outerRing)) {
+                    return false;
+                }
+
+                foreach (array_slice($rings, 1) as $hole) {
+                    if ($pointInRing($lat, $lng, $hole)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            if ($geometryType === 'MultiPolygon') {
+                foreach ($coordinates as $polygon) {
+                    if ($geometryContainsPoint(['type' => 'Polygon', 'coordinates' => $polygon], $lat, $lng)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        $hasBarangayBoundaries = Barangay::query()->whereNotNull('boundary_geojson')->exists();
+
+        if ($geoPoint) {
+            $matchedBarangay = Barangay::query()
+                ->whereNotNull('boundary_geojson')
+                ->get(['name', 'boundary_geojson'])
+                ->first(function (Barangay $barangay) use ($geometryContainsPoint, $geoPoint) {
+                    return is_array($barangay->boundary_geojson)
+                        && $geometryContainsPoint($barangay->boundary_geojson, $geoPoint['lat'], $geoPoint['lng']);
+                });
+
+            if ($matchedBarangay) {
+                $submittedBarangay = $matchedBarangay->name;
+            } elseif ($hasBarangayBoundaries) {
+                return back()->withErrors([
+                    'barangay' => 'Your location is outside the barangay boundary. Please choose a point inside the highlighted area.',
+                ])->withInput();
+            }
+        }
+
+        if ($geoPoint && $submittedBarangay === '') {
+            return back()->withErrors([
+                'barangay' => 'Your location could not be matched to a barangay boundary. Please track a valid location.',
+            ])->withInput();
+        }
 
         ResidentRequest::updateOrCreate(
             ['user_id' => Auth::id()],
             [
                 'full_name' => $fullName,
-                'barangay' => $data['barangay'],
+                'barangay' => $submittedBarangay,
                 'contact' => $data['contact'] ?? null,
                 'address' => $data['address'] ?? null,
                 'age' => $calculatedAge,
@@ -424,7 +883,7 @@ Route::middleware('auth')->group(function () {
                 'date_of_birth' => $birthdate?->toDateString(),
                 'age' => $calculatedAge,
                 'contact_number' => $data['contact'] ?? null,
-                'barangay' => $data['barangay'] ?? null,
+                'barangay' => $submittedBarangay ?: null,
             ]);
 
         return redirect()->route('users.verification')->with('request_sent_state', true);
@@ -445,17 +904,13 @@ Route::middleware('auth')->group(function () {
             ->latest()
             ->get();
 
-        $assignedCaptainIds = Barangay::query()
-            ->whereNotNull('captain_user_id')
-            ->pluck('captain_user_id');
-
-        $availableCaptains = User::query()
+        $captains = User::query()
+            ->with('ledBarangay')
             ->where('role', 'BrgCaptain')
-            ->whereNotIn('id', $assignedCaptainIds)
-            ->orderBy('name')
+            ->latest()
             ->get();
 
-        return view('lgu.barangays', compact('barangays', 'availableCaptains'));
+        return view('lgu.barangays', compact('barangays', 'captains'));
     })->name('lgu.barangays');
 
     Route::post('/lgu/barangays', function (Request $request) {
@@ -463,38 +918,167 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('dashboard');
         }
 
+        $barangayId = $request->input('barangay_id');
+
+        if (filled($barangayId)) {
+            $barangay = Barangay::query()->find($barangayId);
+
+            if (! $barangay) {
+                return back()->withErrors(['name' => 'Barangay not found.'])->withInput();
+            }
+
+            $data = $request->validate([
+                'name' => ['required', 'string', 'max:255', Rule::unique('barangays', 'name')->ignore($barangay->id)],
+                'boundary_geojson' => ['required', 'json'],
+            ]);
+
+            $barangay->update([
+                'name' => $data['name'],
+                'boundary_geojson' => json_decode($data['boundary_geojson'], true),
+            ]);
+
+            if ($barangay->captain) {
+                $barangay->captain->update([
+                    'barangay' => $barangay->name,
+                ]);
+            }
+
+            return redirect()->route('lgu.barangays')->with('status', 'Barangay updated successfully.');
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:barangays,name'],
-            'captain_user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'boundary_geojson' => ['required', 'json'],
         ]);
-
-        if (! empty($data['captain_user_id'])) {
-            $captain = User::query()->find($data['captain_user_id']);
-
-            if (! $captain || $captain->role !== 'BrgCaptain') {
-                return back()->withErrors([
-                    'captain_user_id' => 'Selected account is not a Barangay Captain.',
-                ])->withInput();
-            }
-
-            $alreadyAssigned = Barangay::query()
-                ->where('captain_user_id', $captain->id)
-                ->exists();
-
-            if ($alreadyAssigned) {
-                return back()->withErrors([
-                    'captain_user_id' => 'This Barangay Captain is already assigned to another barangay.',
-                ])->withInput();
-            }
-        }
 
         Barangay::create([
             'name' => $data['name'],
-            'captain_user_id' => $data['captain_user_id'] ?? null,
+            'boundary_geojson' => json_decode($data['boundary_geojson'], true),
         ]);
 
         return redirect()->route('lgu.barangays')->with('status', 'Barangay added successfully.');
     })->name('lgu.barangays.store');
+
+    Route::post('/lgu/barangays/captains', function (Request $request) {
+        if (Auth::user()->role !== 'LGU') {
+            return redirect()->route('dashboard');
+        }
+
+        $data = $request->validate([
+            'captain_name' => ['required', 'string', 'max:255'],
+            'captain_email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'captain_password' => ['required', 'string', 'min:8', 'confirmed'],
+            'captain_barangay_id' => ['required', 'integer', 'exists:barangays,id'],
+        ]);
+
+        $barangay = Barangay::query()->findOrFail($data['captain_barangay_id']);
+
+        $captain = User::query()->create([
+            'name' => $data['captain_name'],
+            'full_name' => $data['captain_name'],
+            'email' => mb_strtolower(trim($data['captain_email'])),
+            'role' => 'BrgCaptain',
+            'barangay' => $barangay->name,
+            'password' => $data['captain_password'],
+        ]);
+
+        $barangay->update([
+            'captain_user_id' => $captain->id,
+        ]);
+
+        return redirect()->route('lgu.barangays')->with('status', 'Barangay captain created successfully.');
+    })->name('lgu.barangays.captains.store');
+
+    Route::post('/lgu/barangays/captains/assignment', function (Request $request) {
+        if (Auth::user()->role !== 'LGU') {
+            return redirect()->route('dashboard');
+        }
+
+        $data = $request->validate([
+            'captain_user_id' => ['required', 'integer', 'exists:users,id'],
+            'captain_barangay_id' => ['nullable', 'integer', 'exists:barangays,id'],
+            'captain_action' => ['required', Rule::in(['assign', 'remove'])],
+        ]);
+
+        $captain = User::query()
+            ->where('role', 'BrgCaptain')
+            ->findOrFail($data['captain_user_id']);
+
+        DB::transaction(function () use ($captain, $data) {
+            $currentBarangay = Barangay::query()
+                ->where('captain_user_id', $captain->id)
+                ->first();
+
+            if ($data['captain_action'] === 'remove') {
+                if ($currentBarangay) {
+                    $currentBarangay->update(['captain_user_id' => null]);
+                }
+
+                $captain->update(['barangay' => null]);
+
+                return;
+            }
+
+            $targetBarangay = Barangay::query()->findOrFail($data['captain_barangay_id']);
+            $existingCaptain = $targetBarangay->captain;
+
+            if ($currentBarangay && $currentBarangay->isNot($targetBarangay)) {
+                $currentBarangay->update(['captain_user_id' => null]);
+            }
+
+            if ($existingCaptain && $existingCaptain->isNot($captain)) {
+                $existingCaptain->update(['barangay' => null]);
+            }
+
+            $targetBarangay->update([
+                'captain_user_id' => $captain->id,
+            ]);
+
+            $captain->update([
+                'barangay' => $targetBarangay->name,
+            ]);
+        });
+
+        return redirect()->route('lgu.barangays')->with('status', 'Barangay captain assignment updated successfully.');
+    })->name('lgu.barangays.captains.assignment');
+
+    Route::delete('/lgu/barangays/captains/{captain}', function (User $captain) {
+        if (Auth::user()->role !== 'LGU') {
+            return redirect()->route('dashboard');
+        }
+
+        if ($captain->role !== 'BrgCaptain') {
+            return back()->withErrors(['captain' => 'Selected user is not a barangay captain.']);
+        }
+
+        DB::transaction(function () use ($captain) {
+            Barangay::query()
+                ->where('captain_user_id', $captain->id)
+                ->update(['captain_user_id' => null]);
+
+            $captain->delete();
+        });
+
+        return redirect()->route('lgu.barangays')->with('status', 'Barangay captain deleted successfully.');
+    })->name('lgu.barangays.captains.destroy');
+
+    Route::delete('/lgu/barangays/{barangay}', function (Barangay $barangay) {
+        if (Auth::user()->role !== 'LGU') {
+            return redirect()->route('dashboard');
+        }
+
+        $captainId = $barangay->captain_user_id;
+
+        $barangay->delete();
+
+        if ($captainId) {
+            User::query()
+                ->whereKey($captainId)
+                ->update(['barangay' => null]);
+        }
+
+        return redirect()->route('lgu.barangays')->with('status', 'Barangay deleted successfully.');
+    })->name('lgu.barangays.destroy');
 
     Route::get('/lgu/reports', function () {
         return Auth::user()->role === 'LGU'
@@ -773,10 +1357,687 @@ Route::middleware('auth')->group(function () {
     })->name('barangay-captain.reports');
 
     Route::get('/barangay-captain/events', function () {
-        return Auth::user()->role === 'BrgCaptain'
-            ? view('barangay_captain.events')
-            : redirect()->route('dashboard');
+        return redirect()->route('dashboard');
     })->name('barangay-captain.events');
+
+    Route::get('/barangay-captain/posts', function () {
+        return redirect()->route('dashboard');
+    })->name('barangay-captain.posts');
+
+    Route::post('/barangay-captain/posts', function () {
+        return redirect()->route('dashboard');
+    })->name('barangay-captain.posts.store');
+
+    Route::put('/barangay-captain/posts/{post}', function () {
+        return redirect()->route('dashboard');
+    })->name('barangay-captain.posts.update');
+
+    Route::delete('/barangay-captain/posts/{post}', function () {
+        return redirect()->route('dashboard');
+    })->name('barangay-captain.posts.destroy');
+
+    Route::post('/barangay-captain/events', function () {
+        return redirect()->route('dashboard');
+    })->name('barangay-captain.events.store');
+
+    Route::get('/bhw/events', function () {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $barangayName = trim((string) Auth::user()->barangay);
+        $assignedBarangay = $barangayName !== ''
+            ? Barangay::query()->where('name', $barangayName)->first()
+            : null;
+
+        $events = $assignedBarangay
+            ? Event::query()
+                ->where('barangay_id', $assignedBarangay->id)
+                ->whereHas('createdBy', function ($query) {
+                    $query->where('role', 'BHW');
+                })
+                ->orderByDesc('event_date')
+                ->orderByDesc('start_time')
+                ->get()
+            : collect();
+
+        return view('bhw.events', compact('events'));
+    })->name('bhw.events');
+
+    Route::post('/bhw/events', function (Request $request) {
+        if (Auth::user()->role !== 'BHW') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $barangayName = trim((string) Auth::user()->barangay);
+        $assignedBarangay = $barangayName !== ''
+            ? Barangay::query()->where('name', $barangayName)->first()
+            : null;
+
+        if (! $assignedBarangay) {
+            return response()->json(['error' => 'No assigned barangay'], 404);
+        }
+
+        $data = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'event_date' => 'required|date',
+            'start_time' => 'nullable|date_format:H:i',
+            'end_time' => 'nullable|date_format:H:i',
+            'location' => 'nullable|string|max:255',
+            'registration_limit' => 'nullable|integer|min:1',
+            'category' => 'nullable|string|max:100',
+            'image' => 'nullable|image|max:4096',
+        ]);
+
+        $imageUrl = null;
+
+        if ($request->hasFile('image')) {
+            $imageUrl = $request->file('image')->store('event-images', 'public');
+        }
+
+        $event = Event::create([
+            'barangay_id' => $assignedBarangay->id,
+            'created_by' => Auth::id(),
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'event_date' => $data['event_date'],
+            'start_time' => $data['start_time'],
+            'end_time' => $data['end_time'],
+            'location' => $data['location'],
+            'registration_limit' => $data['registration_limit'] ?? null,
+            'category' => 'event',
+            'image_url' => $imageUrl,
+        ]);
+
+        if (! $request->expectsJson()) {
+            return redirect()
+                ->route('bhw.events')
+                ->with('status', 'Event created successfully.');
+        }
+
+        return response()->json([
+            'success' => true,
+            'event' => $event,
+            'image_url' => $imageUrl ? Storage::url($imageUrl) : null,
+            'message' => 'Event created successfully',
+        ]);
+    })->name('bhw.events.store');
+
+    Route::get('/bhw/posts', function () {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $barangayName = trim((string) Auth::user()->barangay);
+        $assignedBarangay = $barangayName !== ''
+            ? Barangay::query()->where('name', $barangayName)->first()
+            : null;
+
+        $posts = $assignedBarangay
+            ? Event::query()
+                ->where('barangay_id', $assignedBarangay->id)
+                ->whereIn('category', ['event', 'announcement'])
+                ->orderByDesc('event_date')
+                ->orderByDesc('start_time')
+                ->get()
+            : collect();
+
+        return view('bhw.posts', compact('assignedBarangay', 'posts'));
+    })->name('bhw.posts');
+
+    Route::post('/bhw/posts', function (Request $request) {
+        if (Auth::user()->role !== 'BHW') {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $barangayName = trim((string) Auth::user()->barangay);
+        $assignedBarangay = $barangayName !== ''
+            ? Barangay::query()->where('name', $barangayName)->first()
+            : null;
+
+        if (! $assignedBarangay) {
+            return response()->json(['error' => 'No assigned barangay'], 404);
+        }
+
+        $data = $request->validate([
+            'type' => ['required', 'in:event,announcement'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'event_date' => ['required', 'date'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'end_time' => ['nullable', 'date_format:H:i'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'registration_limit' => ['nullable', 'integer', 'min:1'],
+            'image' => ['nullable', 'image', 'max:4096'],
+        ]);
+
+        $imageUrl = null;
+
+        if ($request->hasFile('image')) {
+            $imageUrl = $request->file('image')->store('event-images', 'public');
+        }
+
+        $post = Event::create([
+            'barangay_id' => $assignedBarangay->id,
+            'created_by' => Auth::id(),
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'event_date' => $data['event_date'],
+            'start_time' => $data['start_time'],
+            'end_time' => $data['end_time'],
+            'location' => $data['location'],
+            'registration_limit' => $data['registration_limit'] ?? null,
+            'category' => $data['type'] === 'announcement' ? 'announcement' : 'event',
+            'image_url' => $imageUrl,
+        ]);
+
+        if (! $request->expectsJson()) {
+            return redirect()
+                ->route('bhw.posts')
+                ->with('status', 'Post created successfully.');
+        }
+
+        return response()->json([
+            'success' => true,
+            'post' => $post,
+            'image_url' => $imageUrl ? Storage::url($imageUrl) : null,
+            'message' => 'Post created successfully',
+        ]);
+    })->name('bhw.posts.store');
+
+    Route::post('/bhw/posts/{post}/toggle-disable', function (Event $post) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $barangayName = trim((string) Auth::user()->barangay);
+        $assignedBarangay = $barangayName !== ''
+            ? Barangay::query()->where('name', $barangayName)->first()
+            : null;
+
+        abort_unless($assignedBarangay && $post->barangay_id === $assignedBarangay->id, 404);
+
+        $post->disabled_at = $post->disabled_at ? null : now();
+        $post->save();
+
+        return redirect()->route('bhw.posts')->with('status', $post->disabled_at ? 'Post disabled successfully.' : 'Post re-enabled successfully.');
+    })->name('bhw.posts.toggle-disable');
+
+    Route::put('/bhw/posts/{post}', function (Request $request, Event $post) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $barangayName = trim((string) Auth::user()->barangay);
+        $assignedBarangay = $barangayName !== ''
+            ? Barangay::query()->where('name', $barangayName)->first()
+            : null;
+
+        abort_unless($assignedBarangay && $post->barangay_id === $assignedBarangay->id, 404);
+
+        $data = $request->validate([
+            'type' => ['required', 'in:event,announcement'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'event_date' => ['required', 'date'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'end_time' => ['nullable', 'date_format:H:i'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'image' => ['nullable', 'image', 'max:4096'],
+        ]);
+
+        $imageUrl = $post->image_url;
+
+        if ($request->hasFile('image')) {
+            if ($imageUrl && Storage::disk('public')->exists($imageUrl)) {
+                Storage::disk('public')->delete($imageUrl);
+            }
+
+            $imageUrl = $request->file('image')->store('event-images', 'public');
+        }
+
+        $post->update([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'event_date' => $data['event_date'],
+            'start_time' => $data['start_time'],
+            'end_time' => $data['end_time'],
+            'location' => $data['location'],
+            'registration_limit' => $data['registration_limit'] ?? null,
+            'category' => $data['type'] === 'announcement' ? 'announcement' : 'event',
+            'image_url' => $imageUrl,
+        ]);
+
+        return redirect()->route('bhw.posts')->with('status', 'Post updated successfully.');
+    })->name('bhw.posts.update');
+
+    Route::delete('/bhw/posts/{post}', function (Event $post) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $barangayName = trim((string) Auth::user()->barangay);
+        $assignedBarangay = $barangayName !== ''
+            ? Barangay::query()->where('name', $barangayName)->first()
+            : null;
+
+        abort_unless($assignedBarangay && $post->barangay_id === $assignedBarangay->id, 404);
+
+        if ($post->image_url && Storage::disk('public')->exists($post->image_url)) {
+            Storage::disk('public')->delete($post->image_url);
+        }
+
+        $post->delete();
+
+        return redirect()->route('bhw.posts')->with('status', 'Post deleted successfully.');
+    })->name('bhw.posts.destroy');
+
+    Route::get('/barangay-captain/bhw-workers', function () {
+        if (Auth::user()->role !== 'BrgCaptain') {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        $bhwWorkers = collect();
+        $puroks = collect();
+
+        if ($assignedBarangay) {
+            $bhwWorkers = User::query()
+                ->where('role', 'BHW')
+                ->where('barangay', $assignedBarangay->name)
+                ->orderBy('name')
+                ->get();
+
+            $puroks = Purok::query()
+                ->where('barangay_id', $assignedBarangay->id)
+                ->orderBy('name')
+                ->get();
+        }
+
+        return view('barangay_captain.bhw_workers', array_merge([
+            'assignedBarangay' => $assignedBarangay,
+            'assignedBarangayBoundary' => $assignedBarangay?->boundary_geojson,
+        ], compact('bhwWorkers', 'puroks')));
+    })->name('barangay-captain.bhw-workers');
+
+    Route::post('/barangay-captain/bhw-workers/puroks', function (Request $request) {
+        if (Auth::user()->role !== 'BrgCaptain') {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        if (! $assignedBarangay) {
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->withErrors(['name' => 'No assigned barangay yet. You cannot create a purok.']);
+        }
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'boundary_geojson' => ['required', 'json'],
+        ]);
+
+        $purokName = trim((string) $data['name']);
+        $purokBoundary = json_decode($data['boundary_geojson'], true);
+
+        if (! is_array($purokBoundary) || ($purokBoundary['type'] ?? '') === '') {
+            return back()
+                ->withInput()
+                ->withErrors(['boundary_geojson' => 'Select a valid purok boundary.']);
+        }
+
+        $pointInRing = static function (float $lat, float $lng, array $ring): bool {
+            $inside = false;
+            $vertexCount = count($ring);
+
+            if ($vertexCount < 3) {
+                return false;
+            }
+
+            for ($i = 0, $j = $vertexCount - 1; $i < $vertexCount; $j = $i++) {
+                $current = $ring[$i] ?? [];
+                $previous = $ring[$j] ?? [];
+
+                $xi = (float) ($current[0] ?? 0);
+                $yi = (float) ($current[1] ?? 0);
+                $xj = (float) ($previous[0] ?? 0);
+                $yj = (float) ($previous[1] ?? 0);
+
+                $intersects = (($yi > $lat) !== ($yj > $lat))
+                    && ($lng < (($xj - $xi) * ($lat - $yi) / (($yj - $yi) !== 0.0 ? ($yj - $yi) : 0.0000001)) + $xi);
+
+                if ($intersects) {
+                    $inside = ! $inside;
+                }
+            }
+
+            return $inside;
+        };
+
+        $geometryContainsPoint = static function (array $geometry, float $lat, float $lng) use (&$geometryContainsPoint, $pointInRing): bool {
+            $geometryType = $geometry['type'] ?? '';
+            $coordinates = $geometry['coordinates'] ?? [];
+
+            if ($geometryType === 'FeatureCollection') {
+                foreach ($geometry['features'] ?? [] as $feature) {
+                    if ($geometryContainsPoint($feature, $lat, $lng)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            if ($geometryType === 'Feature') {
+                return $geometryContainsPoint($geometry['geometry'] ?? [], $lat, $lng);
+            }
+
+            if ($geometryType === 'Polygon') {
+                $rings = is_array($coordinates) ? $coordinates : [];
+                $outerRing = $rings[0] ?? [];
+
+                if (! $pointInRing($lat, $lng, $outerRing)) {
+                    return false;
+                }
+
+                foreach (array_slice($rings, 1) as $hole) {
+                    if ($pointInRing($lat, $lng, $hole)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            if ($geometryType === 'MultiPolygon') {
+                foreach ($coordinates as $polygon) {
+                    if ($geometryContainsPoint(['type' => 'Polygon', 'coordinates' => $polygon], $lat, $lng)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        $geometryWithinBoundary = null;
+        $geometryWithinBoundary = static function (array $geometry, array $boundary) use (&$geometryWithinBoundary, $geometryContainsPoint): bool {
+            $geometryType = $geometry['type'] ?? '';
+
+            if ($geometryType === 'FeatureCollection') {
+                foreach ($geometry['features'] ?? [] as $feature) {
+                    if (! $geometryWithinBoundary($feature, $boundary)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            if ($geometryType === 'Feature') {
+                return $geometryWithinBoundary($geometry['geometry'] ?? [], $boundary);
+            }
+
+            if ($geometryType === 'Polygon') {
+                $rings = $geometry['coordinates'] ?? [];
+                $outerRing = $rings[0] ?? [];
+
+                foreach ($outerRing as $point) {
+                    $lng = (float) ($point[0] ?? 0);
+                    $lat = (float) ($point[1] ?? 0);
+
+                    if (! $geometryContainsPoint($boundary, $lat, $lng)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            if ($geometryType === 'MultiPolygon') {
+                foreach ($geometry['coordinates'] ?? [] as $polygon) {
+                    if (! $geometryWithinBoundary(['type' => 'Polygon', 'coordinates' => $polygon], $boundary)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
+        };
+
+        if (! empty($assignedBarangay->boundary_geojson) && ! $geometryWithinBoundary($purokBoundary, $assignedBarangay->boundary_geojson)) {
+            return back()
+                ->withInput()
+                ->withErrors(['boundary_geojson' => 'Purok range must stay within your assigned barangay boundary.']);
+        }
+
+        $alreadyExists = Purok::query()
+            ->where('barangay_id', $assignedBarangay->id)
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($purokName)])
+            ->exists();
+
+        if ($alreadyExists) {
+            return back()
+                ->withInput()
+                ->withErrors(['name' => 'This purok already exists in your barangay.']);
+        }
+
+        Purok::query()->create([
+            'barangay_id' => $assignedBarangay->id,
+            'name' => $purokName,
+            'created_by' => Auth::id(),
+            'boundary_geojson' => $purokBoundary,
+        ]);
+
+        return redirect()
+            ->route('barangay-captain.bhw-workers')
+            ->with('status', 'Purok created successfully.');
+    })->name('barangay-captain.puroks.store');
+
+    Route::post('/barangay-captain/bhw-workers', function (Request $request) {
+        if (Auth::user()->role !== 'BrgCaptain') {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        if (! $assignedBarangay) {
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->withErrors(['email' => 'No assigned barangay yet. You cannot create a BHW worker.']);
+        }
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8'],
+        ]);
+
+        $name = strstr($data['email'], '@', true) ?: $data['email'];
+
+        User::query()->create([
+            'name' => $name,
+            'full_name' => null,
+            'email' => mb_strtolower(trim($data['email'])),
+            'role' => 'BHW',
+            'barangay' => $assignedBarangay->name,
+            'password' => $data['password'],
+        ]);
+
+        return redirect()
+            ->route('barangay-captain.bhw-workers')
+            ->with('status', 'BHW worker created successfully.');
+    })->name('barangay-captain.bhw-workers.store');
+
+    Route::post('/barangay-captain/bhw-workers/assign', function (Request $request) {
+        if (Auth::user()->role !== 'BrgCaptain') {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        if (! $assignedBarangay) {
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->withInput()
+                ->withErrors(['worker_id' => 'No assigned barangay yet.']);
+        }
+
+        $data = $request->validate([
+            'worker_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $worker = User::query()
+            ->whereKey($data['worker_id'])
+            ->where('role', 'BHW')
+            ->where('barangay', $assignedBarangay->name)
+            ->first();
+
+        if (! $worker) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'worker_id' => 'Unable to assign worker to this purok.',
+                ]);
+        }
+
+        $purokId = $request->input('purok_id');
+
+        if (! filled($purokId)) {
+            $worker->update([
+                'household_no' => null,
+            ]);
+
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->with('status', 'BHW worker unassigned from purok successfully.');
+        }
+
+        $request->validate([
+            'purok_id' => ['required', 'integer', 'exists:puroks,id'],
+        ]);
+
+        $purok = Purok::query()
+            ->whereKey($purokId)
+            ->where('barangay_id', $assignedBarangay->id)
+            ->first();
+
+        if (! $purok) {
+            return back()
+                ->withInput([
+                    'worker_id' => $data['worker_id'],
+                    'worker_name' => $worker->name,
+                    'purok_id' => $request->input('purok_id'),
+                    'purok_name' => '',
+                ])
+                ->withErrors([
+                    'purok_id' => 'The purok id field is required.',
+                ]);
+        }
+
+        $worker->update([
+            'household_no' => $purok->name,
+        ]);
+
+        return redirect()
+            ->route('barangay-captain.bhw-workers')
+            ->with('status', 'BHW worker assigned to purok successfully.');
+    })->name('barangay-captain.bhw-workers.assign');
+
+    Route::post('/barangay-captain/bhw-workers/kick', function (Request $request) {
+        if (Auth::user()->role !== 'BrgCaptain') {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        if (! $assignedBarangay) {
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->withInput()
+                ->withErrors(['worker_id' => 'No assigned barangay yet.']);
+        }
+
+        $data = $request->validate([
+            'worker_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $worker = User::query()
+            ->whereKey($data['worker_id'])
+            ->where('role', 'BHW')
+            ->where('barangay', $assignedBarangay->name)
+            ->first();
+
+        if (! $worker) {
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->withErrors([
+                    'worker_id' => 'Unable to update this account.',
+                ]);
+        }
+
+        $worker->update([
+            'role' => 'users',
+            'household_no' => null,
+        ]);
+
+        return redirect()
+            ->route('barangay-captain.bhw-workers')
+            ->with('status', 'BHW account role removed successfully.');
+    })->name('barangay-captain.bhw-workers.kick');
+
+    Route::post('/barangay-captain/puroks/{id}/delete', function ($id) {
+        if (Auth::user()->role !== 'BrgCaptain') {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        if (! $assignedBarangay) {
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->withErrors(['purok_id' => 'No assigned barangay yet.']);
+        }
+
+        $purok = Purok::query()
+            ->whereKey($id)
+            ->where('barangay_id', $assignedBarangay->id)
+            ->first();
+
+        if (! $purok) {
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->withErrors(['purok_id' => 'Purok not found.']);
+        }
+
+        // Unassign all BHW workers from this purok
+        User::query()
+            ->where('household_no', $purok->name)
+            ->where('barangay', $assignedBarangay->name)
+            ->update(['household_no' => null]);
+
+        $purok->delete();
+
+        return redirect()
+            ->route('barangay-captain.bhw-workers')
+            ->with('status', 'Purok deleted successfully.');
+    })->name('barangay-captain.puroks.delete');
 
     Route::get('/barangay-captain/settings', function () {
         if (Auth::user()->role !== 'BrgCaptain') {
@@ -1028,6 +2289,45 @@ Route::middleware('auth')->group(function () {
         return view('bhw.residents', compact('acceptedResidents'));
     })->name('bhw.residents');
 
+    Route::post('/bhw/residents', function (Request $request) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_initial' => ['nullable', 'string', 'max:1'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'gender' => ['nullable', 'string', 'max:50'],
+            'birthdate' => ['nullable', 'date'],
+            'household_no' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $middleInitial = strtoupper(trim((string) ($data['middle_initial'] ?? '')));
+        $middleSegment = $middleInitial !== '' ? $middleInitial.'.' : null;
+        $birthdate = filled($data['birthdate'] ?? null) ? Carbon::parse((string) $data['birthdate']) : null;
+        $calculatedAge = $birthdate?->age;
+
+        $fullName = trim(implode(' ', array_filter([
+            trim((string) $data['first_name']),
+            $middleSegment,
+            trim((string) $data['last_name']),
+        ])));
+
+        ResidentRequest::create([
+            'user_id' => Auth::id(),
+            'full_name' => $fullName,
+            'barangay' => Auth::user()->barangay ?: 'Unknown',
+            'contact' => null,
+            'address' => null,
+            'age' => $calculatedAge,
+            'status' => 'accepted',
+            'reviewed_at' => now(),
+        ]);
+
+        return redirect()->route('bhw.residents')->with('status', 'Resident added successfully.');
+    })->name('bhw.residents.store');
+
     Route::get('/bhw/requests', function (Request $request) {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');
@@ -1246,13 +2546,31 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('bhw.requests', ['search' => $request->query('search')])->with('status', 'Message sent to resident inbox.');
     })->name('bhw.requests.message');
 
-    Route::get('/bhw/reports', function () {
+    Route::get('/bhw/reports', function (Request $request) {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');
         }
 
-        $fromDate = request('from_date');
-        $toDate = request('to_date');
+        $period = $request->query('period', 'monthly');
+        $fromDate = null;
+        $toDate = null;
+
+        if ($period === 'weekly') {
+            $fromDate = now()->startOfWeek()->toDateString();
+            $toDate = now()->toDateString();
+        } elseif ($period === 'custom') {
+            $validated = $request->validate([
+                'from_date' => ['required', 'date'],
+                'to_date' => ['required', 'date', 'after_or_equal:from_date'],
+            ]);
+
+            $fromDate = $validated['from_date'];
+            $toDate = $validated['to_date'];
+        } else {
+            $period = 'monthly';
+            $fromDate = now()->startOfMonth()->toDateString();
+            $toDate = now()->toDateString();
+        }
 
         $residentsQuery = ResidentRequest::query()
             ->where('status', 'accepted');
@@ -1307,7 +2625,7 @@ Route::middleware('auth')->group(function () {
             ],
         ];
 
-        return view('bhw.reports', compact('reportData', 'fromDate', 'toDate'));
+        return view('bhw.reports', compact('reportData', 'fromDate', 'toDate', 'period'));
     })->name('bhw.reports');
 
     Route::get('/bhw/schedule', function () {

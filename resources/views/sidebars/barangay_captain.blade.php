@@ -5,7 +5,7 @@
         $isDashboard = request()->routeIs('barangay-captain.main') || request()->routeIs('brgcaptain.main');
         $isResidents = request()->routeIs('barangay-captain.residents');
         $isReports = request()->routeIs('barangay-captain.reports');
-        $isEvents = request()->routeIs('barangay-captain.events');
+        $isBhwWorkers = request()->routeIs('barangay-captain.bhw-workers');
         $isSettings = request()->routeIs('barangay-captain.settings');
 
         $activeLinkClass = 'flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-primary/20';
@@ -48,6 +48,10 @@
                 <span class="{{ $isDashboard ? $activeIconClass : $inactiveIconClass }}" @if ($isDashboard) style="font-variation-settings: 'FILL' 1;" @endif>dashboard</span>
                 <p class="{{ $isDashboard ? $activeTextClass : $inactiveTextClass }}">Dashboard</p>
             </a>
+            <a class="{{ $isBhwWorkers ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('barangay-captain.bhw-workers') }}">
+                <span class="{{ $isBhwWorkers ? $activeIconClass : $inactiveIconClass }}" @if ($isBhwWorkers) style="font-variation-settings: 'FILL' 1;" @endif>badge</span>
+                <p class="{{ $isBhwWorkers ? $activeTextClass : $inactiveTextClass }}">BHW Workers</p>
+            </a>
             <a class="{{ $isResidents ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('barangay-captain.residents') }}">
                 <span class="{{ $isResidents ? $activeIconClass : $inactiveIconClass }}" @if ($isResidents) style="font-variation-settings: 'FILL' 1;" @endif>groups</span>
                 <p class="{{ $isResidents ? $activeTextClass : $inactiveTextClass }}">Residents</p>
@@ -55,10 +59,6 @@
             <a class="{{ $isReports ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('barangay-captain.reports') }}">
                 <span class="{{ $isReports ? $activeIconClass : $inactiveIconClass }}" @if ($isReports) style="font-variation-settings: 'FILL' 1;" @endif>assessment</span>
                 <p class="{{ $isReports ? $activeTextClass : $inactiveTextClass }}">Reports</p>
-            </a>
-            <a class="{{ $isEvents ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('barangay-captain.events') }}">
-                <span class="{{ $isEvents ? $activeIconClass : $inactiveIconClass }}" @if ($isEvents) style="font-variation-settings: 'FILL' 1;" @endif>calendar_month</span>
-                <p class="{{ $isEvents ? $activeTextClass : $inactiveTextClass }}">Events</p>
             </a>
         </div>
         <div class="flex flex-col gap-4">

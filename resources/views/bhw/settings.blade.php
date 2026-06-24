@@ -101,6 +101,10 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+@php
+    $displayName = $user->full_name ?: $user->name;
+    $profilePicturePath = $user->profile_picture_path;
+@endphp
 <div class="main-container">
     <div class="md:hidden fixed top-4 left-4 z-50">
         <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
@@ -115,9 +119,22 @@
     <main class="flex-1 p-8 overflow-hidden md:ml-0">
         <div class="page-content">
             <div class="w-full max-w-4xl mx-auto">
-                <header class="mb-6">
-                    <h1 class="text-3xl font-bold leading-tight">Settings</h1>
-                    <p class="text-base text-text-light/70 dark:text-text-dark/70">Update your profile information.</p>
+                <header class="mb-6 rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-6 shadow-sm">
+                    <p class="text-sm font-semibold uppercase tracking-[0.28em] text-primary/80 dark:text-primary/90">Welcome</p>
+                    <div class="mt-2 flex flex-col gap-1">
+                        <h1 class="text-4xl font-extrabold leading-tight text-[#10261a] dark:text-white">{{ $displayName }}</h1>
+                        <p class="text-sm font-medium text-text-light/70 dark:text-text-dark/70">Update your profile information and account details.</p>
+                    </div>
+                    <div class="mt-4 flex flex-wrap items-center gap-4 text-sm">
+                        <div class="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-primary">
+                            <span class="material-symbols-outlined text-[18px]">mail</span>
+                            <span>{{ $user->email }}</span>
+                        </div>
+                        <div class="flex items-center gap-2 rounded-full bg-background-light dark:bg-background-dark px-3 py-1.5 text-text-light/70 dark:text-text-dark/70">
+                            <span class="material-symbols-outlined text-[18px]">badge</span>
+                            <span>BHW Account</span>
+                        </div>
+                    </div>
                 </header>
 
                 @if (session('status'))
@@ -141,13 +158,33 @@
                         @csrf
 
                         <div class="md:col-span-2">
-                            <label class="block text-sm font-medium mb-1">Profile Picture (optional)</label>
-                            <input type="file" name="profile_picture" accept="image/*" class="w-full rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 py-2">
+                            <label class="block text-sm font-medium mb-2">Profile Picture</label>
+                            <div class="flex flex-col md:flex-row md:items-center gap-4 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
+                                <div class="flex items-center gap-4">
+                                    @if ($profilePicturePath)
+                                        <img id="profilePreview" src="{{ route('profile.picture', ['user' => $user->id, 'v' => optional($user->updated_at)->timestamp]) }}" alt="Profile picture" class="size-20 rounded-full object-cover border border-border-light dark:border-border-dark bg-white" />
+                                    @else
+                                        <div id="profilePreview" class="flex size-20 items-center justify-center rounded-full bg-primary/15 text-2xl font-bold text-primary border border-border-light dark:border-border-dark">
+                                            {{ strtoupper(substr($displayName, 0, 1)) }}
+                                        </div>
+                                    @endif
+                                    <div>
+                                        <p class="text-sm font-semibold text-text-light dark:text-text-dark">Upload a new photo</p>
+                                        <p class="text-xs text-text-light/70 dark:text-text-dark/70">PNG or JPG up to 2 MB.</p>
+                                    </div>
+                                </div>
+                                <input id="profilePictureInput" type="file" name="profile_picture" accept="image/*" class="w-full rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark px-3 py-2 text-sm md:max-w-md">
+                            </div>
                         </div>
 
                         <div>
                             <label class="block text-sm font-medium mb-1">Full Name</label>
                             <input type="text" name="full_name" value="{{ old('full_name', $user->full_name) }}" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Email</label>
+                            <input type="email" name="email" value="{{ old('email', $user->email) }}" required class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
                         </div>
 
                         <div>
@@ -206,6 +243,8 @@
     const overlay = document.getElementById('overlay');
     const dateOfBirth = document.getElementById('dateOfBirth');
     const computedAge = document.getElementById('computedAge');
+    const profilePictureInput = document.getElementById('profilePictureInput');
+    const profilePreview = document.getElementById('profilePreview');
 
     menuToggle.addEventListener('click', () => {
         sidebar.classList.toggle('active');
@@ -237,6 +276,22 @@
 
     if (dateOfBirth) {
         dateOfBirth.addEventListener('input', updateAgePreview);
+    }
+
+    if (profilePictureInput && profilePreview) {
+        profilePictureInput.addEventListener('change', () => {
+            const file = profilePictureInput.files && profilePictureInput.files[0];
+            if (!file) {
+                return;
+            }
+
+            const objectUrl = URL.createObjectURL(file);
+            if (profilePreview.tagName === 'IMG') {
+                profilePreview.src = objectUrl;
+            } else {
+                profilePreview.innerHTML = `<img src="${objectUrl}" alt="Profile preview" class="size-20 rounded-full object-cover">`;
+            }
+        });
     }
 </script>
 </body>

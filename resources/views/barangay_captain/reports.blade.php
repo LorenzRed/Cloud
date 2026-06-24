@@ -6,6 +6,7 @@
 <title>Bantay Kalusugan - Reports</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <style>
@@ -144,6 +145,12 @@
                         <h1 class="text-3xl font-bold leading-tight">Reports</h1>
                         <p class="text-base font-normal leading-normal text-text-light/70 dark:text-text-dark/70">View community health reports and statistics</p>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <button id="printReportBtn" type="button" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90">
+                            <span class="material-symbols-outlined text-[18px]">print</span>
+                            Print
+                        </button>
+                    </div>
                 </header>
 
                 <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-6">
@@ -155,23 +162,24 @@
                         $maternal = $reportData['maternal_summary'] ?? [];
                         $illness = $reportData['illness_case_summary'] ?? [];
                         $programs = $reportData['health_program_status_report'] ?? [];
-                    @endphp
 
-                    <form method="GET" action="{{ route('barangay-captain.reports') }}" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">From date</label>
-                            <input type="date" name="from_date" value="{{ $fromDate ?? '' }}" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">To date</label>
-                            <input type="date" name="to_date" value="{{ $toDate ?? '' }}" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
-                        </div>
-                        <div class="md:col-span-2 flex items-end gap-2">
-                            <button type="submit" class="h-10 px-4 rounded-lg bg-primary text-white text-sm font-semibold">Filter by date</button>
-                            <a href="{{ route('barangay-captain.reports') }}" class="h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-sm font-semibold inline-flex items-center">Reset</a>
-                            <button type="button" id="exportPdfBtn" class="h-10 px-4 rounded-lg bg-secondary text-white text-sm font-semibold">Export to PDF</button>
-                        </div>
-                    </form>
+                        $malnutritionIdentified = (int) ($malnutrition['identified_cases'] ?? 0);
+                        $malnutritionMonitoring = (int) ($malnutrition['under_monitoring'] ?? 0);
+
+                        $vaccinationVaccinated = (int) ($vaccination['vaccinated'] ?? 0);
+                        $vaccinationUnvaccinated = (int) ($vaccination['unvaccinated'] ?? 0);
+
+                        $maternalPregnantWomen = (int) ($maternal['pregnant_women'] ?? 0);
+                        $maternalPrenatalMonitoring = (int) ($maternal['prenatal_monitoring'] ?? 0);
+                        $maternalHighRisk = (int) ($maternal['high_risk_cases'] ?? 0);
+
+                        $illnessActive = (int) ($illness['active_cases'] ?? 0);
+                        $illnessResolved = (int) ($illness['resolved_cases'] ?? 0);
+
+                        $monthlyTotalResidents = (int) ($monthly['total_residents'] ?? 0);
+                        $monthlyTotalHouseholds = (int) ($monthly['total_households'] ?? 0);
+                        $monthlySeniorCitizens = (int) ($monthly['senior_citizens'] ?? 0);
+                    @endphp
 
                     <div id="reportContent" class="space-y-4">
                         <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
@@ -179,71 +187,89 @@
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Total residents</p>
-                                    <p class="text-2xl font-bold" id="monthlyTotalResidents">{{ number_format((int) ($monthly['total_residents'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="monthlyTotalResidents">{{ number_format($monthlyTotalResidents) }}</p>
                                 </div>
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Total households</p>
-                                    <p class="text-2xl font-bold" id="monthlyTotalHouseholds">{{ number_format((int) ($monthly['total_households'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="monthlyTotalHouseholds">{{ number_format($monthlyTotalHouseholds) }}</p>
                                 </div>
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Senior citizens</p>
-                                    <p class="text-2xl font-bold" id="monthlySeniorCitizens">{{ number_format((int) ($monthly['senior_citizens'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="monthlySeniorCitizens">{{ number_format($monthlySeniorCitizens) }}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
                             <h2 class="text-xl font-bold mb-3">Malnutrition Summary</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="h-64">
+                                <canvas id="malnutritionChart" aria-label="Malnutrition summary chart"></canvas>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Identified cases</p>
-                                    <p class="text-2xl font-bold" id="malnutritionIdentified">{{ number_format((int) ($malnutrition['identified_cases'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="malnutritionIdentified">{{ number_format($malnutritionIdentified) }}</p>
                                 </div>
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Under monitoring</p>
-                                    <p class="text-2xl font-bold" id="malnutritionMonitoring">{{ number_format((int) ($malnutrition['under_monitoring'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="malnutritionMonitoring">{{ number_format($malnutritionMonitoring) }}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
                             <h2 class="text-xl font-bold mb-3">Vaccination Coverage Report</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="h-64">
+                                <canvas id="vaccinationChart" aria-label="Vaccination coverage chart"></canvas>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Vaccinated residents</p>
-                                    <p class="text-2xl font-bold" id="vaccinationVaccinated">{{ number_format((int) ($vaccination['vaccinated'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="vaccinationVaccinated">{{ number_format($vaccinationVaccinated) }}</p>
                                 </div>
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Unvaccinated residents</p>
-                                    <p class="text-2xl font-bold" id="vaccinationUnvaccinated">{{ number_format((int) ($vaccination['unvaccinated'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="vaccinationUnvaccinated">{{ number_format($vaccinationUnvaccinated) }}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
                             <h2 class="text-xl font-bold mb-3">Maternal Summary</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="h-64">
+                                <canvas id="maternalChart" aria-label="Maternal summary chart"></canvas>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Pregnant women</p>
-                                    <p class="text-2xl font-bold" id="maternalPregnantWomen">{{ number_format((int) ($maternal['pregnant_women'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="maternalPregnantWomen">{{ number_format($maternalPregnantWomen) }}</p>
                                 </div>
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Prenatal monitoring</p>
-                                    <p class="text-2xl font-bold" id="maternalPrenatalMonitoring">{{ number_format((int) ($maternal['prenatal_monitoring'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="maternalPrenatalMonitoring">{{ number_format($maternalPrenatalMonitoring) }}</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 gap-3 mt-3">
+                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
+                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">High-risk cases</p>
+                                    <p class="text-2xl font-bold" id="maternalHighRisk">{{ number_format($maternalHighRisk) }}</p>
                                 </div>
                             </div>
                         </div>
 
                         <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
                             <h2 class="text-xl font-bold mb-3">Illness Case Summary</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="h-64">
+                                <canvas id="illnessChart" aria-label="Illness case summary chart"></canvas>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Active cases</p>
-                                    <p class="text-2xl font-bold" id="illnessActive">{{ number_format((int) ($illness['active_cases'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="illnessActive">{{ number_format($illnessActive) }}</p>
                                 </div>
                                 <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
                                     <p class="text-sm text-text-light/70 dark:text-text-dark/70">Resolved cases</p>
-                                    <p class="text-2xl font-bold" id="illnessResolved">{{ number_format((int) ($illness['resolved_cases'] ?? 0)) }}</p>
+                                    <p class="text-2xl font-bold" id="illnessResolved">{{ number_format($illnessResolved) }}</p>
                                 </div>
                             </div>
                         </div>
@@ -284,56 +310,147 @@
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
-    
+
     menuToggle.addEventListener('click', () => {
         sidebar.classList.toggle('active');
         overlay.classList.toggle('active');
     });
-    
+
     overlay.addEventListener('click', () => {
         sidebar.classList.remove('active');
         overlay.classList.remove('active');
     });
 
-    const exportPdfBtn = document.getElementById('exportPdfBtn');
-    if (exportPdfBtn) {
-        exportPdfBtn.addEventListener('click', () => {
-            if (!window.jspdf || !window.jspdf.jsPDF) {
-                return;
-            }
+    const chartTextColor = document.documentElement.classList.contains('dark') ? '#E0E0E0' : '#4A4A4A';
+    const chartGridColor = document.documentElement.classList.contains('dark') ? 'rgba(224, 224, 224, 0.16)' : 'rgba(74, 74, 74, 0.12)';
 
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+    const reportSeries = {
+        malnutrition: {
+            identified: {{ $malnutritionIdentified }},
+            monitoring: {{ $malnutritionMonitoring }},
+        },
+        vaccination: {
+            vaccinated: {{ $vaccinationVaccinated }},
+            unvaccinated: {{ $vaccinationUnvaccinated }},
+        },
+        illness: {
+            active: {{ $illnessActive }},
+            resolved: {{ $illnessResolved }},
+        },
+        maternal: {
+            pregnantWomen: {{ $maternalPregnantWomen }},
+            prenatalMonitoring: {{ $maternalPrenatalMonitoring }},
+            highRisk: {{ $maternalHighRisk }},
+        },
+    };
 
-            const line = (text, y) => doc.text(String(text), 14, y);
-            const fromDate = "{{ $fromDate ?? '' }}" || 'N/A';
-            const toDate = "{{ $toDate ?? '' }}" || 'N/A';
+    const sharedScaleOptions = {
+        beginAtZero: true,
+        ticks: { color: chartTextColor },
+        grid: { color: chartGridColor },
+    };
 
-            line('Barangay Health Reports', 16);
-            line('Date filter: ' + fromDate + ' to ' + toDate, 24);
+    const sharedPlugins = {
+        legend: {
+            labels: {
+                color: chartTextColor,
+                boxWidth: 14,
+            },
+        },
+    };
 
-            line('Monthly Barangay Health Report', 36);
-            line('Total residents: ' + document.getElementById('monthlyTotalResidents').innerText, 44);
-            line('Total households: ' + document.getElementById('monthlyTotalHouseholds').innerText, 50);
-            line('Senior citizens: ' + document.getElementById('monthlySeniorCitizens').innerText, 56);
+    const malnutritionCanvas = document.getElementById('malnutritionChart');
+    if (malnutritionCanvas) {
+        new Chart(malnutritionCanvas, {
+            type: 'bar',
+            data: {
+                labels: ['Identified Cases', 'Under Monitoring'],
+                datasets: [{
+                    label: 'Malnutrition Summary',
+                    data: [reportSeries.malnutrition.identified, reportSeries.malnutrition.monitoring],
+                    backgroundColor: ['#D0021B', '#50E3C2'],
+                    borderRadius: 8,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: sharedPlugins,
+                scales: { y: sharedScaleOptions, x: { ticks: { color: chartTextColor }, grid: { display: false } } },
+            },
+        });
+    }
 
-            line('Malnutrition Summary', 68);
-            line('Identified cases: ' + document.getElementById('malnutritionIdentified').innerText, 76);
-            line('Under monitoring: ' + document.getElementById('malnutritionMonitoring').innerText, 82);
+    const vaccinationCanvas = document.getElementById('vaccinationChart');
+    if (vaccinationCanvas) {
+        new Chart(vaccinationCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Vaccinated', 'Unvaccinated'],
+                datasets: [{
+                    label: 'Vaccination Coverage',
+                    data: [reportSeries.vaccination.vaccinated, reportSeries.vaccination.unvaccinated],
+                    backgroundColor: ['#50E3C2', '#F5A623'],
+                    borderColor: ['#3ac7a8', '#de941f'],
+                    borderWidth: 1,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: sharedPlugins,
+            },
+        });
+    }
 
-            line('Vaccination Coverage Report', 94);
-            line('Vaccinated residents: ' + document.getElementById('vaccinationVaccinated').innerText, 102);
-            line('Unvaccinated residents: ' + document.getElementById('vaccinationUnvaccinated').innerText, 108);
+    const illnessCanvas = document.getElementById('illnessChart');
+    if (illnessCanvas) {
+        new Chart(illnessCanvas, {
+            type: 'bar',
+            data: {
+                labels: ['Active Cases', 'Resolved Cases'],
+                datasets: [{
+                    label: 'Illness Case Summary',
+                    data: [reportSeries.illness.active, reportSeries.illness.resolved],
+                    backgroundColor: ['#D0021B', '#50E3C2'],
+                    borderRadius: 8,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: sharedPlugins,
+                scales: { y: sharedScaleOptions, x: { ticks: { color: chartTextColor }, grid: { display: false } } },
+            },
+        });
+    }
 
-            line('Maternal Summary', 120);
-            line('Pregnant women: ' + document.getElementById('maternalPregnantWomen').innerText, 128);
-            line('Prenatal monitoring: ' + document.getElementById('maternalPrenatalMonitoring').innerText, 134);
+    const maternalCanvas = document.getElementById('maternalChart');
+    if (maternalCanvas) {
+        new Chart(maternalCanvas, {
+            type: 'bar',
+            data: {
+                labels: ['Pregnant Women', 'Prenatal Monitoring', 'High-Risk Cases'],
+                datasets: [{
+                    label: 'Maternal Summary',
+                    data: [reportSeries.maternal.pregnantWomen, reportSeries.maternal.prenatalMonitoring, reportSeries.maternal.highRisk],
+                    backgroundColor: ['#4A90E2', '#50E3C2', '#D0021B'],
+                    borderRadius: 8,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: sharedPlugins,
+                scales: { y: sharedScaleOptions, x: { ticks: { color: chartTextColor }, grid: { display: false } } },
+            },
+        });
+    }
 
-            line('Illness Case Summary', 146);
-            line('Active cases: ' + document.getElementById('illnessActive').innerText, 154);
-            line('Resolved cases: ' + document.getElementById('illnessResolved').innerText, 160);
-
-            doc.save('barangay-health-reports.pdf');
+    const printReportBtn = document.getElementById('printReportBtn');
+    if (printReportBtn) {
+        printReportBtn.addEventListener('click', () => {
+            window.print();
         });
     }
 </script>

@@ -4,6 +4,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Bantay Kalusugan - Events</title>
+<meta name="csrf-token" content="{{ csrf_token() }}"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
@@ -159,15 +160,19 @@
 
                         <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
                             <h2 class="text-lg font-bold mb-3">Schedule Health Events</h2>
-                            <form id="eventForm" class="space-y-3">
+                            <form id="eventForm" method="POST" action="{{ route('barangay-captain.events.store') }}" enctype="multipart/form-data" class="space-y-3">
+                                @csrf
                                 <input id="eventName" type="text" required placeholder="Event name" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <input id="eventDate" type="date" required class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
                                     <input id="eventTime" type="time" required class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
                                 </div>
+                                <input id="eventEndTime" type="time" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3" placeholder="End time">
                                 <input id="eventVenue" type="text" required placeholder="Venue" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
+                                <input id="eventImage" type="file" accept="image/*" class="w-full rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 py-2 text-sm">
                                 <button type="submit" class="h-10 px-4 rounded-lg bg-secondary text-white text-sm font-semibold">Schedule event</button>
                             </form>
+                            <p id="eventStatus" class="mt-2 text-sm"></p>
                         </div>
                     </div>
 
@@ -185,17 +190,21 @@
                         <div id="pendingApprovals" class="space-y-3"></div>
                     </div>
 
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                        <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
-                            <h2 class="text-lg font-bold mb-3">Published Announcements</h2>
-                            <div id="publishedAnnouncements" class="space-y-3"></div>
-                        </div>
-                        <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
-                            <h2 class="text-lg font-bold mb-3">Scheduled Health Events</h2>
-                            <div id="scheduledEvents" class="space-y-3"></div>
-                        </div>
-                    </div>
                 </div>
+
+                @php
+                    $initialScheduledEvents = collect($events ?? [])->map(function ($event) {
+                        return [
+                            'id' => $event->id,
+                            'name' => $event->title,
+                            'date' => optional($event->event_date)->format('M d, Y') ?? 'TBA',
+                            'time' => $event->start_time,
+                            'endTime' => $event->end_time,
+                            'venue' => $event->location,
+                            'imageUrl' => $event->image_url,
+                        ];
+                    })->values();
+                @endphp
             </div>
         </div>
     </main>
@@ -242,9 +251,6 @@
         },
     ];
 
-    let publishedAnnouncements = [];
-    let scheduledEvents = [];
-
     function renderPendingApprovals() {
         if (!pendingApprovals.length) {
             pendingApprovalsEl.innerHTML = '<p class="text-sm text-text-light/70 dark:text-text-dark/70">No pending BHW/BNS announcements.</p>';
@@ -268,80 +274,80 @@
         `).join('');
     }
 
-    function renderPublishedAnnouncements() {
-        if (!publishedAnnouncements.length) {
-            publishedAnnouncementsEl.innerHTML = '<p class="text-sm text-text-light/70 dark:text-text-dark/70">No published announcements yet.</p>';
-            return;
-        }
-
-        publishedAnnouncementsEl.innerHTML = publishedAnnouncements.map((item) => `
-            <div class="rounded-lg border border-border-light dark:border-border-dark p-3">
-                <p class="font-semibold">${item.title}</p>
-                <p class="text-sm text-text-light/80 dark:text-text-dark/80">${item.message}</p>
-                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Posted by ${item.source} • ${item.createdAt}</p>
-            </div>
-        `).join('');
-    }
-
-    function renderScheduledEvents() {
-        if (!scheduledEvents.length) {
-            scheduledEventsEl.innerHTML = '<p class="text-sm text-text-light/70 dark:text-text-dark/70">No scheduled health events yet.</p>';
-            return;
-        }
-
-        scheduledEventsEl.innerHTML = scheduledEvents.map((item) => `
-            <div class="rounded-lg border border-border-light dark:border-border-dark p-3">
-                <p class="font-semibold">${item.name}</p>
-                <p class="text-sm text-text-light/80 dark:text-text-dark/80">${item.date} • ${item.time}</p>
-                <p class="text-sm text-text-light/80 dark:text-text-dark/80">Venue: ${item.venue}</p>
-            </div>
-        `).join('');
-    }
-
-    announcementForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-
-        const title = document.getElementById('announcementTitle').value.trim();
-        const message = document.getElementById('announcementMessage').value.trim();
-
-        if (!title || !message) {
-            return;
-        }
-
-        publishedAnnouncements.unshift({
-            id: crypto.randomUUID(),
-            source: 'Barangay Captain',
-            title,
-            message,
-            createdAt: new Date().toLocaleString(),
-        });
-
-        announcementForm.reset();
-        renderPublishedAnnouncements();
-    });
-
     eventForm.addEventListener('submit', (event) => {
         event.preventDefault();
 
         const name = document.getElementById('eventName').value.trim();
         const date = document.getElementById('eventDate').value;
         const time = document.getElementById('eventTime').value;
+        const endTime = document.getElementById('eventEndTime').value;
         const venue = document.getElementById('eventVenue').value.trim();
+        const imageInput = document.getElementById('eventImage');
+        const eventStatus = document.getElementById('eventStatus');
 
         if (!name || !date || !time || !venue) {
             return;
         }
 
-        scheduledEvents.unshift({
-            id: crypto.randomUUID(),
-            name,
-            date,
-            time,
-            venue,
-        });
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const formData = new FormData();
+        formData.append('title', name);
+        formData.append('description', '');
+        formData.append('event_date', date);
+        formData.append('start_time', time);
+        formData.append('end_time', endTime);
+        formData.append('location', venue);
+        formData.append('category', 'event');
 
-        eventForm.reset();
-        renderScheduledEvents();
+        if (imageInput && imageInput.files && imageInput.files[0]) {
+            formData.append('image', imageInput.files[0]);
+        }
+
+        fetch('/barangay-captain/events', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: formData,
+        })
+            .then(async (response) => {
+                const data = await response.json().catch(() => null);
+
+                if (!response.ok) {
+                    throw new Error(data?.message || data?.error || 'Unable to create event');
+                }
+
+                return data;
+            })
+            .then(data => {
+                if (data.success) {
+                    eventForm.reset();
+                    if (eventStatus) {
+                        eventStatus.textContent = 'Event posted successfully.';
+                        eventStatus.className = 'mt-2 text-sm text-green-700 dark:text-green-300 font-medium';
+                        setTimeout(() => {
+                            eventStatus.textContent = '';
+                        }, 3000);
+                    }
+                } else {
+                    const message = 'Error creating event: ' + (data.error || 'Unknown error');
+                    if (eventStatus) {
+                        eventStatus.textContent = message;
+                        eventStatus.className = 'mt-2 text-sm text-red-700 dark:text-red-300 font-medium';
+                    }
+                    alert(message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const message = 'Error creating event: ' + error.message;
+                if (eventStatus) {
+                    eventStatus.textContent = message;
+                    eventStatus.className = 'mt-2 text-sm text-red-700 dark:text-red-300 font-medium';
+                }
+                alert(message);
+            });
     });
 
     notifyForm.addEventListener('submit', (event) => {
@@ -377,8 +383,26 @@
     });
 
     renderPendingApprovals();
-    renderPublishedAnnouncements();
-    renderScheduledEvents();
+
+    const eventImageInput = document.getElementById('eventImage');
+    const eventImagePreview = document.createElement('div');
+    eventImagePreview.className = 'hidden mt-2 overflow-hidden rounded-lg border border-border-light dark:border-border-dark';
+    if (eventImageInput && eventImageInput.parentNode) {
+        eventImageInput.parentNode.insertBefore(eventImagePreview, eventImageInput.nextSibling);
+
+        eventImageInput.addEventListener('change', () => {
+            const file = eventImageInput.files && eventImageInput.files[0];
+            if (!file) {
+                eventImagePreview.classList.add('hidden');
+                eventImagePreview.innerHTML = '';
+                return;
+            }
+
+            const previewUrl = URL.createObjectURL(file);
+            eventImagePreview.classList.remove('hidden');
+            eventImagePreview.innerHTML = `<img src="${previewUrl}" alt="Event image preview" class="h-36 w-full object-cover">`;
+        });
+    }
 </script>
 </body>
 </html>

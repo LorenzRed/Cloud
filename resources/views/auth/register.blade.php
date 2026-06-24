@@ -156,7 +156,17 @@
                                         </div>
                                     </div>
                                     <p id="regConfirmClientError" class="-mt-1 hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
-                                    <button class="w-full bg-primary text-white font-bold h-12 rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/80 dark:focus:ring-offset-background-dark transition-colors duration-300" type="submit">
+
+                                    <!-- Terms and Conditions Checkbox -->
+                                    <div class="flex items-start gap-3 mt-6">
+                                        <input id="termsCheckbox" type="checkbox" name="terms_accepted" class="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary cursor-pointer mt-0.5" />
+                                        <label for="termsCheckbox" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed cursor-pointer">
+                                            I agree to the <button type="button" id="termsLink" class="text-primary font-semibold hover:underline">Terms and Conditions</button> and consent to my data being collected and shared as described.
+                                        </label>
+                                    </div>
+                                    <p id="termsClientError" class="hidden text-sm text-red-600 dark:text-red-400 -mt-2" role="alert">You must agree to the terms and conditions.</p>
+
+                                    <button class="w-full bg-primary text-white font-bold h-12 rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/80 dark:focus:ring-offset-background-dark transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed" type="submit" id="submitBtn" disabled>
                                         Register
                                     </button>
                                 </form>
@@ -168,6 +178,111 @@
                     </div>
                 </div>
             </main>
+        </div>
+    </div>
+
+    <!-- Terms and Conditions Modal -->
+    <div id="termsModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/50 flex items-center justify-center p-4">
+        <div class="bg-form-bg-light dark:bg-form-bg-dark rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center p-6 border-b border-border-light dark:border-border-dark">
+                <h3 class="text-2xl font-bold font-heading text-text-light dark:text-text-dark">Terms and Conditions</h3>
+                <button type="button" id="closeTermsBtn" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl leading-none">
+                    ×
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="overflow-y-auto flex-1 p-6 space-y-6 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                <section>
+                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">1. Data Collection and Location Services</h4>
+                    <p>
+                        This application collects location data for the purpose of providing maternal and child health services specific to your barangay. By registering, you consent to the collection and processing of your geographic location information to:
+                    </p>
+                    <ul class="list-disc pl-5 mt-2 space-y-1">
+                        <li>Identify your barangay of residence</li>
+                        <li>Provide localized health information and services</li>
+                        <li>Connect you with appropriate healthcare providers in your area</li>
+                        <li>Facilitate emergency response coordination if needed</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">2. Data Sharing and Consent</h4>
+                    <p>
+                        You acknowledge and agree that your personal information, including but not limited to:
+                    </p>
+                    <ul class="list-disc pl-5 mt-2 space-y-1">
+                        <li>Email address and contact information</li>
+                        <li>Location and barangay information</li>
+                        <li>Medical and health records (as applicable)</li>
+                        <li>Demographics and family information</li>
+                    </ul>
+                    <p class="mt-3">
+                        ...will be collected and may be shared with authorized healthcare professionals, barangay health workers (BHW), and local government health departments to ensure you receive appropriate and timely maternal and child health services. This data is shared in accordance with Republic Act 10173 (Data Privacy Act of 2012) and other applicable laws.
+                    </p>
+                </section>
+
+                <section>
+                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">3. Legal Basis</h4>
+                    <p>
+                        The collection and processing of your personal data is authorized under:
+                    </p>
+                    <ul class="list-disc pl-5 mt-2 space-y-1">
+                        <li><strong>Republic Act 10173 (Data Privacy Act of 2012):</strong> Protects personal information while allowing processing for legitimate healthcare purposes</li>
+                        <li><strong>Republic Act 9733 (Anti-Torture Act):</strong> Ensures protection of data subjects</li>
+                        <li><strong>Local Health Code:</strong> Authorizes barangay health centers to maintain health records</li>
+                        <li><strong>Your express consent:</strong> By checking this box, you provide explicit authorization</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">4. Your Rights</h4>
+                    <p>Under the Data Privacy Act, you have the right to:</p>
+                    <ul class="list-disc pl-5 mt-2 space-y-1">
+                        <li>Access your personal data</li>
+                        <li>Rectify inaccurate information</li>
+                        <li>Withdraw your consent (though this may affect service availability)</li>
+                        <li>Lodge complaints with the National Privacy Commission</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">5. Data Security</h4>
+                    <p>
+                        We implement appropriate technical and organizational measures to protect your personal data from unauthorized access, alteration, disclosure, or destruction. Access to your data is restricted to authorized personnel only.
+                    </p>
+                </section>
+
+                <section>
+                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">6. Consent Acknowledgment</h4>
+                    <p>
+                        By checking the "I agree to the Terms and Conditions" box, you explicitly acknowledge that:
+                    </p>
+                    <ul class="list-disc pl-5 mt-2 space-y-1">
+                        <li>You have read and understood these terms</li>
+                        <li>You freely and voluntarily consent to data collection and processing</li>
+                        <li>You authorize sharing of your data with authorized health entities</li>
+                        <li>You understand your rights under the Data Privacy Act</li>
+                    </ul>
+                </section>
+
+                <section>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 pt-4 border-t border-border-light dark:border-border-dark">
+                        Last updated: May 13, 2026 | For questions about privacy, contact your local barangay health center.
+                    </p>
+                </section>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex gap-3 p-6 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-900">
+                <button type="button" id="acceptTermsBtn" class="flex-1 bg-primary text-white font-bold h-10 rounded-lg hover:bg-primary/90 transition-colors">
+                    I Understand and Agree
+                </button>
+                <button type="button" id="declineTermsBtn" class="flex-1 bg-gray-300 dark:bg-gray-600 text-text-light dark:text-text-dark font-bold h-10 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                    Close
+                </button>
+            </div>
         </div>
     </div>
     <script>
@@ -261,6 +376,64 @@
             toggleConfirmPassword.setAttribute('aria-label', nowVisible ? 'Hide password' : 'Show password');
             confirmPasswordEyeOpen.classList.toggle('hidden', nowVisible);
             confirmPasswordEyeClosed.classList.toggle('hidden', !nowVisible);
+        });
+
+        // Terms and Conditions Modal
+        const termsModal = document.getElementById('termsModal');
+        const termsLink = document.getElementById('termsLink');
+        const closeTermsBtn = document.getElementById('closeTermsBtn');
+        const acceptTermsBtn = document.getElementById('acceptTermsBtn');
+        const declineTermsBtn = document.getElementById('declineTermsBtn');
+        const termsCheckbox = document.getElementById('termsCheckbox');
+        const termsClientError = document.getElementById('termsClientError');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Open modal when terms link is clicked
+        termsLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            termsModal.classList.remove('hidden');
+        });
+
+        // Close modal functions
+        function closeModal() {
+            termsModal.classList.add('hidden');
+        }
+
+        closeTermsBtn.addEventListener('click', closeModal);
+        declineTermsBtn.addEventListener('click', closeModal);
+
+        // Accept terms - check checkbox and close modal
+        acceptTermsBtn.addEventListener('click', () => {
+            termsCheckbox.checked = true;
+            updateSubmitButton();
+            termsClientError.classList.add('hidden');
+            closeModal();
+        });
+
+        // Close modal when clicking outside of it
+        termsModal.addEventListener('click', (e) => {
+            if (e.target === termsModal) {
+                closeModal();
+            }
+        });
+
+        // Update submit button state based on checkbox
+        function updateSubmitButton() {
+            submitBtn.disabled = !termsCheckbox.checked;
+        }
+
+        termsCheckbox.addEventListener('change', updateSubmitButton);
+
+        // Validate terms before form submission
+        registerForm.addEventListener('submit', function (e) {
+            if (!termsCheckbox.checked) {
+                e.preventDefault();
+                termsClientError.textContent = 'You must agree to the terms and conditions to register.';
+                termsClientError.classList.remove('hidden');
+                clearRegClientErrors();
+                return;
+            }
+            termsClientError.classList.add('hidden');
         });
     </script>
 </body>

@@ -3,13 +3,37 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Bantay Kalusugan - Edit Profile</title>
+    <title>Bantay Kalusugan - Profile</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <style>
+        #usersSidebar {
+            transition: width 0.25s ease;
+        }
+
+        @media (min-width: 1024px) {
+            #usersSidebar.is-collapsed {
+                width: 5rem;
+            }
+
+            #usersSidebar.is-collapsed .sidebar-label,
+            #usersSidebar.is-collapsed .sidebar-brand-text {
+                display: none;
+            }
+
+            #usersSidebar.is-collapsed .sidebar-link,
+            #usersSidebar.is-collapsed .sidebar-logout {
+                justify-content: center;
+            }
+
+            #usersSidebar.is-collapsed .sidebar-header-inner {
+                justify-content: center;
+            }
+        }
+    </style>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -30,146 +54,217 @@
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-[#0e1b13] dark:text-gray-200">
     @php
-        $selectedGender = ucfirst(strtolower(trim((string) old('gender', $user->gender))));
+        $isDashboard = request()->routeIs('users.main');
+        $isEvents = request()->routeIs('users.events');
+        $isAnnouncements = request()->routeIs('users.announcements');
+        $isProfile = request()->routeIs('users.profile');
+        $isNotifications = request()->routeIs('users.notifications');
+        $isMedicalRecords = request()->routeIs('users.medical-records');
     @endphp
-    <div class="min-h-screen px-6 md:px-8 py-8">
-        <div class="mx-auto w-full max-w-4xl">
-            <header class="mb-6 flex items-center justify-between gap-3">
-                <div>
-                    <h1 class="text-3xl font-bold">Profile Settings</h1>
-                    <p class="text-sm text-[#4e976b] dark:text-gray-400 mt-1">Update your resident profile information.</p>
+    @include('sidebars.users')
+
+    <div id="usersContent" class="flex min-h-screen flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] transition-all duration-200">
+        <main class="flex-1 px-4 sm:px-5 md:px-6 lg:px-7 pt-4 md:pt-6 pb-24 md:pb-6 overflow-y-auto">
+            <div class="w-full max-w-none space-y-6">
+            <div class="flex justify-center">
+                <div class="flex flex-col items-center text-center gap-2">
+                    <div class="relative mt-14 mb-2 h-28 w-28 overflow-visible">
+                        <div class="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-[#d0e7d9] bg-primary/15 dark:border-gray-700">
+                            @if ($user->profile_picture_path)
+                                <img src="{{ route('profile.picture', ['user' => $user->id, 'v' => optional($user->updated_at)->timestamp]) }}" alt="Profile picture" class="h-full w-full rounded-full object-cover" />
+                            @else
+                                <span class="text-4xl font-bold text-primary">{{ strtoupper(substr($user->full_name ?: $user->name ?: 'U', 0, 1)) }}</span>
+                            @endif
+                        </div>
+
+                        <button type="button" id="avatarEditBtn" class="absolute -bottom-1 -right-1 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-white border border-[#c4e8d1] dark:border-gray-700" aria-label="Edit profile">
+                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                        </button>
+
+                        <form id="avatarUploadForm" action="{{ route('users.profile.update') }}" method="POST" enctype="multipart/form-data" class="hidden">
+                            @csrf
+                            <input id="avatarFileInput" type="file" name="profile_picture" accept="image/*" class="hidden" />
+                        </form>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-[#0e1b13] dark:text-white">{{ $user->full_name ?: $user->name }}</p>
+                        <p class="text-base text-primary dark:text-primary/80 font-medium mt-1">{{ $user->contact_number ?: $user->email }}</p>
+                        <p class="text-sm text-black dark:text-gray-200 mt-2 max-w-md mx-auto leading-relaxed">BantayKalusugan Health Monitoring System.</p>
+                    </div>
                 </div>
-                <a href="{{ route('users.main') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
-                    <span class="material-symbols-outlined text-base">arrow_back</span>
-                    Back to Dashboard
-                </a>
-            </header>
-
-            @if (session('status'))
-                <div class="mb-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
-                    {{ session('status') }}
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200">
-                    <ul class="list-disc pl-5 space-y-1">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-[#d0e7d9] dark:border-gray-700 shadow-sm">
-                <form id="profileForm" method="POST" action="{{ route('users.profile.update') }}" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    @csrf
-
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium mb-1">Profile Picture (optional)</label>
-                        <input type="file" name="profile_picture" accept="image/*" class="w-full rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3 py-2">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Full Name</label>
-                        <input type="text" name="full_name" value="{{ old('full_name', $user->full_name) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Email</label>
-                        <input type="email" name="email" value="{{ old('email', $user->email) }}" required class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Gender</label>
-                        <select name="gender" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
-                            <option value="">Select gender</option>
-                            @foreach (['Male', 'Female', 'Other'] as $gender)
-                                <option value="{{ $gender }}" @selected($selectedGender === $gender)>{{ $gender }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Date of Birth</label>
-                        <input id="dateOfBirth" type="date" name="date_of_birth" value="{{ old('date_of_birth', optional($user->date_of_birth)->format('Y-m-d')) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Age</label>
-                        <input id="computedAge" type="number" value="{{ old('age', $user->age) }}" readonly class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Civil Status</label>
-                        <input type="text" name="civil_status" value="{{ old('civil_status', $user->civil_status) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3" placeholder="---">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Contact Number</label>
-                        <input type="text" name="contact_number" value="{{ old('contact_number', $user->contact_number) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Household No.</label>
-                        <input type="text" name="household_no" value="{{ old('household_no', $user->household_no) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3" placeholder="---">
-                    </div>
-
-                    <div class="md:col-span-2">
-                        <label class="block text-sm font-medium mb-1">Barangay</label>
-                        <input type="text" name="barangay" value="{{ old('barangay', $user->barangay) }}" readonly class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 cursor-not-allowed">
-                        <p class="text-xs text-[#4e976b] dark:text-gray-400 mt-1">Cannot be changed.</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Municipality</label>
-                        <input type="text" id="municipalityAddressInput" name="municipality" value="{{ old('municipality', $user->municipality) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 px-3" placeholder="---">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Province</label>
-                        <input type="text" id="provinceAddressInput" name="province" value="{{ old('province', $user->province) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 px-3" placeholder="---">
-                    </div>
-
-                    <div class="md:col-span-2 pt-2">
-                        <button type="submit" class="h-10 px-4 rounded-lg bg-primary text-[#0e1b13] text-sm font-bold hover:opacity-90">Update Profile</button>
-                    </div>
-                </form>
             </div>
-        </div>
+
+            <section class="mt-8 rounded-2xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+                <a href="{{ route('users.profile.details') }}" class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left border-b border-[#e7f3ec] dark:border-gray-700">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#4e976b] dark:text-gray-400">Profile</p>
+                        <h2 class="mt-1 text-xl font-bold text-[#0e1b13] dark:text-white">Profile Details</h2>
+                        <p class="mt-1 text-sm text-[#376f50] dark:text-gray-300">Open your full editable profile form.</p>
+                    </div>
+                    <span class="material-symbols-outlined text-[22px] text-[#4e976b] dark:text-gray-300">chevron_right</span>
+                </a>
+
+                <a href="{{ route('users.profile.chat-support') }}" class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#4e976b] dark:text-gray-400">Health Chat</p>
+                        <h2 class="mt-1 text-xl font-bold text-[#0e1b13] dark:text-white">Chat Support</h2>
+                        <p class="mt-1 text-sm text-[#376f50] dark:text-gray-300">Open chat help and see how it works.</p>
+                    </div>
+                    <span class="material-symbols-outlined text-[22px] text-[#4e976b] dark:text-gray-300">chevron_right</span>
+                </a>
+            </section>
+
+            <section class="space-y-3">
+                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#4e976b] dark:text-gray-400 px-1">Account Settings</p>
+                <div class="rounded-2xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left text-red-600 dark:text-red-300">
+                            <div class="flex items-center gap-3">
+                                <span class="material-symbols-outlined text-[22px]">logout</span>
+                                <span class="font-semibold text-base">Logout</span>
+                            </div>
+                        </button>
+                    </form>
+                </div>
+            </section>
+            </div>
+        </main>
+
+        <nav class="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-[#d0e7d9] bg-white/95 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95" aria-label="Mobile navigation">
+            <div class="grid grid-cols-5 gap-1 px-2 py-2">
+                <a href="{{ route('users.main') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isDashboard ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+                    <span class="material-symbols-outlined text-[20px]">home</span>
+                    Home
+                </a>
+                <a href="{{ route('users.events') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isEvents ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+                    <span class="material-symbols-outlined text-[20px]">event</span>
+                    Events
+                </a>
+                <a href="{{ route('users.announcements') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isAnnouncements ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+                    <span class="material-symbols-outlined text-[20px]">campaign</span>
+                    News
+                </a>
+                <a href="{{ route('users.medical-records') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isMedicalRecords ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+                    <span class="material-symbols-outlined text-[20px]">health_metrics</span>
+                    Medical
+                </a>
+                <a href="{{ route('users.profile') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isProfile ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+                    <span class="material-symbols-outlined text-[20px]">person</span>
+                    Profile
+                </a>
+            </div>
+        </nav>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        const dateOfBirth = document.getElementById('dateOfBirth');
-        const computedAge = document.getElementById('computedAge');
-        function updateAgePreview() {
-            if (!dateOfBirth || !computedAge) {
+        (function () {
+            const sidebar = document.getElementById('usersSidebar');
+            const content = document.getElementById('usersContent');
+            const toggleButton = document.getElementById('usersSidebarToggle');
+            const hamburgerIcon = document.getElementById('hamburgerIcon');
+            const closeIcon = document.getElementById('closeIcon');
+
+            if (!sidebar || !content || !toggleButton || !hamburgerIcon || !closeIcon) {
                 return;
             }
 
-            if (!dateOfBirth.value) {
-                computedAge.value = '';
-                return;
+            const storageKey = 'usersSidebarCollapsed';
+
+            function applySidebarState(collapsed) {
+                if (collapsed) {
+                    sidebar.classList.add('is-collapsed');
+                    content.classList.remove('lg:ml-64');
+                    content.classList.remove('lg:w-[calc(100%-16rem)]');
+                    content.classList.add('lg:ml-20');
+                    content.classList.add('lg:w-[calc(100%-5rem)]');
+                    toggleButton.style.left = '5rem';
+                    // Show hamburger icon, hide X
+                    hamburgerIcon.style.transform = 'scale(1) rotate(0deg)';
+                    hamburgerIcon.style.opacity = '1';
+                    closeIcon.style.transform = 'scale(0) rotate(-90deg)';
+                    closeIcon.style.opacity = '0';
+                } else {
+                    sidebar.classList.remove('is-collapsed');
+                    content.classList.remove('lg:ml-20');
+                    content.classList.remove('lg:w-[calc(100%-5rem)]');
+                    content.classList.add('lg:ml-64');
+                    content.classList.add('lg:w-[calc(100%-16rem)]');
+                    toggleButton.style.left = '16rem';
+                    // Show X icon, hide hamburger
+                    hamburgerIcon.style.transform = 'scale(0) rotate(90deg)';
+                    hamburgerIcon.style.opacity = '0';
+                    closeIcon.style.transform = 'scale(1) rotate(0deg)';
+                    closeIcon.style.opacity = '1';
+                }
             }
 
-            const birthDate = new Date(dateOfBirth.value);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
+            const isCollapsed = localStorage.getItem(storageKey) === '1';
+            applySidebarState(isCollapsed);
 
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
+            toggleButton.addEventListener('click', () => {
+                const nextCollapsed = !sidebar.classList.contains('is-collapsed');
+                applySidebarState(nextCollapsed);
+                localStorage.setItem(storageKey, nextCollapsed ? '1' : '0');
+            });
+        })();
+    </script>
+    <script>
+        (function () {
+            const avatarBtn = document.getElementById('avatarEditBtn');
+            const fileInput = document.getElementById('avatarFileInput');
+            const form = document.getElementById('avatarUploadForm');
+            if (!avatarBtn || !fileInput || !form) return;
 
-            computedAge.value = age >= 0 ? age : '';
-        }
+            avatarBtn.addEventListener('click', function () {
+                fileInput.click();
+            });
 
-        if (dateOfBirth) {
-            dateOfBirth.addEventListener('input', updateAgePreview);
-        }
+            fileInput.addEventListener('change', function () {
+                if (!(fileInput.files && fileInput.files.length)) return;
 
-        updateAgePreview();
+                const fd = new FormData();
+                fd.append('profile_picture', fileInput.files[0]);
+                // include CSRF token
+                const tokenInput = form.querySelector('input[name="_token"]');
+                if (tokenInput) fd.append('_token', tokenInput.value);
+
+                fetch("{{ route('users.profile.avatar') }}", {
+                    method: 'POST',
+                    body: fd,
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }).then(async (res) => {
+                    if (!res.ok) {
+                        const data = await res.json().catch(() => null);
+                        const msg = data && data.errors ? data.errors.join(', ') : 'Upload failed';
+                        alert(msg);
+                        return;
+                    }
+
+                    const data = await res.json();
+                    if (data && data.url) {
+                        // Update avatar image on the page
+                        const img = document.querySelector('#usersContent img[alt="Profile picture"]');
+                        if (img) {
+                            img.src = data.url + (data.url.includes('?') ? '&' : '?') + 'ts=' + Date.now();
+                        }
+
+                        // show a small toast
+                        const toast = document.createElement('div');
+                        toast.className = 'fixed top-4 right-4 z-50 max-w-xs rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg transition-opacity duration-300';
+                        toast.textContent = 'Profile picture updated.';
+                        document.body.appendChild(toast);
+                        setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(()=>toast.remove(),300); }, 1500);
+                    }
+                }).catch((err) => {
+                    console.error(err);
+                    alert('Upload failed.');
+                });
+            });
+        })();
     </script>
 </body>
 </html>

@@ -88,7 +88,7 @@
 
     /* Floated: only when .label-floating (JS: focus, value, or autofill). */
     .auth-field-control.label-floating .auth-field-label {
-        top: 8px;
+        top: 6px;
         left: 14px;
         transform: translateY(0);
         font-size: 0.6875rem;
@@ -130,7 +130,7 @@
     }
 
     .auth-field-control.label-floating .auth-field-input {
-        padding: 1.125rem 16px 0.375rem;
+        padding: 1rem 16px 0.75rem;
     }
 
     .auth-field-input:focus {
@@ -143,7 +143,7 @@
     }
 
     .auth-field-control--affix.label-floating .auth-field-input {
-        padding: 1.125rem 0.35rem 0.375rem 16px;
+        padding: 1rem 0.35rem 0.75rem 16px;
     }
 
     button.auth-field-affix,

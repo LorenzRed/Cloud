@@ -176,12 +176,6 @@
                         </nav>
                         <h1 class="text-3xl font-bold text-text-light dark:text-text-dark">Resident Profile</h1>
                     </div>
-                    <div class="flex gap-3 w-full md:w-auto">
-                        <button id="printRecordBtn" class="flex items-center justify-center rounded-lg h-11 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-wide whitespace-nowrap">
-                            <span class="material-symbols-outlined mr-2">print</span>
-                            <span>Print Record</span>
-                        </button>
-                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -284,8 +278,19 @@
                                         </div>
                                     @endif
 
-                                    <div id="medicalHistoryFormWrapper" class="hidden rounded-lg border border-border-light dark:border-border-dark p-4 bg-background-light dark:bg-background-dark mb-4">
-                                        <form method="POST" action="{{ route('bhw.residents.medical-history.store', $resident) }}" class="space-y-3">
+                                    <div id="medicalHistoryFormWrapper" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+                                        <div class="w-full max-w-2xl rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 shadow-xl max-h-[90vh] overflow-y-auto">
+                                            <div class="flex items-center justify-between gap-3 mb-4">
+                                                <div>
+                                                    <h5 class="text-lg font-bold">Add Medical Record</h5>
+                                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Record health details and calculate BMI automatically when height and weight are provided.</p>
+                                                </div>
+                                                <button type="button" id="closeMedicalHistoryForm" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border-light dark:border-border-dark hover:bg-card-light dark:hover:bg-card-dark" aria-label="Close medical record form">
+                                                    <span class="material-symbols-outlined text-base">close</span>
+                                                </button>
+                                            </div>
+
+                                            <form method="POST" action="{{ route('bhw.residents.medical-history.store', $resident) }}" class="space-y-3">
                                             @csrf
                                             <div>
                                                 <p class="text-sm font-semibold mb-2">Common Barangay Medical Record Types</p>
@@ -308,9 +313,19 @@
                                                 <input id="record_value" name="record_value" value="{{ old('record_value') }}" class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-primary focus:border-primary text-sm" placeholder="Enter value (e.g., Vaccinated, 165 cm, 60 kg, 22.4)" type="text" required />
                                             </div>
 
-                                            <div>
-                                                <label class="block text-sm font-semibold mb-1" for="note">Label / Note (optional)</label>
-                                                <textarea id="note" name="note" rows="2" maxlength="500" class="w-full rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-primary focus:border-primary text-sm" placeholder="Add extra details for the resident...">{{ old('note') }}</textarea>
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 rounded-lg border border-border-light dark:border-border-dark p-3 bg-card-light dark:bg-card-dark">
+                                                <div>
+                                                    <label class="block text-sm font-semibold mb-1" for="height_cm">Height (cm)</label>
+                                                    <input id="height_cm" name="height_cm" value="{{ old('height_cm') }}" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-primary focus:border-primary text-sm" placeholder="e.g., 165" type="number" min="0" step="0.1" />
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-semibold mb-1" for="weight_kg">Weight (kg)</label>
+                                                    <input id="weight_kg" name="weight_kg" value="{{ old('weight_kg') }}" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-primary focus:border-primary text-sm" placeholder="e.g., 60" type="number" min="0" step="0.1" />
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-semibold mb-1" for="bmi_value">BMI</label>
+                                                    <input id="bmi_value" type="text" readonly class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm" placeholder="Auto-calculated" />
+                                                </div>
                                             </div>
 
                                             <div class="flex justify-end">
@@ -319,7 +334,8 @@
                                                     <span>Save and Notify User</span>
                                                 </button>
                                             </div>
-                                        </form>
+                                            </form>
+                                        </div>
                                     </div>
 
                                     <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -471,13 +487,13 @@
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
 
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
+    menuToggle?.addEventListener('click', () => {
+        sidebar?.classList.toggle('active');
+        overlay?.classList.toggle('active');
     });
 
-    overlay.addEventListener('click', () => {
-        sidebar.classList.remove('active');
+    overlay?.addEventListener('click', () => {
+        sidebar?.classList.remove('active');
         overlay.classList.remove('active');
     });
 
@@ -504,22 +520,80 @@
         });
     });
 
-    document.getElementById('printRecordBtn').addEventListener('click', () => {
+    document.getElementById('printRecordBtn')?.addEventListener('click', () => {
         window.print();
     });
 
     const recordTypeInput = document.getElementById('record_type');
+    const recordValueInput = document.getElementById('record_value');
+    const heightInput = document.getElementById('height_cm');
+    const weightInput = document.getElementById('weight_kg');
+    const bmiValueInput = document.getElementById('bmi_value');
     const toggleMedicalHistoryFormBtn = document.getElementById('toggleMedicalHistoryForm');
+    const closeMedicalHistoryFormBtn = document.getElementById('closeMedicalHistoryForm');
     const medicalHistoryFormWrapper = document.getElementById('medicalHistoryFormWrapper');
+    const medicalHistoryModalPanel = medicalHistoryFormWrapper?.querySelector('div');
     const toggleConsultationFormBtn = document.getElementById('toggleConsultationForm');
     const consultationFormWrapper = document.getElementById('consultationFormWrapper');
 
     toggleMedicalHistoryFormBtn?.addEventListener('click', () => {
-        medicalHistoryFormWrapper?.classList.toggle('hidden');
+        medicalHistoryFormWrapper?.classList.remove('hidden');
+        recordTypeInput?.focus();
+    });
+
+    closeMedicalHistoryFormBtn?.addEventListener('click', () => {
+        medicalHistoryFormWrapper?.classList.add('hidden');
+    });
+
+    medicalHistoryFormWrapper?.addEventListener('click', (event) => {
+        if (event.target === medicalHistoryFormWrapper) {
+            medicalHistoryFormWrapper.classList.add('hidden');
+        }
+    });
+
+    medicalHistoryModalPanel?.addEventListener('click', (event) => {
+        event.stopPropagation();
     });
 
     toggleConsultationFormBtn?.addEventListener('click', () => {
         consultationFormWrapper?.classList.toggle('hidden');
+    });
+
+    const calculateBmi = () => {
+        if (!heightInput || !weightInput || !bmiValueInput) {
+            return;
+        }
+
+        const heightCm = parseFloat(heightInput.value);
+        const weightKg = parseFloat(weightInput.value);
+
+        if (!Number.isFinite(heightCm) || !Number.isFinite(weightKg) || heightCm <= 0 || weightKg <= 0) {
+            bmiValueInput.value = '';
+            return;
+        }
+
+        const bmi = weightKg / Math.pow(heightCm / 100, 2);
+        const bmiText = bmi.toFixed(1);
+
+        bmiValueInput.value = bmiText;
+
+        const currentRecordType = (recordTypeInput?.value || '').trim().toLowerCase();
+        if ((!currentRecordType || currentRecordType === 'bmi') && recordTypeInput) {
+            recordTypeInput.value = 'BMI';
+        }
+
+        if ((!currentRecordType || currentRecordType === 'bmi') && recordValueInput) {
+            recordValueInput.value = bmiText;
+        }
+    };
+
+    heightInput?.addEventListener('input', calculateBmi);
+    weightInput?.addEventListener('input', calculateBmi);
+
+    recordTypeInput?.addEventListener('input', () => {
+        if ((recordTypeInput.value || '').trim().toLowerCase() === 'bmi') {
+            calculateBmi();
+        }
     });
 
     document.querySelectorAll('.record-type-chip').forEach((chip) => {
@@ -530,6 +604,7 @@
 
             recordTypeInput.value = chip.getAttribute('data-record-type') || '';
             recordTypeInput.focus();
+            calculateBmi();
         });
     });
 
@@ -562,6 +637,8 @@
     if (hasValidationErrors && (!pageTab || pageTab === 'medical-history')) {
         medicalHistoryFormWrapper?.classList.remove('hidden');
     }
+
+    calculateBmi();
 
     if (pageTab === 'consultations') {
         consultationFormWrapper?.classList.remove('hidden');

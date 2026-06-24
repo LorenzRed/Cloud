@@ -6,7 +6,8 @@
         $isResidents = request()->routeIs('bhw.residents');
         $isRequests = request()->routeIs('bhw.requests');
         $isReports = request()->routeIs('bhw.reports');
-        $isSchedule = request()->routeIs('bhw.schedule');
+        $isEvents = request()->routeIs('bhw.events');
+        $isPosts = request()->routeIs('bhw.posts');
         $isSettings = request()->routeIs('bhw.settings');
 
         $activeLinkClass = 'flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-primary/20';
@@ -66,9 +67,13 @@
                 <span class="{{ $isReports ? $activeIconClass : $inactiveIconClass }}" @if ($isReports) style="font-variation-settings: 'FILL' 1;" @endif>assessment</span>
                 <p class="{{ $isReports ? $activeTextClass : $inactiveTextClass }}">Reports</p>
             </a>
-            <a class="{{ $isSchedule ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.schedule') }}">
-                <span class="{{ $isSchedule ? $activeIconClass : $inactiveIconClass }}" @if ($isSchedule) style="font-variation-settings: 'FILL' 1;" @endif>calendar_month</span>
-                <p class="{{ $isSchedule ? $activeTextClass : $inactiveTextClass }}">Schedule</p>
+            <a class="{{ $isEvents ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.events') }}">
+                <span class="{{ $isEvents ? $activeIconClass : $inactiveIconClass }}" @if ($isEvents) style="font-variation-settings: 'FILL' 1;" @endif>event</span>
+                <p class="{{ $isEvents ? $activeTextClass : $inactiveTextClass }}">Events</p>
+            </a>
+            <a class="{{ $isPosts ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.posts') }}">
+                <span class="{{ $isPosts ? $activeIconClass : $inactiveIconClass }}" @if ($isPosts) style="font-variation-settings: 'FILL' 1;" @endif>sticky_note_2</span>
+                <p class="{{ $isPosts ? $activeTextClass : $inactiveTextClass }}">Posts</p>
             </a>
         </div>
         <div class="flex flex-col gap-4">

@@ -239,12 +239,14 @@
         const confirmOkBtn = document.getElementById('confirmOkBtn');
         const mapLoadingOverlay = document.getElementById('mapLoadingOverlay');
         const mapLoadingText = document.getElementById('mapLoadingText');
+        const barangayBoundaries = @json($barangayBoundaries ?? []);
 
         let map;
         let marker;
         let selectedLat = null;
         let selectedLng = null;
         let detectedBarangay = '';
+        let barangayBoundaryLayerGroup;
         let confirmResolver = null;
         let hasUsedCurrentPosition = false;
 
@@ -308,6 +310,115 @@
             }
         }
 
+        function pointInRing(lat, lng, ring) {
+            let inside = false;
+
+            if (!Array.isArray(ring) || ring.length < 3) {
+                return false;
+            }
+
+            for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+                const current = ring[i] || [];
+                const previous = ring[j] || [];
+                const xi = Number(current[0]);
+                const yi = Number(current[1]);
+                const xj = Number(previous[0]);
+                const yj = Number(previous[1]);
+
+                const intersects = ((yi > lat) !== (yj > lat))
+                    && (lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || 0.0000001) + xi);
+
+                if (intersects) {
+                    inside = !inside;
+                }
+            }
+
+            return inside;
+        }
+
+        function geometryContainsPoint(geometry, lat, lng) {
+            if (!geometry || typeof geometry !== 'object') {
+                return false;
+            }
+
+            if (geometry.type === 'FeatureCollection') {
+                return Array.isArray(geometry.features) && geometry.features.some((feature) => geometryContainsPoint(feature, lat, lng));
+            }
+
+            if (geometry.type === 'Feature') {
+                return geometryContainsPoint(geometry.geometry, lat, lng);
+            }
+
+            if (geometry.type === 'Polygon') {
+                const rings = Array.isArray(geometry.coordinates) ? geometry.coordinates : [];
+                const outerRing = rings[0] || [];
+
+                if (!pointInRing(lat, lng, outerRing)) {
+                    return false;
+                }
+
+                return !rings.slice(1).some((hole) => pointInRing(lat, lng, hole));
+            }
+
+            if (geometry.type === 'MultiPolygon') {
+                return Array.isArray(geometry.coordinates) && geometry.coordinates.some((polygon) => geometryContainsPoint({ type: 'Polygon', coordinates: polygon }, lat, lng));
+            }
+
+            return false;
+        }
+
+        function findBarangayByBoundary(lat, lng) {
+            for (const barangay of barangayBoundaries) {
+                if (geometryContainsPoint(barangay.geometry, lat, lng)) {
+                    return barangay.name || '';
+                }
+            }
+
+            return '';
+        }
+
+        function renderBarangayBoundaries() {
+            if (!map || !Array.isArray(barangayBoundaries)) {
+                return;
+            }
+
+            if (barangayBoundaryLayerGroup) {
+                barangayBoundaryLayerGroup.clearLayers();
+            } else {
+                barangayBoundaryLayerGroup = L.layerGroup().addTo(map);
+            }
+
+            barangayBoundaries.forEach((barangay) => {
+                if (!barangay.geometry) {
+                    return;
+                }
+
+                L.geoJSON(barangay.geometry, {
+                    style: {
+                        color: '#22c55e',
+                        weight: 2,
+                        fillColor: '#86efac',
+                        fillOpacity: 0.25,
+                    },
+                    onEachFeature: (feature, layer) => {
+                        layer.bindTooltip(barangay.name, { sticky: true });
+                    },
+                }).addTo(barangayBoundaryLayerGroup);
+            });
+        }
+
+        function detectBarangayForPoint(lat, lng) {
+            const boundaryBarangay = findBarangayByBoundary(lat, lng);
+
+            if (boundaryBarangay) {
+                detectedBarangay = boundaryBarangay;
+                return detectedBarangay;
+            }
+
+            detectedBarangay = '';
+            return '';
+        }
+
         function updateHiddenFullName() {
             if (!fullNameInput) {
                 return;
@@ -342,6 +453,8 @@
                         attribution: '&copy; OpenStreetMap contributors',
                     }).addTo(map);
 
+                    renderBarangayBoundaries();
+
                     marker = L.marker([lat, lng], { draggable: true }).addTo(map);
 
                     marker.on('dragend', () => {
@@ -361,6 +474,7 @@
                     map.setView([lat, lng], 15);
                     marker.setLatLng([lat, lng]);
                     map.invalidateSize();
+                    renderBarangayBoundaries();
                 }
             }, 120);
         }
@@ -370,6 +484,15 @@
         }
 
         async function reverseGeocodeBarangay(lat, lng) {
+            const boundaryMatch = detectBarangayForPoint(lat, lng);
+            if (boundaryMatch) {
+                return;
+            }
+
+            if (Array.isArray(barangayBoundaries) && barangayBoundaries.length > 0) {
+                return;
+            }
+
             try {
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1`);
                 if (!response.ok) {

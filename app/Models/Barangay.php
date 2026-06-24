@@ -13,6 +13,11 @@ class Barangay extends Model
     protected $fillable = [
         'name',
         'captain_user_id',
+        'boundary_geojson',
+    ];
+
+    protected $casts = [
+        'boundary_geojson' => 'array',
     ];
 
     public function captain(): BelongsTo
