@@ -3540,46 +3540,6 @@ Route::middleware('auth')->group(function () {
         return view('bhw.residents', compact('acceptedResidents', 'unreadByResident'));
     })->name('bhw.residents');
 
-    Route::post('/bhw/residents', function (Request $request) {
-        if (Auth::user()->role !== 'BHW') {
-            return redirect()->route('dashboard');
-        }
-
-        $data = $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'middle_initial' => ['nullable', 'string', 'max:1'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'gender' => ['nullable', 'string', 'max:50'],
-            'birthdate' => ['nullable', 'date'],
-            'household_no' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $middleInitial = strtoupper(trim((string) ($data['middle_initial'] ?? '')));
-        $middleSegment = $middleInitial !== '' ? $middleInitial.'.' : null;
-        $birthdate = filled($data['birthdate'] ?? null) ? Carbon::parse((string) $data['birthdate']) : null;
-        $calculatedAge = PersonAge::ageInYears($birthdate?->toDateString());
-
-        $fullName = trim(implode(' ', array_filter([
-            trim((string) $data['first_name']),
-            $middleSegment,
-            trim((string) $data['last_name']),
-        ])));
-
-        ResidentRequest::create([
-            'user_id' => Auth::id(),
-            'full_name' => $fullName,
-            'barangay' => Auth::user()->barangay ?: 'Unknown',
-            'purok_id' => Auth::user()->purok_id,
-            'contact' => null,
-            'address' => null,
-            'age' => $calculatedAge,
-            'status' => 'accepted',
-            'reviewed_at' => now(),
-        ]);
-
-        return redirect()->route('bhw.residents')->with('status', 'Resident added successfully.');
-    })->name('bhw.residents.store');
-
     Route::get('/bhw/requests', function (Request $request) {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');

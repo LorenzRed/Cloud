@@ -216,31 +216,6 @@
         #emptyRow td::before,
         #noResultsRow td::before { display: none !important; }
     }
-
-    .modal {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 100;
-        align-items: center;
-        justify-content: center;
-    }
-    .modal.active { display: flex; }
-    
-    .modal-content {
-        background-color: white;
-        border-radius: 0.75rem;
-        width: 90%;
-        max-width: 1000px;
-        max-height: 90vh;
-        overflow-y: auto;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    }
-    .dark .modal-content {
-        background-color: #2C2C2C;
-        color: #E0E0E0;
-    }
 </style>
 <script>
     tailwind.config = {
@@ -297,15 +272,11 @@
                         <p class="text-xs sm:text-sm text-text-light/70 dark:text-text-dark/70">View and manage accepted residents in your assigned purok.</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 shrink-0">
-                        <button id="openAddResidentModal" type="button" class="inline-flex items-center justify-center gap-1.5 h-9 px-3 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm hover:opacity-90">
-                            <span class="material-symbols-outlined text-base">person_add</span>
-                            <span>Add Resident</span>
-                            </button>
                         <a href="{{ route('bhw.requests') }}" class="inline-flex items-center justify-center gap-1.5 h-9 px-3 bg-primary text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm hover:opacity-90">
                             <span class="material-symbols-outlined text-base">group_add</span>
                             <span>Requests</span>
-                            </a>
-                        </div>
+                        </a>
+                    </div>
                 </header>
 
                 @if (session('status'))
@@ -426,7 +397,7 @@
                                     <tr id="emptyRow">
                                         <td colspan="6" class="px-4 py-10 text-center">
                                                 <span class="material-symbols-outlined text-4xl text-text-light/50 dark:text-text-dark/50 mb-2 block">person_off</span>
-                                            <p class="text-sm text-text-light/70 dark:text-text-dark/70">No accepted residents yet. Review requests to add residents.</p>
+                                            <p class="text-sm text-text-light/70 dark:text-text-dark/70">No accepted residents yet. Review requests to approve residents.</p>
                                         </td>
                                     </tr>
                                 @endforelse
@@ -454,72 +425,6 @@
         </div>
     </main>
 </div>
-
-<div id="addResidentModal" class="modal" aria-hidden="true">
-    <div class="modal-content p-6 w-[94vw] max-w-[720px]">
-        <form method="POST" action="{{ route('bhw.residents.store') }}">
-            @csrf
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-semibold">Add Resident</h2>
-                <button type="button" id="closeAddResidentModal" class="text-text-light/70 dark:text-text-dark/70">&times;</button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-text-light/80 dark:text-text-dark/80">First name</label>
-                    <input name="first_name" required class="mt-1 block w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-text-light/80 dark:text-text-dark/80">Middle initial</label>
-                    <input name="middle_initial" maxlength="1" class="mt-1 block w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-text-light/80 dark:text-text-dark/80">Last name</label>
-                    <input name="last_name" required class="mt-1 block w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-text-light/80 dark:text-text-dark/80">Gender</label>
-                    <select name="gender" class="mt-1 block w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2">
-                        <option value="">Select</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-text-light/80 dark:text-text-dark/80">Birthdate</label>
-                    <input name="birthdate" type="date" class="mt-1 block w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2" />
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-text-light/80 dark:text-text-dark/80">Household / Purok</label>
-                    <input name="household_no" class="mt-1 block w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2" />
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end gap-2">
-                <button type="button" id="cancelAddResident" class="px-4 py-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark text-text-light/80">Cancel</button>
-                <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 text-white">Save</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-    (function () {
-        const openBtn = document.getElementById('openAddResidentModal');
-        const modal = document.getElementById('addResidentModal');
-        const closeBtn = document.getElementById('closeAddResidentModal');
-        const cancelBtn = document.getElementById('cancelAddResident');
-
-        if (!openBtn || !modal) return;
-
-        openBtn.addEventListener('click', () => modal.classList.add('active'));
-        closeBtn?.addEventListener('click', () => modal.classList.remove('active'));
-        cancelBtn?.addEventListener('click', () => modal.classList.remove('active'));
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.classList.remove('active');
-        });
-    }());
-</script>
 
 <script>
     const menuToggle = document.getElementById('menuToggle');
