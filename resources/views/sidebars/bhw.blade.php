@@ -4,9 +4,9 @@
     @php
         $isDashboard = request()->routeIs('bhw.main');
         $isResidents = request()->routeIs('bhw.residents');
-        $isRequests = request()->routeIs('bhw.requests');
+        $isRequests = request()->routeIs('bhw.requests*');
         $isReports = request()->routeIs('bhw.reports');
-        $isEvents = request()->routeIs('bhw.events');
+        $isAnnouncements = request()->routeIs('bhw.announcements');
         $isPosts = request()->routeIs('bhw.posts');
         $isSettings = request()->routeIs('bhw.settings');
 
@@ -53,23 +53,31 @@
             <a class="{{ $isResidents ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.residents') }}">
                 <span class="{{ $isResidents ? $activeIconClass : $inactiveIconClass }}" @if ($isResidents) style="font-variation-settings: 'FILL' 1;" @endif>groups</span>
                 <p class="{{ $isResidents ? $activeTextClass : $inactiveTextClass }}">Residents</p>
+                @if (($residentMessageUnreadCount ?? 0) > 0)
+                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">New</span>
+                @endif
             </a>
             <a class="{{ $isRequests ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.requests') }}">
                 <span class="{{ $isRequests ? $activeIconClass : $inactiveIconClass }}" @if ($isRequests) style="font-variation-settings: 'FILL' 1;" @endif>group_add</span>
                 <p class="{{ $isRequests ? $activeTextClass : $inactiveTextClass }}">Requests</p>
-                @if (($pendingRequestCount ?? 0) > 0)
-                    <span class="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-red text-white text-[10px] font-bold leading-none">
-                        {{ $pendingRequestCount }}
-                    </span>
-                @endif
+                <div class="ml-auto flex items-center gap-1">
+                    @if (($requestMessageUnreadCount ?? 0) > 0)
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">New</span>
+                    @endif
+                    @if (($pendingRequestCount ?? 0) > 0)
+                        <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-red text-white text-[10px] font-bold leading-none">
+                            {{ $pendingRequestCount }}
+                        </span>
+                    @endif
+                </div>
             </a>
             <a class="{{ $isReports ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.reports') }}">
                 <span class="{{ $isReports ? $activeIconClass : $inactiveIconClass }}" @if ($isReports) style="font-variation-settings: 'FILL' 1;" @endif>assessment</span>
                 <p class="{{ $isReports ? $activeTextClass : $inactiveTextClass }}">Reports</p>
             </a>
-            <a class="{{ $isEvents ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.events') }}">
-                <span class="{{ $isEvents ? $activeIconClass : $inactiveIconClass }}" @if ($isEvents) style="font-variation-settings: 'FILL' 1;" @endif>event</span>
-                <p class="{{ $isEvents ? $activeTextClass : $inactiveTextClass }}">Events</p>
+            <a class="{{ $isAnnouncements ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.announcements') }}">
+                <span class="{{ $isAnnouncements ? $activeIconClass : $inactiveIconClass }}" @if ($isAnnouncements) style="font-variation-settings: 'FILL' 1;" @endif>campaign</span>
+                <p class="{{ $isAnnouncements ? $activeTextClass : $inactiveTextClass }}">Announcements</p>
             </a>
             <a class="{{ $isPosts ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.posts') }}">
                 <span class="{{ $isPosts ? $activeIconClass : $inactiveIconClass }}" @if ($isPosts) style="font-variation-settings: 'FILL' 1;" @endif>sticky_note_2</span>

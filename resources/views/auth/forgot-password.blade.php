@@ -64,22 +64,26 @@
                     </div>
                 </div>
                 <div
-                    class="flex w-full lg:w-1/2 flex-col items-center justify-center bg-background-light dark:bg-background-dark p-4 sm:p-8">
-                    <div class="w-full max-w-md space-y-6">
-                        <div class="flex lg:hidden items-center justify-center gap-2 mb-6">
-                            <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" class="w-10 h-10 sm:w-12 sm:h-12 rounded" />
-                            <h1 class="text-2xl sm:text-3xl font-black font-heading tracking-tight">Bantay Kalusugan</h1>
-                        </div>
-                        <div class="bg-form-bg-light dark:bg-form-bg-dark p-6 sm:p-8 rounded-xl shadow-lg w-full">
-                            <h2 class="text-3xl font-black font-heading text-text-light dark:text-text-dark mb-2">Forgot password</h2>
-                            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Enter the email for your account. If it exists, we will send a verification code.</p>
-                            <form id="forgotForm" class="space-y-5" method="POST" action="{{ route('password.email') }}" novalidate>
+                    class="auth-screen flex w-full lg:w-1/2 flex-col items-center justify-center bg-background-light dark:bg-background-dark sm:p-8">
+                    <div class="auth-screen__inner space-y-4 sm:space-y-6">
+                        <header class="auth-screen__brand lg:hidden">
+                            <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" />
+                            <h1 class="font-heading text-text-light dark:text-text-dark">Bantay Kalusugan</h1>
+                        </header>
+
+                        <div class="auth-panel bg-form-bg-light dark:bg-form-bg-dark p-6 sm:p-8 rounded-xl shadow-lg w-full">
+                            <header class="auth-panel__header flex flex-col gap-0.5 sm:gap-1 mb-4 sm:mb-6">
+                                <h2 class="auth-panel__title text-text-light dark:text-text-dark font-heading sm:text-3xl">Forgot password</h2>
+                                <p class="auth-panel__subtitle sm:text-sm text-gray-500 dark:text-gray-400">Enter the email for your account. If it exists, we will send a verification code.</p>
+                            </header>
+
+                            <form id="forgotForm" class="auth-form sm:space-y-5" method="POST" action="{{ route('password.email') }}" novalidate>
                                 @csrf
                                 <div class="auth-field">
                                     <div @class([
                                         'auth-field-control border bg-background-light dark:bg-background-dark focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary',
                                         'border-border-light dark:border-border-dark' => ! $errors->has('email'),
-                                        'border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('email'),
+                                        'has-field-error border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('email'),
                                     ])>
                                         <input id="emailInput" name="email" type="email" autocomplete="email" maxlength="255"
                                             class="auth-field-input text-text-light dark:text-text-dark"
@@ -87,21 +91,20 @@
                                             aria-invalid="{{ $errors->has('email') ? 'true' : 'false' }}" />
                                         <label for="emailInput" class="auth-field-label">Email</label>
                                     </div>
+                                    <p id="forgotEmailClientError" class="auth-field-bubble {{ $errors->has('email') ? '' : 'hidden' }}" role="alert" aria-live="polite">{{ $errors->first('email') }}</p>
                                 </div>
-                                @error('email')
-                                    <p class="-mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ $message }}</p>
-                                @enderror
-                                <p id="forgotEmailClientError" class="-mt-1 hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
+
                                 <button
-                                    class="w-full bg-primary text-white font-bold h-12 rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/80 dark:focus:ring-offset-background-dark transition-colors duration-300"
+                                    class="auth-btn-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/80 dark:focus:ring-offset-background-dark"
                                     type="submit">
                                     Send verification code
                                 </button>
                             </form>
-                            <p class="text-center text-sm text-border-light dark:text-border-dark mt-6">
-                                <a class="font-bold text-primary hover:underline" href="{{ route('login') }}">Back to login</a>
-                            </p>
                         </div>
+
+                        <p class="auth-footer sm:text-sm text-border-light dark:text-border-dark">
+                            <a class="font-bold text-primary hover:underline" href="{{ route('login') }}">Back to login</a>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -114,25 +117,37 @@
             const forgotEmailClientError = document.getElementById('forgotEmailClientError');
             const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-            emailInput.addEventListener('input', function () {
-                if (forgotEmailClientError) {
-                    forgotEmailClientError.textContent = '';
-                    forgotEmailClientError.classList.add('hidden');
+            function showForgotError(message) {
+                if (!forgotEmailClientError) {
+                    return;
                 }
+
+                if (window.AuthFieldAlerts) {
+                    window.AuthFieldAlerts.show(forgotEmailClientError, message);
+                    window.AuthFieldAlerts.focusField(emailInput);
+                    return;
+                }
+
+                forgotEmailClientError.textContent = message;
+                forgotEmailClientError.classList.remove('hidden');
+            }
+
+            emailInput.addEventListener('input', function () {
+                window.AuthFieldAlerts?.hide(forgotEmailClientError);
             });
 
             forgotForm.addEventListener('submit', function (e) {
+                window.AuthFieldAlerts?.hide(forgotEmailClientError);
+
                 const v = (emailInput.value || '').trim();
                 if (!v) {
                     e.preventDefault();
-                    forgotEmailClientError.textContent = 'Please enter your email address.';
-                    forgotEmailClientError.classList.remove('hidden');
+                    showForgotError('Please enter your email address.');
                     return;
                 }
                 if (!pattern.test(v)) {
                     e.preventDefault();
-                    forgotEmailClientError.textContent = 'Please enter a valid email address.';
-                    forgotEmailClientError.classList.remove('hidden');
+                    showForgotError('Please enter a valid email address.');
                 }
             });
         })();

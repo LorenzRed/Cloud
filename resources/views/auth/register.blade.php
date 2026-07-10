@@ -61,19 +61,25 @@
                             <p class="text-lg font-light">Your community's partner in maternal and child health. Protecting futures, one check-up at a time.</p>
                         </div>
                     </div>
-                    <div class="flex w-full lg:w-1/2 flex-col items-center justify-center bg-background-light dark:bg-background-dark p-4 sm:p-8">
-                        <div class="w-full max-w-md space-y-6">
-                            <div class="flex lg:hidden items-center justify-center gap-2 mb-6">
-                                <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" class="w-10 h-10 sm:w-12 sm:h-12 rounded" />
-                                <h1 class="text-2xl sm:text-3xl font-black font-heading tracking-tight text-text-light dark:text-text-dark">Bantay Kalusugan</h1>
-                            </div>
-                            <div class="bg-form-bg-light dark:bg-form-bg-dark p-6 sm:p-8 rounded-xl shadow-lg w-full">
-                                <div class="flex justify-between items-center mb-6">
-                                    <div class="flex flex-col">
-                                        <h2 class="text-3xl font-black font-heading text-text-light dark:text-text-dark">Create Account</h2>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400">Join us to manage health records.</p>
+                    <div class="auth-screen flex w-full lg:w-1/2 flex-col items-center justify-center bg-background-light dark:bg-background-dark sm:p-8">
+                        <div class="auth-screen__inner space-y-4 sm:space-y-6">
+                            <header class="auth-screen__brand lg:hidden">
+                                <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" />
+                                <h1 class="font-heading text-text-light dark:text-text-dark">Bantay Kalusugan</h1>
+                            </header>
+
+                            <nav class="auth-tabs lg:hidden" aria-label="Authentication">
+                                <a class="auth-tabs__item" href="{{ route('login') }}">Login</a>
+                                <a class="auth-tabs__item is-active" href="{{ route('register') }}">Register</a>
+                            </nav>
+
+                            <div class="auth-panel bg-form-bg-light dark:bg-form-bg-dark p-6 sm:p-8 rounded-xl shadow-lg w-full">
+                                <header class="auth-panel__header flex justify-between items-center mb-4 sm:mb-6">
+                                    <div class="flex flex-col gap-0.5">
+                                        <h2 class="auth-panel__title sm:text-3xl font-black font-heading text-text-light dark:text-text-dark">Create Account</h2>
+                                        <p class="auth-panel__subtitle sm:text-sm text-gray-500 dark:text-gray-400">Join us to manage health records.</p>
                                     </div>
-                                </div>
+                                </header>
                                 <div class="hidden sm:flex mb-6">
                                     <div class="flex h-12 flex-1 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
                                         <a class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 text-text-light dark:text-text-dark text-sm font-bold leading-normal transition-all duration-300" href="{{ route('login') }}">
@@ -84,13 +90,13 @@
                                         </a>
                                     </div>
                                 </div>
-                                <form id="registerForm" class="space-y-5" method="POST" action="{{ route('register.perform') }}" novalidate>
+                                <form id="registerForm" class="auth-form sm:space-y-5" method="POST" action="{{ route('register.perform') }}" novalidate>
                                     @csrf
                                     <div class="auth-field">
                                         <div @class([
                                             'auth-field-control border bg-background-light dark:bg-background-dark focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary',
                                             'border-border-light dark:border-border-dark' => ! $errors->has('email'),
-                                            'border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('email'),
+                                            'has-field-error border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('email'),
                                         ])>
                                             <input id="emailInput" name="email" type="email" autocomplete="email" maxlength="255"
                                                 class="auth-field-input text-text-light dark:text-text-dark"
@@ -98,16 +104,13 @@
                                                 aria-invalid="{{ $errors->has('email') ? 'true' : 'false' }}" />
                                             <label for="emailInput" class="auth-field-label">Email</label>
                                         </div>
+                                        <p id="regEmailClientError" class="auth-field-bubble {{ $errors->has('email') ? '' : 'hidden' }}" role="alert" aria-live="polite">{{ $errors->first('email') }}</p>
                                     </div>
-                                    @error('email')
-                                        <p class="-mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ $message }}</p>
-                                    @enderror
-                                    <p id="regEmailClientError" class="-mt-1 hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
                                     <div class="auth-field">
                                         <div @class([
                                             'auth-field-control auth-field-control--affix border bg-background-light dark:bg-background-dark focus-within:ring-2',
                                             'border-border-light dark:border-border-dark focus-within:ring-primary/50 focus-within:border-primary' => ! $errors->has('password'),
-                                            'border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('password'),
+                                            'has-field-error border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('password'),
                                         ])>
                                             <input id="passwordInput" name="password" type="password" autocomplete="new-password" minlength="8"
                                                 class="auth-field-input text-text-light dark:text-text-dark"
@@ -126,16 +129,13 @@
                                                 </svg>
                                             </button>
                                         </div>
+                                        <p id="regPasswordClientError" class="auth-field-bubble {{ $errors->has('password') ? '' : 'hidden' }}" role="alert" aria-live="polite">{{ $errors->first('password') }}</p>
                                     </div>
-                                    @error('password')
-                                        <p class="text-sm text-red-600 dark:text-red-400" role="alert">{{ $message }}</p>
-                                    @enderror
-                                    <p id="regPasswordClientError" class="hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
                                     <div class="auth-field">
                                         <div @class([
                                             'auth-field-control auth-field-control--affix border bg-background-light dark:bg-background-dark focus-within:ring-2',
                                             'border-border-light dark:border-border-dark focus-within:ring-primary/50 focus-within:border-primary' => ! $errors->has('password'),
-                                            'border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('password'),
+                                            'has-field-error border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('password'),
                                         ])>
                                             <input id="confirmPasswordInput" name="password_confirmation" type="password" autocomplete="new-password" minlength="8"
                                                 class="auth-field-input text-text-light dark:text-text-dark"
@@ -154,26 +154,29 @@
                                                 </svg>
                                             </button>
                                         </div>
+                                        <p id="regConfirmClientError" class="auth-field-bubble hidden" role="alert" aria-live="polite"></p>
                                     </div>
-                                    <p id="regConfirmClientError" class="-mt-1 hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
 
                                     <!-- Terms and Conditions Checkbox -->
-                                    <div class="flex items-start gap-3 mt-6">
-                                        <input id="termsCheckbox" type="checkbox" name="terms_accepted" class="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary cursor-pointer mt-0.5" />
-                                        <label for="termsCheckbox" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed cursor-pointer">
-                                            I agree to the <button type="button" id="termsLink" class="text-primary font-semibold hover:underline">Terms and Conditions</button> and consent to my data being collected and shared as described.
-                                        </label>
+                                    <div class="auth-field auth-terms sm:mt-6">
+                                        <div class="flex items-start gap-2.5 sm:gap-3">
+                                            <input id="termsCheckbox" type="checkbox" name="terms_accepted" class="w-4 h-4 sm:w-5 sm:h-5 rounded border-border-light dark:border-border-dark text-primary cursor-pointer mt-0.5 shrink-0" />
+                                            <label for="termsCheckbox" class="text-sm text-gray-600 dark:text-gray-300 leading-relaxed cursor-pointer">
+                                                I agree to the <button type="button" id="termsLink" class="text-primary font-semibold hover:underline">Terms and Conditions</button> and consent to my data being collected and shared as described.
+                                            </label>
+                                        </div>
+                                        <p id="termsClientError" class="auth-field-bubble auth-field-bubble--block hidden" role="alert" aria-live="polite">You must agree to the terms and conditions.</p>
                                     </div>
-                                    <p id="termsClientError" class="hidden text-sm text-red-600 dark:text-red-400 -mt-2" role="alert">You must agree to the terms and conditions.</p>
 
-                                    <button class="w-full bg-primary text-white font-bold h-12 rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/80 dark:focus:ring-offset-background-dark transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed" type="submit" id="submitBtn" disabled>
+                                    <button class="auth-btn-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/80 dark:focus:ring-offset-background-dark disabled:cursor-not-allowed" type="submit" id="submitBtn" disabled>
                                         Register
                                     </button>
                                 </form>
-                                <p class="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
-                                    Already have an account? <a class="font-bold text-primary hover:underline" href="{{ route('login') }}">Login</a>
-                                </p>
                             </div>
+
+                            <p class="auth-footer sm:text-sm text-gray-500 dark:text-gray-400">
+                                Already have an account? <a class="font-bold text-primary hover:underline" href="{{ route('login') }}">Login</a>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -182,20 +185,22 @@
     </div>
 
     <!-- Terms and Conditions Modal -->
-    <div id="termsModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-black/50 flex items-center justify-center p-4">
-        <div class="bg-form-bg-light dark:bg-form-bg-dark rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div id="termsModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
+        <div class="fixed inset-0 bg-black/50" aria-hidden="true"></div>
+        <div class="fixed inset-0 flex items-center justify-center p-3 sm:p-4 pointer-events-none">
+            <div data-terms-modal-panel class="pointer-events-auto bg-form-bg-light dark:bg-form-bg-dark rounded-lg sm:rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             <!-- Modal Header -->
-            <div class="flex justify-between items-center p-6 border-b border-border-light dark:border-border-dark">
-                <h3 class="text-2xl font-bold font-heading text-text-light dark:text-text-dark">Terms and Conditions</h3>
-                <button type="button" id="closeTermsBtn" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl leading-none">
-                    ×
+            <div class="flex justify-between items-center p-4 sm:p-6 border-b border-border-light dark:border-border-dark">
+                <h3 id="termsModalTitle" class="text-lg sm:text-2xl font-bold font-heading text-text-light dark:text-text-dark">Terms and Conditions</h3>
+                <button type="button" id="closeTermsBtn" class="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200" aria-label="Close terms and conditions">
+                    <span class="material-symbols-outlined text-[20px] sm:text-[22px]">close</span>
                 </button>
             </div>
 
             <!-- Modal Content -->
-            <div class="overflow-y-auto flex-1 p-6 space-y-6 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <div class="overflow-y-auto flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                 <section>
-                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">1. Data Collection and Location Services</h4>
+                    <h4 class="font-bold text-base sm:text-lg text-text-light dark:text-text-dark mb-2 sm:mb-3">1. Data Collection and Location Services</h4>
                     <p>
                         This application collects location data for the purpose of providing maternal and child health services specific to your barangay. By registering, you consent to the collection and processing of your geographic location information to:
                     </p>
@@ -208,7 +213,7 @@
                 </section>
 
                 <section>
-                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">2. Data Sharing and Consent</h4>
+                    <h4 class="font-bold text-base sm:text-lg text-text-light dark:text-text-dark mb-2 sm:mb-3">2. Data Sharing and Consent</h4>
                     <p>
                         You acknowledge and agree that your personal information, including but not limited to:
                     </p>
@@ -224,7 +229,7 @@
                 </section>
 
                 <section>
-                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">3. Legal Basis</h4>
+                    <h4 class="font-bold text-base sm:text-lg text-text-light dark:text-text-dark mb-2 sm:mb-3">3. Legal Basis</h4>
                     <p>
                         The collection and processing of your personal data is authorized under:
                     </p>
@@ -237,7 +242,7 @@
                 </section>
 
                 <section>
-                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">4. Your Rights</h4>
+                    <h4 class="font-bold text-base sm:text-lg text-text-light dark:text-text-dark mb-2 sm:mb-3">4. Your Rights</h4>
                     <p>Under the Data Privacy Act, you have the right to:</p>
                     <ul class="list-disc pl-5 mt-2 space-y-1">
                         <li>Access your personal data</li>
@@ -248,14 +253,14 @@
                 </section>
 
                 <section>
-                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">5. Data Security</h4>
+                    <h4 class="font-bold text-base sm:text-lg text-text-light dark:text-text-dark mb-2 sm:mb-3">5. Data Security</h4>
                     <p>
                         We implement appropriate technical and organizational measures to protect your personal data from unauthorized access, alteration, disclosure, or destruction. Access to your data is restricted to authorized personnel only.
                     </p>
                 </section>
 
                 <section>
-                    <h4 class="font-bold text-lg text-text-light dark:text-text-dark mb-3">6. Consent Acknowledgment</h4>
+                    <h4 class="font-bold text-base sm:text-lg text-text-light dark:text-text-dark mb-2 sm:mb-3">6. Consent Acknowledgment</h4>
                     <p>
                         By checking the "I agree to the Terms and Conditions" box, you explicitly acknowledge that:
                     </p>
@@ -275,13 +280,14 @@
             </div>
 
             <!-- Modal Footer -->
-            <div class="flex gap-3 p-6 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-900">
-                <button type="button" id="acceptTermsBtn" class="flex-1 bg-primary text-white font-bold h-10 rounded-lg hover:bg-primary/90 transition-colors">
+            <div class="flex gap-2 sm:gap-3 p-4 sm:p-6 border-t border-border-light dark:border-border-dark bg-gray-50 dark:bg-gray-900">
+                <button type="button" id="acceptTermsBtn" class="flex-1 bg-primary text-white text-sm sm:text-base font-bold h-9 sm:h-10 rounded-lg hover:bg-primary/90 transition-colors">
                     I Understand and Agree
                 </button>
-                <button type="button" id="declineTermsBtn" class="flex-1 bg-gray-300 dark:bg-gray-600 text-text-light dark:text-text-dark font-bold h-10 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
+                <button type="button" id="declineTermsBtn" class="flex-1 bg-gray-300 dark:bg-gray-600 text-text-light dark:text-text-dark text-sm sm:text-base font-bold h-9 sm:h-10 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors">
                     Close
                 </button>
+            </div>
             </div>
         </div>
     </div>
@@ -296,16 +302,20 @@
         const regConfirmClientError = document.getElementById('regConfirmClientError');
 
         function clearRegClientErrors() {
-            [regEmailClientError, regPasswordClientError, regConfirmClientError].forEach(function (el) {
-                if (el) {
-                    el.textContent = '';
-                    el.classList.add('hidden');
-                }
-            });
+            window.AuthFieldAlerts?.hideAll(registerForm);
         }
 
         function showRegError(el, message) {
-            if (!el) return;
+            if (!el) {
+                return;
+            }
+
+            if (window.AuthFieldAlerts) {
+                window.AuthFieldAlerts.show(el, message);
+                window.AuthFieldAlerts.focusField(el);
+                return;
+            }
+
             el.textContent = message;
             el.classList.remove('hidden');
         }
@@ -314,37 +324,59 @@
 
         registerForm.addEventListener('submit', function (e) {
             clearRegClientErrors();
-            let ok = true;
+
             const emailVal = (emailInput.value || '').trim();
+
             if (!emailVal) {
-                showRegError(regEmailClientError, 'Please enter your email address.');
-                ok = false;
-            } else if (!regEmailPattern.test(emailVal)) {
-                showRegError(regEmailClientError, 'Please enter a valid email address.');
-                ok = false;
-            }
-            const pw = passwordInput.value || '';
-            if (pw.length < 8) {
-                showRegError(regPasswordClientError, 'Password must be at least 8 characters.');
-                ok = false;
-            } else if (!/[a-zA-Z]/.test(pw)) {
-                showRegError(regPasswordClientError, 'Password must include at least one letter.');
-                ok = false;
-            } else if (!/[0-9]/.test(pw)) {
-                showRegError(regPasswordClientError, 'Password must include at least one number.');
-                ok = false;
-            }
-            if (pw !== confirmPasswordInput.value) {
-                showRegError(regConfirmClientError, 'Passwords do not match.');
-                ok = false;
-            }
-            if (!ok) {
                 e.preventDefault();
+                showRegError(regEmailClientError, 'Please enter your email address.');
+                return;
+            }
+
+            if (!regEmailPattern.test(emailVal)) {
+                e.preventDefault();
+                showRegError(regEmailClientError, 'Please enter a valid email address.');
+                return;
+            }
+
+            const pw = passwordInput.value || '';
+
+            if (pw.length < 8) {
+                e.preventDefault();
+                showRegError(regPasswordClientError, 'Password must be at least 8 characters.');
+                return;
+            }
+
+            if (!/[a-zA-Z]/.test(pw)) {
+                e.preventDefault();
+                showRegError(regPasswordClientError, 'Password must include at least one letter.');
+                return;
+            }
+
+            if (!/[0-9]/.test(pw)) {
+                e.preventDefault();
+                showRegError(regPasswordClientError, 'Password must include at least one number.');
+                return;
+            }
+
+            if (pw !== confirmPasswordInput.value) {
+                e.preventDefault();
+                showRegError(regConfirmClientError, 'Passwords do not match.');
+                return;
+            }
+
+            if (!termsCheckbox.checked) {
+                e.preventDefault();
+                showRegError(termsClientError, 'You must agree to the terms and conditions to register.');
             }
         });
 
-        function onRegInput() {
-            clearRegClientErrors();
+        function onRegInput(event) {
+            const bubble = event.target.closest('.auth-field')?.querySelector('.auth-field-bubble[role="alert"]');
+
+            if (bubble) {
+                window.AuthFieldAlerts?.hide(bubble);
+            }
         }
         emailInput.addEventListener('input', onRegInput);
         passwordInput.addEventListener('input', onRegInput);
@@ -380,6 +412,7 @@
 
         // Terms and Conditions Modal
         const termsModal = document.getElementById('termsModal');
+        const termsModalPanel = termsModal?.querySelector('[data-terms-modal-panel]');
         const termsLink = document.getElementById('termsLink');
         const closeTermsBtn = document.getElementById('closeTermsBtn');
         const acceptTermsBtn = document.getElementById('acceptTermsBtn');
@@ -388,52 +421,71 @@
         const termsClientError = document.getElementById('termsClientError');
         const submitBtn = document.getElementById('submitBtn');
 
-        // Open modal when terms link is clicked
-        termsLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            termsModal.classList.remove('hidden');
-        });
-
-        // Close modal functions
-        function closeModal() {
-            termsModal.classList.add('hidden');
-        }
-
-        closeTermsBtn.addEventListener('click', closeModal);
-        declineTermsBtn.addEventListener('click', closeModal);
-
-        // Accept terms - check checkbox and close modal
-        acceptTermsBtn.addEventListener('click', () => {
-            termsCheckbox.checked = true;
-            updateSubmitButton();
-            termsClientError.classList.add('hidden');
-            closeModal();
-        });
-
-        // Close modal when clicking outside of it
-        termsModal.addEventListener('click', (e) => {
-            if (e.target === termsModal) {
-                closeModal();
-            }
-        });
-
-        // Update submit button state based on checkbox
-        function updateSubmitButton() {
-            submitBtn.disabled = !termsCheckbox.checked;
-        }
-
-        termsCheckbox.addEventListener('change', updateSubmitButton);
-
-        // Validate terms before form submission
-        registerForm.addEventListener('submit', function (e) {
-            if (!termsCheckbox.checked) {
-                e.preventDefault();
-                termsClientError.textContent = 'You must agree to the terms and conditions to register.';
-                termsClientError.classList.remove('hidden');
-                clearRegClientErrors();
+        function openTermsModal() {
+            if (!termsModal) {
                 return;
             }
-            termsClientError.classList.add('hidden');
+
+            termsModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeTermsModal() {
+            if (!termsModal) {
+                return;
+            }
+
+            termsModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        termsLink?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openTermsModal();
+        });
+
+        closeTermsBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeTermsModal();
+        });
+
+        declineTermsBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeTermsModal();
+        });
+
+        acceptTermsBtn?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (termsCheckbox) {
+                termsCheckbox.checked = true;
+            }
+
+            updateSubmitButton();
+            termsClientError?.classList.add('hidden');
+            closeTermsModal();
+        });
+
+        termsModalPanel?.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        function updateSubmitButton() {
+            if (submitBtn && termsCheckbox) {
+                submitBtn.disabled = !termsCheckbox.checked;
+            }
+        }
+
+        termsCheckbox?.addEventListener('change', () => {
+            updateSubmitButton();
+
+            if (termsCheckbox?.checked) {
+                window.AuthFieldAlerts?.hide(termsClientError);
+            }
         });
     </script>
 </body>

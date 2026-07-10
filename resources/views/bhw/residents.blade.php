@@ -9,14 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
 <style>
     .material-symbols-outlined {
-        font-variation-settings:
-        'FILL' 0,
-        'wght' 400,
-        'GRAD' 0,
-        'opsz' 24
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
     }
-    
-    /* Sidebar responsive styles */
+
     @media (max-width: 768px) {
         #sidebar {
             transform: translateX(-100%);
@@ -25,69 +20,18 @@
             z-index: 40;
             height: 100vh;
         }
-        
-        #sidebar.active {
-            transform: translateX(0);
-        }
-        
+        #sidebar.active { transform: translateX(0); }
         #overlay {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            inset: 0;
             background-color: rgba(0, 0, 0, 0.5);
             z-index: 30;
         }
-        
-        #overlay.active {
-            display: block;
-        }
-        
-        main {
-            width: 100%;
-        }
+        #overlay.active { display: block; }
+        main { width: 100%; }
     }
-    
-    /* Page content styles */
-    .page-content {
-        height: 100%;
-        overflow-y: auto;
-    }
-    
-    /* Custom scrollbar */
-    .page-content::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    .page-content::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-    
-    .page-content::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 10px;
-    }
-    
-    .page-content::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
-    }
-    
-    .dark .page-content::-webkit-scrollbar-track {
-        background: #2c2c2c;
-    }
-    
-    .dark .page-content::-webkit-scrollbar-thumb {
-        background: #555;
-    }
-    
-    .dark .page-content::-webkit-scrollbar-thumb:hover {
-        background: #777;
-    }
-    
-    /* Ensure main content takes full height */
+
     html, body {
         height: 100%;
         margin: 0;
@@ -95,13 +39,6 @@
         overflow: hidden;
     }
     
-    /* Active navigation item styling */
-    .nav-item.active {
-        background-color: rgba(74, 144, 226, 0.2);
-        color: #4A90E2;
-    }
-    
-    /* Main layout fixes */
     .main-container {
         height: 100vh;
         display: flex;
@@ -112,25 +49,184 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        min-height: 0;
     }
-    
-    /* Modal styles */
+
+    .residents-page-content {
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .residents-page-layout {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        max-width: 80rem;
+        margin: 0 auto;
+    }
+
+    .residents-page-header { flex-shrink: 0; }
+
+    .residents-panel {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .residents-toolbar {
+        flex-shrink: 0;
+        margin-bottom: 0.75rem;
+    }
+
+    #filtersPanel {
+        display: none;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    #filtersPanel.open { display: flex; }
+    @media (min-width: 768px) {
+        #filtersPanel { display: flex; }
+        #toggleFiltersBtn { display: none; }
+    }
+    @media (max-width: 767px) {
+        #filtersPanel {
+            padding-top: 0.5rem;
+            border-top: 1px solid #EAEAEA;
+        }
+        .dark #filtersPanel { border-top-color: #3D3D3D; }
+        #filtersPanel.collapsed:not(.open) { display: none; }
+    }
+
+    .residents-filter-control {
+        height: 2.25rem;
+        min-width: 0;
+        padding: 0 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid #EAEAEA;
+        background: #FFFFFF;
+        font-size: 0.8125rem;
+    }
+    .dark .residents-filter-control {
+        border-color: #3D3D3D;
+        background: #1A1A1A;
+        color: #E0E0E0;
+    }
+    @media (min-width: 768px) {
+        .residents-filter-control { width: auto; min-width: 7.5rem; }
+    }
+    @media (max-width: 767px) {
+        .residents-filter-control { width: 100%; }
+    }
+
+    #toggleFiltersBtn.active {
+        border-color: #4A90E2;
+        background: rgba(74, 144, 226, 0.1);
+        color: #4A90E2;
+    }
+
+    .residents-table-wrap {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 0.5rem;
+        border: 1px solid #EAEAEA;
+    }
+    .dark .residents-table-wrap { border-color: #3D3D3D; }
+
+    .residents-table-wrap thead th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #FFFFFF;
+    }
+    .dark .residents-table-wrap thead th { background: #2C2C2C; }
+
+    .residents-list-footer {
+        flex-shrink: 0;
+        padding-top: 0.75rem;
+        margin-top: 0.75rem;
+        border-top: 1px solid #EAEAEA;
+    }
+    .dark .residents-list-footer { border-top-color: #3D3D3D; }
+
+    @media (max-width: 767px) {
+        .residents-table-wrap { border: none; }
+        .residents-table-wrap table { min-width: 0 !important; }
+        .residents-table-wrap thead { display: none; }
+        .residents-table-wrap tbody { display: flex; flex-direction: column; gap: 0.625rem; }
+        .residents-table-wrap .resident-row {
+            display: block;
+            border: 1px solid #EAEAEA;
+            border-radius: 0.75rem;
+            background: #FFFFFF;
+            padding: 0.75rem 0.875rem;
+        }
+        .dark .residents-table-wrap .resident-row {
+            border-color: #3D3D3D;
+            background: #2C2C2C;
+        }
+        .residents-table-wrap .resident-row td {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.375rem 0;
+            border: none;
+            font-size: 0.8125rem;
+        }
+        .residents-table-wrap .resident-row td::before {
+            content: attr(data-label);
+            flex-shrink: 0;
+            width: 36%;
+            max-width: 6.5rem;
+            font-size: 0.625rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: rgba(74, 74, 74, 0.55);
+        }
+        .dark .residents-table-wrap .resident-row td::before { color: rgba(224, 224, 224, 0.55); }
+        .residents-table-wrap .resident-row td[data-label="Resident"] {
+            display: block;
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
+            border-bottom: 1px solid #EAEAEA;
+        }
+        .dark .residents-table-wrap .resident-row td[data-label="Resident"] { border-bottom-color: #3D3D3D; }
+        .residents-table-wrap .resident-row td[data-label="Resident"]::before { display: none; }
+        .residents-table-wrap .resident-row.hidden { display: none !important; }
+        #emptyRow td,
+        #noResultsRow td {
+            display: block !important;
+            border: 1px solid #EAEAEA;
+            border-radius: 0.75rem;
+            background: #FFFFFF;
+        }
+        .dark #emptyRow td,
+        .dark #noResultsRow td { border-color: #3D3D3D; background: #2C2C2C; }
+        #emptyRow td::before,
+        #noResultsRow td::before { display: none !important; }
+    }
+
     .modal {
         display: none;
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        inset: 0;
         background-color: rgba(0, 0, 0, 0.5);
         z-index: 100;
         align-items: center;
         justify-content: center;
     }
-    
-    .modal.active {
-        display: flex;
-    }
+    .modal.active { display: flex; }
     
     .modal-content {
         background-color: white;
@@ -141,37 +237,9 @@
         overflow-y: auto;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     }
-    
     .dark .modal-content {
         background-color: #2C2C2C;
         color: #E0E0E0;
-    }
-    
-    /* Request item styles */
-    .request-item {
-        transition: all 0.2s ease;
-    }
-    
-    .request-item:hover {
-        background-color: rgba(74, 144, 226, 0.05);
-    }
-    
-    .dark .request-item:hover {
-        background-color: rgba(74, 144, 226, 0.1);
-    }
-    
-    /* Tabs styling */
-    .tab {
-        padding: 0.5rem 1rem;
-        border-bottom: 2px solid transparent;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-    
-    .tab.active {
-        color: #4A90E2;
-        border-bottom-color: #4A90E2;
-        font-weight: 600;
     }
 </style>
 <script>
@@ -193,15 +261,7 @@
                     "border-light": "#EAEAEA",
                     "border-dark": "#3D3D3D",
                 },
-                fontFamily: {
-                    "display": ["Manrope", "sans-serif"]
-                },
-                borderRadius: {
-                    "DEFAULT": "0.5rem",
-                    "lg": "0.75rem",
-                    "xl": "1rem",
-                    "full": "9999px"
-                },
+                fontFamily: { "display": ["Manrope", "sans-serif"] },
             },
         },
     }
@@ -209,118 +269,192 @@
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
 <div class="main-container">
-    <!-- Mobile menu button -->
     <div class="md:hidden fixed top-4 left-4 z-50">
         <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
             <span class="material-symbols-outlined">menu</span>
         </button>
     </div>
     
-    <!-- Overlay for mobile -->
-    <div id="overlay" class=""></div>
-    
+    <div id="overlay"></div>
     @include('sidebars.bhw')
     
-    <!-- Main content -->
-    <main class="flex-1 p-8 overflow-hidden md:ml-0">
-        <div class="page-content">
-            <div class="w-full max-w-7xl mx-auto">
-                <header class="flex flex-wrap justify-between items-center gap-4 mb-6">
-                    <div class="flex flex-col gap-1">
-                        <h1 class="text-3xl font-bold leading-tight">Residents Masterlist</h1>
-                        <p class="text-base font-normal leading-normal text-text-light/70 dark:text-text-dark/70">View and manage all residents in your community.</p>
+    <main class="flex-1 p-4 md:p-8 overflow-hidden md:ml-0 max-md:pt-16 min-h-0">
+        <div class="residents-page-content">
+            <div class="residents-page-layout">
+                @php
+                    $totalResidents = $acceptedResidents->count();
+                    $purokOptions = $acceptedResidents
+                        ->map(fn ($r) => trim((string) ($r->purok?->name ?? $r->user?->purok?->name ?? '')))
+                        ->filter()
+                        ->unique()
+                        ->sort()
+                        ->values();
+                @endphp
+
+                <header class="residents-page-header flex flex-wrap justify-between items-start gap-3 mb-4 max-md:pl-11">
+                    <div class="flex flex-col gap-0.5 min-w-0">
+                        <h1 class="text-xl sm:text-2xl font-bold leading-tight">Residents Masterlist</h1>
+                        <p class="text-xs sm:text-sm text-text-light/70 dark:text-text-dark/70">View and manage accepted residents in your assigned purok.</p>
                     </div>
-                        <div class="flex items-center gap-2">
-                            <button id="openAddResidentModal" type="button" class="inline-flex items-center justify-center gap-2 h-10 px-4 bg-green-600 text-white rounded-lg text-sm font-bold leading-normal tracking-wide shadow-sm hover:opacity-90">
-                                <span class="material-symbols-outlined text-lg">person_add</span>
-                                <span class="truncate">Add Resident</span>
+                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                        <button id="openAddResidentModal" type="button" class="inline-flex items-center justify-center gap-1.5 h-9 px-3 bg-green-600 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm hover:opacity-90">
+                            <span class="material-symbols-outlined text-base">person_add</span>
+                            <span>Add Resident</span>
                             </button>
-                            <a href="{{ route('bhw.requests') }}" class="inline-flex items-center justify-center gap-2 h-10 px-4 bg-primary text-white rounded-lg text-sm font-bold leading-normal tracking-wide shadow-sm hover:opacity-90">
-                                <span class="material-symbols-outlined text-lg">group_add</span>
-                                <span class="truncate">Open Requests</span>
+                        <a href="{{ route('bhw.requests') }}" class="inline-flex items-center justify-center gap-1.5 h-9 px-3 bg-primary text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm hover:opacity-90">
+                            <span class="material-symbols-outlined text-base">group_add</span>
+                            <span>Requests</span>
                             </a>
                         </div>
                 </header>
-                <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-6">
-                    <div class="flex flex-col md:flex-row gap-4 mb-4">
-                        <div class="relative flex-grow">
-                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-light/50 dark:text-text-dark/50">search</span>
-                            <input class="w-full h-10 pl-10 pr-4 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-primary focus:border-primary text-text-light dark:text-text-dark placeholder:text-text-light/50 dark:placeholder:text-text-dark/50" placeholder="Search by name..." type="text"/>
+
+                @if (session('status'))
+                    <div class="mb-3 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/30 dark:text-green-200 shrink-0">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
+                <div class="residents-panel bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-3 sm:p-4 flex-1 min-h-0">
+                    <div class="residents-toolbar flex flex-wrap items-center gap-2">
+                        <div class="relative flex-1 min-w-[10rem]">
+                            <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-text-light/50 dark:text-text-dark/50 text-lg">search</span>
+                            <input id="residentSearch" type="search" placeholder="Search by name, family, or contact..." class="w-full h-9 pl-9 pr-3 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-1 focus:ring-primary/40 focus:border-primary text-sm"/>
                         </div>
-                        <div class="flex gap-2">
-                            <select class="h-10 w-full md:w-auto rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-primary focus:border-primary text-text-light dark:text-text-dark">
-                                <option>All Status</option>
-                                <option>At Risk</option>
-                                <option>Needs Follow-up</option>
-                                <option>Normal</option>
-                                <option>Inactive</option>
+                        <button type="button" id="toggleFiltersBtn" class="md:hidden h-9 px-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-xs font-semibold inline-flex items-center gap-1.5 shrink-0" aria-expanded="false" aria-controls="filtersPanel">
+                            <span class="material-symbols-outlined text-base">tune</span>
+                            Filters
+                        </button>
+                        <div id="filtersPanel" class="collapsed w-full md:w-auto">
+                            <select id="purokFilter" class="residents-filter-control">
+                                <option value="">All puroks</option>
+                                @foreach ($purokOptions as $purokName)
+                                    <option value="{{ $purokName }}">{{ $purokName }}</option>
+                                @endforeach
                             </select>
-                            <button class="flex items-center justify-center gap-2 h-10 px-4 bg-transparent text-text-light/70 dark:text-text-dark/70 border border-border-light dark:border-border-dark rounded-lg text-sm font-medium hover:bg-background-light dark:hover:bg-background-dark">
-                                <span class="material-symbols-outlined text-lg">filter_list</span>
-                                <span>Filters</span>
+                            <select id="ageGroupFilter" class="residents-filter-control">
+                                <option value="">All ages</option>
+                                <option value="child">Child (0–5)</option>
+                                <option value="youth">Youth (6–17)</option>
+                                <option value="adult">Adult (18–59)</option>
+                                <option value="senior">Senior (60+)</option>
+                            </select>
+                            <select id="genderFilter" class="residents-filter-control">
+                                <option value="">All genders</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
+                            <button type="button" id="clearFiltersBtn" class="h-9 px-3 rounded-lg border border-border-light dark:border-border-dark text-xs font-semibold text-text-light/70 dark:text-text-dark/70 hover:bg-background-light dark:hover:bg-background-dark shrink-0">
+                                Clear
                             </button>
                         </div>
                     </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full">
-                            <thead>
+
+                    <div class="residents-table-wrap">
+                        <table class="w-full md:min-w-[760px]" id="residentsTable">
+                            <thead class="hidden md:table-header-group">
                                 <tr class="border-b border-border-light dark:border-border-dark">
-                                    <th class="px-4 py-3 text-left text-text-light/70 dark:text-text-dark/70 text-xs font-medium uppercase tracking-wider">Patient Name</th>
-                                    <th class="px-4 py-3 text-left text-text-light/70 dark:text-text-dark/70 text-xs font-medium uppercase tracking-wider">Age</th>
-                                    <th class="px-4 py-3 text-left text-text-light/70 dark:text-text-dark/70 text-xs font-medium uppercase tracking-wider">Last Consultation</th>
-                                    <th class="px-4 py-3 text-left text-text-light/70 dark:text-text-dark/70 text-xs font-medium uppercase tracking-wider">Health Status</th>
-                                    <th class="px-4 py-3 text-left text-text-light/70 dark:text-text-dark/70 text-xs font-medium uppercase tracking-wider"></th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Resident</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Family</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70 hidden lg:table-cell">Purok</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Age</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70 hidden sm:table-cell">Last consultation</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70"></th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="residentsTableBody">
                                 @forelse ($acceptedResidents as $resident)
-                                    <tr class="border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
-                                        <td class="h-[72px] px-4 py-2 text-text-light dark:text-text-dark text-sm font-medium">{{ $resident->full_name }}</td>
-                                        <td class="h-[72px] px-4 py-2 text-text-light/70 dark:text-text-dark/70 text-sm">{{ $resident->age ?? 'N/A' }}</td>
-                                        <td class="h-[72px] px-4 py-2 text-text-light/70 dark:text-text-dark/70 text-sm">{{ $resident->reviewed_at ? $resident->reviewed_at->format('M d, Y') : 'N/A' }}</td>
-                                        <td class="h-[72px] px-4 py-2">
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300">Accepted</span>
+                                    @php
+                                        $unreadCount = (int) ($unreadByResident[$resident->user_id] ?? 0);
+                                        $familyNumber = trim((string) ($resident->family_number ?? $resident->user?->family_number ?? ''));
+                                        $purokName = trim((string) ($resident->purok?->name ?? $resident->user?->purok?->name ?? ''));
+                                        $gender = trim((string) ($resident->user?->gender ?? ''));
+                                        $age = (int) ($resident->age ?? 0);
+                                        $ageGroup = match (true) {
+                                            $age <= 5 => 'child',
+                                            $age <= 17 => 'youth',
+                                            $age >= 60 => 'senior',
+                                            default => 'adult',
+                                        };
+                                        $nameParts = preg_split('/\s+/', trim($resident->full_name)) ?: [];
+                                        $initials = strtoupper(substr($nameParts[0] ?? 'R', 0, 1).substr($nameParts[count($nameParts) - 1] ?? 'R', 0, 1));
+                                        $lastConsultation = filled($resident->last_consultation_at ?? null)
+                                            ? \Carbon\Carbon::parse($resident->last_consultation_at)->format('M d, Y')
+                                            : null;
+                                        $registeredLabel = $resident->reviewed_at?->format('M d, Y') ?? 'N/A';
+                                    @endphp
+                                    <tr
+                                        class="resident-row border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark"
+                                        data-search="{{ strtolower(implode(' ', array_filter([$resident->full_name, $familyNumber, $resident->contact, $purokName]))) }}"
+                                        data-purok="{{ $purokName }}"
+                                        data-age-group="{{ $ageGroup }}"
+                                        data-gender="{{ $gender }}"
+                                    >
+                                        <td class="px-4 py-3 text-sm font-medium" data-label="Resident">
+                                            <div class="flex items-center gap-3 min-w-0 md:text-left text-right ml-auto md:ml-0">
+                                                <div class="size-9 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">{{ $initials }}</div>
+                                                <div class="min-w-0">
+                                                    <div class="flex flex-wrap items-center justify-end md:justify-start gap-2">
+                                                        <p class="font-semibold text-text-light dark:text-text-dark truncate">{{ $resident->full_name }}</p>
+                                                        @if ($unreadCount > 0)
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200 shrink-0">{{ $unreadCount }} new</span>
+                                                        @endif
+                                                    </div>
+                                                    <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5 truncate">{{ $gender !== '' ? $gender : '—' }} · {{ $purokName !== '' ? $purokName : 'No purok' }}</p>
+                                                </div>
+                                            </div>
                                         </td>
-                                        <td class="h-[72px] px-4 py-2 text-primary text-sm font-bold text-right">
-                                            <a href="{{ route('bhw.residents.profile', $resident) }}" class="hover:underline">View Profile</a>
+                                        <td class="px-4 py-3 text-sm text-text-light/70 dark:text-text-dark/70" data-label="Family">
+                                            <span class="md:block text-right md:text-left">{{ $familyNumber !== '' ? $familyNumber : '—' }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-sm text-text-light/70 dark:text-text-dark/70 hidden lg:table-cell" data-label="Purok">
+                                            {{ $purokName !== '' ? $purokName : '—' }}
+                                        </td>
+                                        <td class="px-4 py-3 text-sm whitespace-nowrap" data-label="Age">
+                                            <span class="md:block text-right md:text-left font-medium">{{ $age > 0 ? $age.' yrs' : 'N/A' }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-sm text-text-light/70 dark:text-text-dark/70 hidden sm:table-cell whitespace-nowrap" data-label="Last consultation">
+                                            <span class="md:block text-right md:text-left">{{ $lastConsultation ?? $registeredLabel }}</span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right" data-label="">
+                                            <a href="{{ route('bhw.residents.profile', $resident) }}" class="inline-flex items-center gap-1 text-primary text-sm font-semibold hover:underline">
+                                                View
+                                                <span class="material-symbols-outlined text-base md:hidden">chevron_right</span>
+                                            </a>
                                         </td>
                                     </tr>
                                 @empty
-                                    <tr>
-                                        <td colspan="5" class="h-[72px] px-4 py-2 text-center">
-                                            <div class="py-8">
+                                    <tr id="emptyRow">
+                                        <td colspan="6" class="px-4 py-10 text-center">
                                                 <span class="material-symbols-outlined text-4xl text-text-light/50 dark:text-text-dark/50 mb-2 block">person_off</span>
-                                                <p class="text-text-light/70 dark:text-text-dark/70 text-sm">No accepted residents yet. Review requests to add residents.</p>
-                                            </div>
+                                            <p class="text-sm text-text-light/70 dark:text-text-dark/70">No accepted residents yet. Review requests to add residents.</p>
                                         </td>
                                     </tr>
                                 @endforelse
+                                <tr id="noResultsRow" class="hidden">
+                                    <td colspan="6" class="px-4 py-10 text-center">
+                                        <span class="material-symbols-outlined text-4xl text-text-light/50 dark:text-text-dark/50 mb-2 block">search_off</span>
+                                        <p class="text-sm text-text-light/70 dark:text-text-dark/70">No residents match your search or filters.</p>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
-                    <nav aria-label="Pagination" class="flex items-center justify-between pt-4">
-                        <div class="hidden sm:block">
-                            <p class="text-sm text-text-light/70 dark:text-text-dark/70">
+
+                    <nav class="residents-list-footer" aria-label="Results">
+                        <p class="text-xs sm:text-sm text-text-light/70 dark:text-text-dark/70">
                                 Showing
-                                <span class="font-medium text-text-light dark:text-text-dark">1</span>
-                                to
-                                <span class="font-medium text-text-light dark:text-text-dark">5</span>
+                            <span id="statVisible" class="font-semibold text-text-light dark:text-text-dark">{{ number_format($totalResidents) }}</span>
                                 of
-                                <span class="font-medium text-text-light dark:text-text-dark">42</span>
-                                results
+                            <span class="font-semibold text-text-light dark:text-text-dark">{{ number_format($totalResidents) }}</span>
+                            residents
                             </p>
-                        </div>
-                        <div class="flex flex-1 justify-between sm:justify-end gap-2">
-                            <a class="relative inline-flex items-center rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-2 text-sm font-medium text-text-light/70 dark:text-text-dark/70 hover:bg-background-light dark:hover:bg-background-dark" href="#">Previous</a>
-                            <a class="relative inline-flex items-center rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-2 text-sm font-medium text-text-light/70 dark:text-text-dark/70 hover:bg-background-light dark:hover:bg-background-dark" href="#">Next</a>
-                        </div>
                     </nav>
                 </div>
             </div>
         </div>
     </main>
 </div>
-<!-- Add Resident Modal -->
+
 <div id="addResidentModal" class="modal" aria-hidden="true">
     <div class="modal-content p-6 w-[94vw] max-w-[720px]">
         <form method="POST" action="{{ route('bhw.residents.store') }}">
@@ -376,12 +510,11 @@
         const closeBtn = document.getElementById('closeAddResidentModal');
         const cancelBtn = document.getElementById('cancelAddResident');
 
-        if (! openBtn || ! modal) return;
+        if (!openBtn || !modal) return;
 
         openBtn.addEventListener('click', () => modal.classList.add('active'));
         closeBtn?.addEventListener('click', () => modal.classList.remove('active'));
         cancelBtn?.addEventListener('click', () => modal.classList.remove('active'));
-
         modal.addEventListener('click', (e) => {
             if (e.target === modal) modal.classList.remove('active');
         });
@@ -389,20 +522,82 @@
 </script>
 
 <script>
-    // Toggle sidebar on mobile
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
-    
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
+    const toggleFiltersBtn = document.getElementById('toggleFiltersBtn');
+    const filtersPanel = document.getElementById('filtersPanel');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const residentSearch = document.getElementById('residentSearch');
+    const purokFilter = document.getElementById('purokFilter');
+    const ageGroupFilter = document.getElementById('ageGroupFilter');
+    const genderFilter = document.getElementById('genderFilter');
+    const statVisible = document.getElementById('statVisible');
+    const noResultsRow = document.getElementById('noResultsRow');
+    const residentRows = Array.from(document.querySelectorAll('.resident-row'));
+
+    toggleFiltersBtn?.addEventListener('click', () => {
+        const isOpen = filtersPanel?.classList.contains('open');
+        filtersPanel?.classList.toggle('open', !isOpen);
+        filtersPanel?.classList.toggle('collapsed', isOpen);
+        toggleFiltersBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        toggleFiltersBtn.classList.toggle('active', !isOpen);
     });
-    
-    overlay.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
+
+    if (window.innerWidth >= 768) {
+        filtersPanel?.classList.add('open');
+        filtersPanel?.classList.remove('collapsed');
+    }
+
+    menuToggle?.addEventListener('click', () => {
+        sidebar?.classList.toggle('active');
+        overlay?.classList.toggle('active');
     });
+    overlay?.addEventListener('click', () => {
+        sidebar?.classList.remove('active');
+        overlay?.classList.remove('active');
+    });
+
+    function filterResidents() {
+        const query = (residentSearch?.value || '').trim().toLowerCase();
+        const purok = purokFilter?.value || '';
+        const ageGroup = ageGroupFilter?.value || '';
+        const gender = genderFilter?.value || '';
+        let visibleCount = 0;
+
+        residentRows.forEach((row) => {
+            const matchesSearch = !query || (row.dataset.search || '').includes(query);
+            const matchesPurok = !purok || row.dataset.purok === purok;
+            const matchesAgeGroup = !ageGroup || row.dataset.ageGroup === ageGroup;
+            const matchesGender = !gender || row.dataset.gender === gender;
+            const visible = matchesSearch && matchesPurok && matchesAgeGroup && matchesGender;
+
+            row.classList.toggle('hidden', !visible);
+            if (visible) visibleCount += 1;
+        });
+
+        if (noResultsRow) {
+            noResultsRow.classList.toggle('hidden', visibleCount > 0 || residentRows.length === 0);
+        }
+        if (statVisible) {
+            statVisible.textContent = String(visibleCount);
+        }
+    }
+
+    function clearFilters() {
+        if (residentSearch) residentSearch.value = '';
+        if (purokFilter) purokFilter.value = '';
+        if (ageGroupFilter) ageGroupFilter.value = '';
+        if (genderFilter) genderFilter.value = '';
+        filterResidents();
+    }
+
+    residentSearch?.addEventListener('input', filterResidents);
+    purokFilter?.addEventListener('change', filterResidents);
+    ageGroupFilter?.addEventListener('change', filterResidents);
+    genderFilter?.addEventListener('change', filterResidents);
+    clearFiltersBtn?.addEventListener('click', clearFilters);
+    filterResidents();
 </script>
 </body>
 </html>

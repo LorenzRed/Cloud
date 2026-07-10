@@ -1,0 +1,28 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('resident_bhw_messages', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('resident_user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('bhw_user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('sender_id')->constrained('users')->cascadeOnDelete();
+            $table->text('message');
+            $table->timestamp('read_at')->nullable();
+            $table->timestamps();
+
+            $table->index(['resident_user_id', 'bhw_user_id', 'created_at'], 'rbhw_msg_thread_idx');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('resident_bhw_messages');
+    }
+};

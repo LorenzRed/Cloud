@@ -115,8 +115,8 @@
                     @endif
 
                     <div id="barangayModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/50 px-4 py-6">
-                        <div class="w-full max-w-5xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl bg-white dark:bg-background-dark border border-border-light dark:border-border-dark shadow-2xl">
-                            <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4 sticky top-0 bg-white dark:bg-background-dark z-10">
+                        <div class="w-full max-w-6xl h-[calc(100vh-3rem)] overflow-hidden rounded-2xl bg-white dark:bg-background-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
+                            <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4 bg-white dark:bg-background-dark z-10">
                                 <div>
                                     <h3 id="barangayFormTitle" class="text-text-light dark:text-text-dark text-lg font-semibold">Add Barangay Boundary</h3>
                                     <p id="barangayFormSubtitle" class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Draw the barangay boundary on the map and save it here.</p>
@@ -126,46 +126,41 @@
                                 </button>
                             </div>
 
-                            <div class="p-6">
-                                <div class="mb-5 overflow-hidden rounded-xl border border-border-light dark:border-border-dark">
-                                    <div class="flex items-center justify-between gap-3 border-b border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 py-3">
-                                        <div>
-                                            <p class="text-sm font-semibold text-text-light dark:text-text-dark">Barangay boundary map</p>
-                                            <p class="text-xs text-text-light/70 dark:text-text-dark/70">Search a place, then draw a polygon to save the barangay range.</p>
-                                        </div>
-                                    </div>
-                                    <div class="border-b border-border-light dark:border-border-dark bg-white dark:bg-card-dark px-4 py-3 relative">
-                                        <div class="flex flex-col gap-2">
+                            <div class="grid flex-1 min-h-0 gap-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,1fr)]">
+                                <div class="border-b lg:border-b-0 lg:border-r border-border-light dark:border-border-dark min-h-0">
+                                    <div id="barangayBoundaryMap" class="h-full min-h-[45vh] lg:min-h-0 w-full"></div>
+                                </div>
+
+                                <div class="p-6 flex flex-col min-h-0 overflow-y-auto">
+                                    <form id="barangayForm" method="POST" action="{{ route('lgu.barangays.store') }}" class="flex flex-col gap-4">
+                                        @csrf
+                                        <input id="barangay_id" name="barangay_id" type="hidden" value="{{ old('barangay_id') }}" />
+                                        <input id="boundary_geojson" name="boundary_geojson" type="hidden" value="{{ old('boundary_geojson') }}" required />
+
+                                        <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 space-y-4 relative">
                                             <div class="relative">
-                                                <input id="barangayMapSearchInput" type="text" class="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 pr-10 text-sm" placeholder="Search a location, address, or place..." autocomplete="off" />
-                                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-base">search</span>
+                                                <label for="barangayMapSearchInput" class="text-xs uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Search Location</label>
+                                                <div class="relative mt-2">
+                                                    <input id="barangayMapSearchInput" type="text" class="w-full h-11 rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark px-3 pr-10 text-sm" placeholder="Search a location, address, or place..." autocomplete="off" />
+                                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-light/40 dark:text-text-dark/40 text-base">search</span>
+                                                </div>
+                                                <div id="barangayMapSearchSuggestions" class="hidden absolute left-0 right-0 top-full z-20 mt-2 max-h-56 overflow-y-auto rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark shadow-xl"></div>
                                             </div>
-                                            <div id="barangayMapSearchSuggestions" class="hidden max-h-56 overflow-y-auto rounded-lg border border-border-light dark:border-border-dark bg-white dark:bg-background-dark shadow-lg"></div>
+                                            <p id="barangayMapSearchHint" class="text-xs text-text-light/60 dark:text-text-dark/60">Type to see suggestions, then pick one or press Enter.</p>
+
+                                            <div>
+                                                <label for="name" class="block text-xs uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Barangay Name</label>
+                                                <input id="name" name="name" type="text" value="{{ old('name') }}" required placeholder="Enter barangay name"
+                                                    class="mt-2 w-full h-11 px-3 rounded-lg bg-white dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                            </div>
                                         </div>
-                                        <p id="barangayMapSearchHint" class="mt-2 text-xs text-text-light/60 dark:text-text-dark/60">Type to see suggestions, then pick one or press Enter.</p>
-                                    </div>
-                                    <div id="barangayBoundaryMap" class="h-[420px] w-full"></div>
-                                </div>
 
-                                <form id="barangayForm" method="POST" action="{{ route('lgu.barangays.store') }}" class="space-y-4">
-                            @csrf
-                            <input id="barangay_id" name="barangay_id" type="hidden" value="{{ old('barangay_id') }}" />
-                            <input id="boundary_geojson" name="boundary_geojson" type="hidden" value="{{ old('boundary_geojson') }}" required />
-                            <div class="flex flex-col gap-4 md:flex-row md:items-end">
-                                <div class="flex-1 min-w-0">
-                                    <label for="name" class="block text-sm font-medium mb-1 text-text-light dark:text-text-dark">Barangay Name</label>
-                                    <input id="name" name="name" type="text" value="{{ old('name') }}" required placeholder="Enter barangay name"
-                                        class="w-full h-11 px-3 rounded-lg bg-white dark:bg-background-dark/40 border border-border-light dark:border-border-dark text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                                        <button id="barangaySubmitBtn" type="submit" class="inline-flex w-full items-center justify-center gap-2 h-11 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                                            <span id="barangaySubmitIcon" class="material-symbols-outlined text-lg">check</span>
+                                            <span id="barangaySubmitText" class="text-sm font-medium">Save Barangay</span>
+                                        </button>
+                                    </form>
                                 </div>
-
-                                <div class="flex-shrink-0">
-                                    <button id="barangaySubmitBtn" type="submit" class="inline-flex items-center gap-2 h-11 px-4 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
-                                        <span id="barangaySubmitIcon" class="material-symbols-outlined text-lg">check</span>
-                                        <span id="barangaySubmitText" class="text-sm font-medium">Save Barangay</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
                             </div>
                         </div>
                     </div>
@@ -248,26 +243,28 @@
             <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
                 <div>
                     <h2 class="text-xl font-bold text-text-light dark:text-text-dark">Add Barangay Captain</h2>
-                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Create a captain account and assign it to a barangay.</p>
+                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Create a captain account with email and password. Assign them to a barangay from the table.</p>
                 </div>
                 <button type="button" id="closeAddCaptainModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
 
-            <form method="POST" action="{{ route('lgu.barangays.captains.store') }}" class="space-y-4 px-6 py-5">
+            <form method="POST" action="{{ route('lgu.barangays.captains.store') }}" class="space-y-4 px-6 pt-2 pb-5">
                 @csrf
                 <div>
-                    <label for="captain_name" class="block text-sm font-medium mb-1 text-text-light dark:text-text-dark">Captain Name</label>
-                    <input id="captain_name" name="captain_name" type="text" value="{{ old('captain_name') }}" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark h-11 px-3" placeholder="Enter captain name" required />
-                </div>
-                <div>
                     <label for="captain_email" class="block text-sm font-medium mb-1 text-text-light dark:text-text-dark">Email</label>
-                    <input id="captain_email" name="captain_email" type="email" value="{{ old('captain_email') }}" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark h-11 px-3" placeholder="captain@example.com" required />
+                    <input id="captain_email" name="captain_email" type="email" value="{{ old('captain_email') }}" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark h-11 px-3 @error('captain_email') border-red-500 @enderror" placeholder="captain@example.com" required />
+                    @error('captain_email')
+                        <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
                     <label for="captain_password" class="block text-sm font-medium mb-1 text-text-light dark:text-text-dark">Password</label>
-                    <input id="captain_password" name="captain_password" type="password" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark h-11 px-3" placeholder="Enter a temporary password" required />
+                    <input id="captain_password" name="captain_password" type="password" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark h-11 px-3 @error('captain_password') border-red-500 @enderror" placeholder="Enter a temporary password" required />
+                    @error('captain_password')
+                        <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
                 <div>
                     <label for="captain_password_confirmation" class="block text-sm font-medium mb-1 text-text-light dark:text-text-dark">Confirm Password</label>
@@ -529,6 +526,29 @@
             [13.65, 121.45],
         ]);
         const mindoroCenter = [12.95, 120.90];
+        const mindoroDefaultZoom = 9;
+
+        function resetOverviewMapToMindoro() {
+            if (barangayOverviewMap) {
+                barangayOverviewMap.setView(mindoroCenter, mindoroDefaultZoom);
+            }
+        }
+
+        function resetBoundaryMapToMindoro() {
+            if (barangayBoundaryMap) {
+                barangayBoundaryMap.setView(mindoroCenter, mindoroDefaultZoom);
+            }
+
+            if (searchMarker && barangayBoundaryMap) {
+                barangayBoundaryMap.removeLayer(searchMarker);
+                searchMarker = null;
+            }
+
+            barangayMapSearchSuggestions?.classList.add('hidden');
+            if (barangayMapSearchSuggestions) {
+                barangayMapSearchSuggestions.innerHTML = '';
+            }
+        }
 
         let barangayBoundaryMap = null;
         let barangayBoundaryGroup = null;
@@ -592,7 +612,13 @@
 
         function openBarangayModal() {
             openModal(barangayModal);
+
+            if (barangayBoundaryMap && !barangayIdInput?.value) {
+                resetBoundaryMapToMindoro();
+            }
+
             setTimeout(() => barangayBoundaryMap?.invalidateSize(), 50);
+            setTimeout(() => barangayBoundaryMap?.invalidateSize(), 250);
         }
 
         function closeBarangayModal() {
@@ -603,7 +629,9 @@
                 searchMarker = null;
             }
 
-            barangayMapSearchInput.value = '';
+            if (barangayMapSearchInput) {
+                barangayMapSearchInput.value = '';
+            }
             barangayMapSearchSuggestions?.classList.add('hidden');
             if (barangayMapSearchSuggestions) {
                 barangayMapSearchSuggestions.innerHTML = '';
@@ -632,6 +660,10 @@
         function openBarangayOverviewModal() {
             renderBarangayOverviewMap();
             setSelectedBarangay(null);
+            if (barangayOverviewSearch) {
+                barangayOverviewSearch.value = '';
+            }
+            resetOverviewMapToMindoro();
             openModal(barangayOverviewModal);
             setTimeout(() => barangayOverviewMap?.invalidateSize(), 50);
         }
@@ -907,6 +939,11 @@
             if (normalized.length < 2) {
                 barangayMapSearchSuggestions.classList.add('hidden');
                 barangayMapSearchSuggestions.innerHTML = '';
+
+                if (!normalized) {
+                    resetBoundaryMapToMindoro();
+                }
+
                 return [];
             }
 
@@ -988,7 +1025,10 @@
             barangaySubmitText.textContent = 'Save Barangay';
             barangaySubmitIcon.textContent = 'check';
             clearBoundaryLayer();
-            barangayMapSearchInput.value = '';
+            if (barangayMapSearchInput) {
+                barangayMapSearchInput.value = '';
+            }
+            resetBoundaryMapToMindoro();
             barangayMapSearchSuggestions?.classList.add('hidden');
             if (barangayMapSearchSuggestions) {
                 barangayMapSearchSuggestions.innerHTML = '';
@@ -1009,7 +1049,9 @@
             barangaySubmitText.textContent = 'Update Barangay';
             barangaySubmitIcon.textContent = 'save';
             renderBoundaryGeoJson(barangayBoundary);
-            barangayMapSearchInput.value = '';
+            if (barangayMapSearchInput) {
+                barangayMapSearchInput.value = '';
+            }
             barangayMapSearchSuggestions?.classList.add('hidden');
             if (barangayMapSearchSuggestions) {
                 barangayMapSearchSuggestions.innerHTML = '';
@@ -1101,10 +1143,8 @@
             }
 
             barangayOverviewMap = L.map('barangayOverviewMap', {
-                maxBounds: mindoroBounds,
-                maxBoundsViscosity: 1.0,
-                minZoom: 8,
-            }).setView(mindoroCenter, 9);
+                minZoom: 3,
+            }).setView(mindoroCenter, mindoroDefaultZoom);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors',
@@ -1134,13 +1174,6 @@
                 layer.addTo(barangayOverviewMap);
                 barangayOverviewLayers.push({ barangay, layer });
             });
-
-            if (barangayOverviewLayers.length > 0) {
-                const overviewGroup = L.featureGroup(barangayOverviewLayers.map((entry) => entry.layer));
-                barangayOverviewMap.fitBounds(overviewGroup.getBounds().pad(0.12));
-            } else {
-                barangayOverviewMap.fitBounds(mindoroBounds);
-            }
 
             const overviewList = barangayOverviewList;
 
@@ -1182,6 +1215,11 @@
             if (barangayOverviewSearchResults) {
                 barangayOverviewSearchResults.innerHTML = '';
                 barangayOverviewSearchResults.classList.toggle('hidden', normalized.length === 0);
+            }
+
+            if (!normalized) {
+                setSelectedBarangay(null);
+                resetOverviewMapToMindoro();
             }
 
             const visibleItems = barangaysWithBoundaries.filter((barangay) => barangay.name.toLowerCase().includes(normalized));
@@ -1262,10 +1300,8 @@
             }
 
             barangayBoundaryMap = L.map('barangayBoundaryMap', {
-                maxBounds: mindoroBounds,
-                maxBoundsViscosity: 1.0,
-                minZoom: 8,
-            }).setView(mindoroCenter, 9);
+                minZoom: 3,
+            }).setView(mindoroCenter, mindoroDefaultZoom);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors',
@@ -1321,6 +1357,8 @@
             if (initialBoundary) {
                 renderBoundaryGeoJson(initialBoundary);
             }
+
+            setTimeout(() => barangayBoundaryMap?.invalidateSize(), 100);
         }
 
         openAddCaptainModalBtn?.addEventListener('click', () => openModal(addCaptainModal));
@@ -1425,6 +1463,13 @@
         }
 
         barangayMapSearchInput?.addEventListener('input', () => {
+            const query = (barangayMapSearchInput.value || '').trim();
+
+            if (!query) {
+                resetBoundaryMapToMindoro();
+                return;
+            }
+
             window.clearTimeout(searchSuggestionsTimer);
             searchSuggestionsTimer = window.setTimeout(() => {
                 fetchBarangaySuggestions(barangayMapSearchInput.value);
@@ -1471,7 +1516,7 @@
 
         filterBarangayTable(barangaySearchInput?.value || '');
 
-        @if (old('captain_email'))
+        @if (old('captain_email') || session('reopen_captain_modal'))
             openModal(addCaptainModal);
         @endif
 
@@ -1487,7 +1532,7 @@
             openBarangayModal();
         }
 
-        @if ($errors->any() && ! old('captain_email'))
+        @if ($errors->any() && ! old('captain_email') && ! session('reopen_captain_modal'))
             ensureBoundaryMap();
             openBarangayModal();
         @endif

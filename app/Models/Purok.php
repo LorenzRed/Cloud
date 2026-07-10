@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Purok extends Model
 {
@@ -26,5 +27,12 @@ class Purok extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function bhwWorkers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'bhw_purok')
+            ->where('role', 'BHW')
+            ->withTimestamps();
     }
 }

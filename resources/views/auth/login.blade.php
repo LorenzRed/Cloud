@@ -69,26 +69,27 @@
                     </div>
                     <!-- Right Panel -->
                     <div
-                        class="flex w-full lg:w-1/2 flex-col items-center justify-center bg-background-light dark:bg-background-dark p-4 sm:p-8">
-                        <div class="w-full max-w-md space-y-6">
-                            <!-- Logo for mobile -->
-                            <div class="flex lg:hidden items-center justify-center gap-2 mb-6">
-                                <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" class="w-10 h-10 sm:w-12 sm:h-12 rounded" />
-                                <h1
-                                    class="text-2xl sm:text-3xl font-black font-heading tracking-tight text-text-light dark:text-text-dark">
-                                    Bantay Kalusugan</h1>
-                            </div>
-                            <!-- Form Container -->
-                            <div class="bg-form-bg-light dark:bg-form-bg-dark p-6 sm:p-8 rounded-xl shadow-lg w-full">
-                                <div class="flex flex-wrap justify-between gap-3 mb-6">
-                                    <div class="flex flex-col gap-1">
-                                        <p
-                                            class="text-text-light dark:text-text-dark text-3xl font-black leading-tight tracking-tight font-heading">
+                        class="auth-screen flex w-full lg:w-1/2 flex-col items-center justify-center bg-background-light dark:bg-background-dark sm:p-8">
+                        <div class="auth-screen__inner space-y-4 sm:space-y-6">
+                            <header class="auth-screen__brand lg:hidden">
+                                <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" />
+                                <h1 class="font-heading text-text-light dark:text-text-dark">Bantay Kalusugan</h1>
+                            </header>
+
+                            <nav class="auth-tabs lg:hidden" aria-label="Authentication">
+                                <a class="auth-tabs__item is-active" href="{{ route('login') }}">Login</a>
+                                <a class="auth-tabs__item" href="{{ route('register') }}">Register</a>
+                            </nav>
+
+                            <div class="auth-panel bg-form-bg-light dark:bg-form-bg-dark p-6 sm:p-8 rounded-xl shadow-lg w-full">
+                                <header class="auth-panel__header flex flex-wrap justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
+                                    <div class="flex flex-col gap-0.5 sm:gap-1">
+                                        <p class="auth-panel__title text-text-light dark:text-text-dark font-heading sm:text-3xl">
                                             Welcome Back</p>
-                                        <p class="text-primary text-base font-normal leading-normal">Log in to track
+                                        <p class="auth-panel__subtitle sm:text-base font-normal">Log in to track
                                             health records.</p>
                                     </div>
-                                </div>
+                                </header>
                                 <div class="hidden sm:flex mb-6">
                                     <div
                                         class="flex h-12 flex-1 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
@@ -103,13 +104,13 @@
                                     </div>
                                 </div>
                                 <!-- Login Form -->
-                                <form id="loginForm" class="space-y-5" method="POST" action="{{ route('login.perform') }}" novalidate>
+                                <form id="loginForm" class="auth-form sm:space-y-5" method="POST" action="{{ route('login.perform') }}" novalidate>
                                     @csrf
                                     <div class="auth-field">
                                         <div @class([
                                             'auth-field-control border bg-background-light dark:bg-background-dark focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary',
                                             'border-border-light dark:border-border-dark' => ! $errors->has('email'),
-                                            'border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('email'),
+                                            'has-field-error border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('email'),
                                         ])>
                                             <input id="emailInput" name="email" type="email" autocomplete="username" maxlength="255"
                                                 class="auth-field-input text-text-light dark:text-text-dark"
@@ -117,16 +118,13 @@
                                                 aria-invalid="{{ $errors->has('email') ? 'true' : 'false' }}" />
                                             <label for="emailInput" class="auth-field-label">Email</label>
                                         </div>
+                                        <p id="emailClientError" class="auth-field-bubble {{ $errors->has('email') ? '' : 'hidden' }}" role="alert" aria-live="polite">{{ $errors->first('email') }}</p>
                                     </div>
-                                    @error('email')
-                                        <p id="emailError" class="-mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ $message }}</p>
-                                    @enderror
-                                    <p id="emailClientError" class="-mt-1 hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
                                     <div class="auth-field">
                                         <div @class([
                                             'auth-field-control auth-field-control--affix border bg-background-light dark:bg-background-dark focus-within:ring-2',
                                             'border-border-light dark:border-border-dark focus-within:ring-primary/50 focus-within:border-primary' => ! $errors->has('password'),
-                                            'border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('password'),
+                                            'has-field-error border-red-500 dark:border-red-500 focus-within:border-red-500 focus-within:ring-red-500/40' => $errors->has('password'),
                                         ])>
                                             <input id="passwordInput" name="password" type="password" autocomplete="current-password"
                                                 class="auth-field-input text-text-light dark:text-text-dark"
@@ -145,16 +143,13 @@
                                                 </svg>
                                             </button>
                                         </div>
+                                        <p id="passwordClientError" class="auth-field-bubble {{ $errors->has('password') ? '' : 'hidden' }}" role="alert" aria-live="polite">{{ $errors->first('password') }}</p>
                                     </div>
-                                    @error('password')
-                                        <p class="-mt-1 text-sm text-red-600 dark:text-red-400" role="alert">{{ $message }}</p>
-                                    @enderror
-                                    <p id="passwordClientError" class="-mt-1 hidden text-sm text-red-600 dark:text-red-400" role="alert"></p>
-                                    <div class="flex justify-end">
+                                    <div class="auth-forgot-password flex justify-end">
                                         <a class="text-sm font-medium text-primary hover:underline" href="{{ route('password.request') }}">Forgot password?</a>
                                     </div>
                                     <button
-                                        class="w-full bg-primary text-white font-bold h-12 rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/80 dark:focus:ring-offset-background-dark transition-colors duration-300"
+                                        class="auth-btn-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/80 dark:focus:ring-offset-background-dark"
                                         type="submit">
                                         Login
                                     </button>
@@ -167,18 +162,20 @@
                                     const passwordClientError = document.getElementById('passwordClientError');
 
                                     function clearClientErrors() {
-                                        if (emailClientError) {
-                                            emailClientError.textContent = '';
-                                            emailClientError.classList.add('hidden');
-                                        }
-                                        if (passwordClientError) {
-                                            passwordClientError.textContent = '';
-                                            passwordClientError.classList.add('hidden');
-                                        }
+                                        window.AuthFieldAlerts?.hideAll(loginForm);
                                     }
 
                                     function showClientError(el, message) {
-                                        if (!el) return;
+                                        if (!el) {
+                                            return;
+                                        }
+
+                                        if (window.AuthFieldAlerts) {
+                                            window.AuthFieldAlerts.show(el, message);
+                                            window.AuthFieldAlerts.focusField(el);
+                                            return;
+                                        }
+
                                         el.textContent = message;
                                         el.classList.remove('hidden');
                                     }
@@ -187,26 +184,33 @@
 
                                     loginForm.addEventListener('submit', function (e) {
                                         clearClientErrors();
-                                        let ok = true;
+
                                         const emailVal = (emailInput.value || '').trim();
+
                                         if (!emailVal) {
-                                            showClientError(emailClientError, 'Please enter your email address.');
-                                            ok = false;
-                                        } else if (!emailPattern.test(emailVal)) {
-                                            showClientError(emailClientError, 'Please enter a valid email address.');
-                                            ok = false;
-                                        }
-                                        if (!passwordInput.value) {
-                                            showClientError(passwordClientError, 'Please enter your password.');
-                                            ok = false;
-                                        }
-                                        if (!ok) {
                                             e.preventDefault();
+                                            showClientError(emailClientError, 'Please enter your email address.');
+                                            return;
+                                        }
+
+                                        if (!emailPattern.test(emailVal)) {
+                                            e.preventDefault();
+                                            showClientError(emailClientError, 'Please enter a valid email address.');
+                                            return;
+                                        }
+
+                                        if (!passwordInput.value) {
+                                            e.preventDefault();
+                                            showClientError(passwordClientError, 'Please enter your password.');
                                         }
                                     });
 
-                                    function onAuthInput() {
-                                        clearClientErrors();
+                                    function onAuthInput(event) {
+                                        const bubble = event.target.closest('.auth-field')?.querySelector('.auth-field-bubble[role="alert"]');
+
+                                        if (bubble) {
+                                            window.AuthFieldAlerts?.hide(bubble);
+                                        }
                                     }
                                     emailInput.addEventListener('input', onAuthInput);
                                     passwordInput.addEventListener('input', onAuthInput);
@@ -225,11 +229,12 @@
                                         passwordEyeClosed.classList.toggle('hidden', !nowVisible);
                                     });
                                 </script>
-                                <p class="text-center text-sm text-border-light dark:text-border-dark mt-6">
-                                    Don't have an account? <a class="font-bold text-primary hover:underline"
-                                        href="{{ route('register') }}">Register</a>
-                                </p>
                             </div>
+
+                            <p class="auth-footer sm:text-sm text-border-light dark:text-border-dark">
+                                Don't have an account? <a class="font-bold text-primary hover:underline"
+                                    href="{{ route('register') }}">Register</a>
+                            </p>
                         </div>
                     </div>
                 </div>

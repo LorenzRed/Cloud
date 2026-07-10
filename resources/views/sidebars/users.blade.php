@@ -47,7 +47,6 @@
 <aside id="usersSidebar" class="hidden lg:flex fixed left-0 top-0 h-screen w-64 shrink-0 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-800 border-r border-[#e7f3ec] dark:border-gray-700 flex-col z-20">
     @php
         $isDashboard = request()->routeIs('users.main');
-        $isEvents = request()->routeIs('users.events');
         $isAnnouncements = request()->routeIs('users.announcements');
         $isProfile = request()->routeIs('users.profile');
         $isNotifications = request()->routeIs('users.notifications');
@@ -84,10 +83,6 @@
         <a href="{{ route('users.main') }}" class="sidebar-link {{ $isDashboard ? $activeLinkClass : $inactiveLinkClass }}">
             <span class="material-symbols-outlined text-[20px]">home</span>
             <span class="sidebar-label">Home</span>
-        </a>
-        <a href="{{ route('users.events') }}" class="sidebar-link {{ $isEvents ? $activeLinkClass : $inactiveLinkClass }}">
-            <span class="material-symbols-outlined text-[20px]">event</span>
-            <span class="sidebar-label">Barangay Events</span>
         </a>
         <a href="{{ route('users.announcements') }}" class="sidebar-link {{ $isAnnouncements ? $activeLinkClass : $inactiveLinkClass }}">
             <span class="material-symbols-outlined text-[20px]">campaign</span>

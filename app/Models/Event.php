@@ -15,7 +15,6 @@ class Event extends Model
         'start_time',
         'end_time',
         'location',
-        'registration_limit',
         'category',
         'image_url',
         'disabled_at',
@@ -23,7 +22,6 @@ class Event extends Model
 
     protected $casts = [
         'event_date' => 'date',
-        'registration_limit' => 'integer',
         'disabled_at' => 'datetime',
     ];
 

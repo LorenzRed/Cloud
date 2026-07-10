@@ -120,16 +120,6 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-@php
-    $isDashboard = request()->routeIs('bhw.main');
-    $isResidents = request()->routeIs('bhw.residents');
-    $isRequests = request()->routeIs('bhw.requests');
-    $isReports = request()->routeIs('bhw.reports');
-    $isSchedule = request()->routeIs('bhw.schedule');
-    $isEvents = request()->routeIs('bhw.events');
-    $isPosts = request()->routeIs('bhw.posts');
-    $isSettings = request()->routeIs('bhw.settings');
-@endphp
 <div class="main-container">
     <div class="md:hidden fixed top-4 left-4 z-50">
         <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
@@ -147,7 +137,7 @@
                 <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
                     <div class="flex flex-col gap-1">
                         <h1 class="text-3xl font-bold">Posts</h1>
-                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Latest events and announcements from your barangay.</p>
+                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Latest announcements from your barangay.</p>
                     </div>
                 </header>
 
@@ -209,17 +199,17 @@
                                 <img src="{{ $eventImage }}" alt="{{ $post->title }}" class="h-44 w-full object-cover" />
                             @else
                                 <div class="flex h-44 w-full items-center justify-center bg-[#f2fbf6] dark:bg-gray-700/40 text-[#4e976b] dark:text-gray-400">
-                                    <span class="material-symbols-outlined text-5xl">photo</span>
+                                    <span class="material-symbols-outlined text-5xl">campaign</span>
                                 </div>
                             @endif
                             <div class="p-4 md:p-5 flex flex-col">
                                 <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <span class="inline-flex items-center rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-[#1f7f4e] dark:text-[#8cefb5]">
-                                            {{ $post->category === 'announcement' ? 'Announcement' : 'Event' }}
+                                            Announcement
                                         </span>
 
-                                        @if ($post->disabled_at && $post->category === 'event')
+                                        @if ($post->disabled_at)
                                             <span class="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-[#9a5a00] dark:bg-orange-900/30 dark:text-orange-200">
                                                 Disabled from users
                                             </span>
@@ -238,24 +228,21 @@
                                 @endif
 
                                 <div class="mt-4 space-y-1.5 text-sm text-[#376f50] dark:text-gray-300">
-                                    <p class="flex items-center gap-2">
-                                        <span class="material-symbols-outlined text-base">schedule</span>
-                                        <span>
-                                            {{ $eventStartTime }}
-                                            @if ($eventEndTime)
-                                                - {{ $eventEndTime }}
-                                            @endif
-                                        </span>
-                                    </p>
-                                    <p class="flex items-center gap-2">
-                                        <span class="material-symbols-outlined text-base">location_on</span>
-                                        <span>{{ $post->location ?: 'Location to be announced' }}</span>
-                                    </p>
-
-                                    @if ($post->category === 'event' && $post->registration_limit !== null)
-                                        <p class="flex items-center gap-2 text-xs text-[#4e976b] dark:text-gray-400">
-                                            <span class="material-symbols-outlined text-base">group</span>
-                                            <span>Registration limit: {{ $post->registration_limit }}</span>
+                                    @if ($eventStartTime)
+                                        <p class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-base">schedule</span>
+                                            <span>
+                                                {{ $eventStartTime }}
+                                                @if ($eventEndTime)
+                                                    - {{ $eventEndTime }}
+                                                @endif
+                                            </span>
+                                        </p>
+                                    @endif
+                                    @if ($post->location)
+                                        <p class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-base">location_on</span>
+                                            <span>{{ $post->location }}</span>
                                         </p>
                                     @endif
 
@@ -270,25 +257,23 @@
                                                 type="button"
                                                 class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-[#f6f8f7] text-[#1f7f4e] transition-colors hover:bg-[#e8f5ec]"
                                                 data-open-edit-modal="{{ $post->id }}"
-                                                aria-label="Edit post"
+                                                aria-label="Edit announcement"
                                             >
                                                 <span class="material-symbols-outlined text-[18px]">edit</span>
                                             </button>
 
-                                            @if ($post->category === 'event')
-                                                <form method="POST" action="{{ route('bhw.posts.toggle-disable', $post) }}">
-                                                    @csrf
-                                                    <button
-                                                        type="submit"
-                                                        class="inline-flex h-8 w-8 items-center justify-center rounded-full border {{ $post->disabled_at ? 'border-[#1f7f4e] text-[#1f7f4e] hover:bg-[#e8f5ec]' : 'border-[#F5A623] text-[#F5A623] hover:bg-orange-50' }} transition-colors"
-                                                        aria-label="{{ $post->disabled_at ? 'Enable post' : 'Disable post' }}"
-                                                    >
-                                                        <span class="material-symbols-outlined text-[18px]">{{ $post->disabled_at ? 'visibility' : 'visibility_off' }}</span>
-                                                    </button>
-                                                </form>
-                                            @endif
+                                            <form method="POST" action="{{ route('bhw.posts.toggle-disable', $post) }}">
+                                                @csrf
+                                                <button
+                                                    type="submit"
+                                                    class="inline-flex h-8 w-8 items-center justify-center rounded-full border {{ $post->disabled_at ? 'border-[#1f7f4e] text-[#1f7f4e] hover:bg-[#e8f5ec]' : 'border-[#F5A623] text-[#F5A623] hover:bg-orange-50' }} transition-colors"
+                                                    aria-label="{{ $post->disabled_at ? 'Enable announcement' : 'Disable announcement' }}"
+                                                >
+                                                    <span class="material-symbols-outlined text-[18px]">{{ $post->disabled_at ? 'visibility' : 'visibility_off' }}</span>
+                                                </button>
+                                            </form>
 
-                                            <form method="POST" action="{{ route('bhw.posts.destroy', $post) }}" onsubmit="return confirm('Delete this post?');">
+                                            <form method="POST" action="{{ route('bhw.posts.destroy', $post) }}" onsubmit="return confirm('Delete this announcement?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button
@@ -308,8 +293,8 @@
                                 <div class="w-[94vw] max-w-[720px] rounded-2xl bg-white dark:bg-gray-800 shadow-2xl overflow-hidden">
                                     <div class="flex items-center justify-between gap-4 border-b border-[#d0e7d9] dark:border-gray-700 px-4 py-3">
                                         <div>
-                                            <h3 class="text-lg font-bold text-[#0e1b13] dark:text-white">Edit Event</h3>
-                                            <p class="text-sm text-[#4e976b] dark:text-gray-400">Update the event details shown to residents.</p>
+                                            <h3 class="text-lg font-bold text-[#0e1b13] dark:text-white">Edit Announcement</h3>
+                                            <p class="text-sm text-[#4e976b] dark:text-gray-400">Update the announcement details sent to residents.</p>
                                         </div>
                                         <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#d0e7d9] text-[#4e976b] transition-colors hover:bg-[#f6f8f7]" data-close-edit-modal="{{ $post->id }}" aria-label="Close edit modal">
                                             <span class="material-symbols-outlined text-[20px]">close</span>
@@ -319,14 +304,17 @@
                                     <form method="POST" action="{{ route('bhw.posts.update', $post) }}" enctype="multipart/form-data" class="space-y-3 p-3 sm:p-4">
                                         @csrf
                                         @method('PUT')
-                                        <input type="hidden" name="type" value="{{ $post->category === 'announcement' ? 'announcement' : 'event' }}">
                                         <div>
                                             <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Title</label>
                                             <input type="text" name="title" value="{{ old('title', $post->title) }}" required class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
                                         </div>
+                                        <div>
+                                            <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">What to announce</label>
+                                            <textarea name="description" rows="4" class="w-full rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 py-2 text-sm">{{ old('description', $post->description) }}</textarea>
+                                        </div>
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                             <div>
-                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Event Date</label>
+                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Date</label>
                                                 <input type="date" name="event_date" value="{{ old('event_date', optional($post->event_date)->format('Y-m-d')) }}" required class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
                                             </div>
                                             <div>
@@ -334,12 +322,6 @@
                                                 <input type="text" name="location" value="{{ old('location', $post->location) }}" placeholder="Venue / location" class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
                                             </div>
                                         </div>
-                                        @if ($post->category === 'event')
-                                            <div>
-                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Registration limit (optional)</label>
-                                                <input type="number" name="registration_limit" min="1" value="{{ old('registration_limit', $post->registration_limit) }}" placeholder="Leave blank for no limit" class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
-                                            </div>
-                                        @endif
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                             <div>
                                                 <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Start Time</label>
@@ -364,12 +346,13 @@
                         </article>
                     @empty
                         <div class="md:col-span-2 rounded-xl border border-dashed border-[#d0e7d9] dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 p-10 text-center">
-                            <span class="material-symbols-outlined text-5xl text-[#4e976b] dark:text-gray-400">event_busy</span>
-                            <p class="mt-3 text-base font-semibold">No posted barangay events yet.</p>
-                            <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Use the Events page to create a new event post.</p>
+                            <span class="material-symbols-outlined text-5xl text-[#4e976b] dark:text-gray-400">campaign</span>
+                            <p class="mt-3 text-base font-semibold">No announcements posted yet.</p>
+                            <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Use the Announcements page to post a new announcement.</p>
                         </div>
                     @endforelse
                 </div>
+            </div>
         </div>
     </main>
 </div>

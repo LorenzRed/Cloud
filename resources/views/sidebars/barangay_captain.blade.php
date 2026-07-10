@@ -6,6 +6,7 @@
         $isResidents = request()->routeIs('barangay-captain.residents');
         $isReports = request()->routeIs('barangay-captain.reports');
         $isBhwWorkers = request()->routeIs('barangay-captain.bhw-workers');
+        $isBnsWorkers = request()->routeIs('barangay-captain.bns-workers');
         $isSettings = request()->routeIs('barangay-captain.settings');
 
         $activeLinkClass = 'flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-primary/20';
@@ -51,6 +52,10 @@
             <a class="{{ $isBhwWorkers ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('barangay-captain.bhw-workers') }}">
                 <span class="{{ $isBhwWorkers ? $activeIconClass : $inactiveIconClass }}" @if ($isBhwWorkers) style="font-variation-settings: 'FILL' 1;" @endif>badge</span>
                 <p class="{{ $isBhwWorkers ? $activeTextClass : $inactiveTextClass }}">BHW Workers</p>
+            </a>
+            <a class="{{ $isBnsWorkers ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('barangay-captain.bns-workers') }}">
+                <span class="{{ $isBnsWorkers ? $activeIconClass : $inactiveIconClass }}" @if ($isBnsWorkers) style="font-variation-settings: 'FILL' 1;" @endif>nutrition</span>
+                <p class="{{ $isBnsWorkers ? $activeTextClass : $inactiveTextClass }}">BNS Workers</p>
             </a>
             <a class="{{ $isResidents ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('barangay-captain.residents') }}">
                 <span class="{{ $isResidents ? $activeIconClass : $inactiveIconClass }}" @if ($isResidents) style="font-variation-settings: 'FILL' 1;" @endif>groups</span>

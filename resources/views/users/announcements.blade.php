@@ -55,7 +55,6 @@
 <body class="font-display bg-background-light dark:bg-background-dark text-[#0e1b13] dark:text-gray-200">
     @php
         $isDashboard = request()->routeIs('users.main');
-        $isEvents = request()->routeIs('users.events');
         $isAnnouncements = request()->routeIs('users.announcements');
         $isProfile = request()->routeIs('users.profile');
         $isNotifications = request()->routeIs('users.notifications');
@@ -138,30 +137,7 @@
             </div>
         </main>
 
-        <nav class="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-[#d0e7d9] bg-white/95 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95" aria-label="Mobile navigation">
-            <div class="grid grid-cols-5 gap-1 px-2 py-2">
-                <a href="{{ route('users.main') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isDashboard ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">home</span>
-                    Home
-                </a>
-                <a href="{{ route('users.events') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isEvents ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">event</span>
-                    Events
-                </a>
-                <a href="{{ route('users.announcements') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isAnnouncements ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">campaign</span>
-                    News
-                </a>
-                <a href="{{ route('users.medical-records') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isMedicalRecords ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">health_metrics</span>
-                    Medical
-                </a>
-                <a href="{{ route('users.profile') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isProfile ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">person</span>
-                    Profile
-                </a>
-            </div>
-        </nav>
+        @include('partials.users-mobile-nav')
     </div>
 
     <script>

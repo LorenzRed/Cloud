@@ -2,7 +2,7 @@
 <html class="light" lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    @include('partials.users-viewport')
     <title>Bantay Kalusugan - Profile Details</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
@@ -33,6 +33,17 @@
                 justify-content: center;
             }
         }
+
+        .profile-static-field {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+    <style>
+        .profile-static-field {
+            user-select: none;
+            -webkit-user-select: none;
+        }
     </style>
     <script>
         tailwind.config = {
@@ -54,6 +65,7 @@
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-[#0e1b13] dark:text-gray-200">
     @php
+        $householdPurok = $user->householdPurokLabel();
         $isDashboard = request()->routeIs('users.main');
         $isEvents = request()->routeIs('users.events');
         $isAnnouncements = request()->routeIs('users.announcements');
@@ -61,6 +73,8 @@
         $isNotifications = request()->routeIs('users.notifications');
         $isMedicalRecords = request()->routeIs('users.medical-records');
         $selectedGender = ucfirst(strtolower(trim((string) old('gender', $user->gender))));
+        $selectedCivilStatus = trim((string) old('civil_status', $user->civil_status));
+        $civilStatusOptions = \App\Models\User::CIVIL_STATUSES;
     @endphp
     @include('sidebars.users')
 
@@ -98,13 +112,18 @@
                         @csrf
 
                         <div>
-                            <label class="block text-base font-medium mb-1">Full Name (Firstname, Middle Initial, Lastname)</label>
-                            <input type="text" name="full_name" value="{{ old('full_name', $user->full_name) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
+                            <label class="block text-base font-medium mb-1" for="profileFullName">Full Name</label>
+                            <div id="profileFullName" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ $user->full_name ?: $user->name }}</div>
                         </div>
 
                         <div>
-                            <label class="block text-base font-medium mb-1">Email</label>
-                            <input type="email" name="email" value="{{ old('email', $user->email) }}" required class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
+                            <label class="block text-base font-medium mb-1" for="profileEmail">Email</label>
+                            <div class="relative">
+                                <div id="profileEmail" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ $user->email }}</div>
+                                <button type="button" id="openChangePasswordModalBtn" class="absolute right-0 top-full mt-0.5 text-sm font-semibold text-[#1f7f4e] hover:text-[#176b3d] hover:underline dark:text-primary leading-none">
+                                    Change password
+                                </button>
+                            </div>
                         </div>
 
                         <div>
@@ -118,18 +137,21 @@
                         </div>
 
                         <div>
-                            <label class="block text-base font-medium mb-1">Date of Birth</label>
-                            <input id="dateOfBirth" type="date" name="date_of_birth" value="{{ old('date_of_birth', optional($user->date_of_birth)->format('Y-m-d')) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
+                            <label class="block text-base font-medium mb-1" for="profileDateOfBirth">Date of Birth</label>
+                            <div id="profileDateOfBirth" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ optional($user->date_of_birth)->format('F j, Y') ?: '—' }}</div>
                         </div>
 
                         <div>
-                            <label class="block text-base font-medium mb-1">Age</label>
-                            <input id="computedAge" type="number" value="{{ old('age', $user->age) }}" readonly class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3">
-                        </div>
-
-                        <div>
-                            <label class="block text-base font-medium mb-1">Civil Status</label>
-                            <input type="text" name="civil_status" value="{{ old('civil_status', $user->civil_status) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3" placeholder="---">
+                            <label class="block text-base font-medium mb-1" for="civil_status">Civil Status</label>
+                            <select id="civil_status" name="civil_status" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
+                                <option value="">Select civil status</option>
+                                @foreach ($civilStatusOptions as $status)
+                                    <option value="{{ $status }}" @selected($selectedCivilStatus === $status)>{{ $status }}</option>
+                                @endforeach
+                                @if ($selectedCivilStatus !== '' && ! in_array($selectedCivilStatus, $civilStatusOptions, true))
+                                    <option value="{{ $selectedCivilStatus }}" selected>{{ $selectedCivilStatus }}</option>
+                                @endif
+                            </select>
                         </div>
 
                         <div>
@@ -139,23 +161,30 @@
 
                         <div>
                             <label class="block text-base font-medium mb-1">Household No./Purok</label>
-                            <input type="text" name="household_no" value="{{ old('household_no', $user->household_no) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3" placeholder="---">
+                            @if ($user->purok_id)
+                                <input type="hidden" name="household_no" value="{{ old('household_no', $householdPurok) }}">
+                                <div class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ old('household_no', $householdPurok) ?: '—' }}</div>
+                                <p class="text-sm text-[#4e976b] dark:text-gray-400 mt-1">Set from your verification map location.</p>
+                            @else
+                                <input type="text" name="household_no" value="{{ old('household_no', $householdPurok) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3" placeholder="---">
+                            @endif
                         </div>
 
                         <div class="md:col-span-2">
                             <label class="block text-base font-medium mb-1">Barangay</label>
-                            <input type="text" name="barangay" value="{{ old('barangay', $user->barangay) }}" readonly class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 cursor-not-allowed">
+                            <input type="hidden" name="barangay" value="{{ old('barangay', $user->barangay) }}">
+                            <div class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ old('barangay', $user->barangay) ?: '—' }}</div>
                             <p class="text-sm text-[#4e976b] dark:text-gray-400 mt-1">Cannot be changed.</p>
                         </div>
 
                         <div>
-                            <label class="block text-base font-medium mb-1">Municipality</label>
-                            <input type="text" id="municipalityAddressInput" name="municipality" value="{{ old('municipality', $user->municipality ?: 'Victoria') }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 px-3" placeholder="---">
+                            <label class="block text-base font-medium mb-1" for="profileMunicipality">Municipality</label>
+                            <div id="profileMunicipality" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ $user->municipality ?: 'Victoria' }}</div>
                         </div>
 
                         <div>
-                            <label class="block text-base font-medium mb-1">Province</label>
-                            <input type="text" id="provinceAddressInput" name="province" value="{{ old('province', $user->province ?: 'Oriental Mindoro') }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 px-3" placeholder="---">
+                            <label class="block text-base font-medium mb-1" for="profileProvince">Province</label>
+                            <div id="profileProvince" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ $user->province ?: 'Oriental Mindoro' }}</div>
                         </div>
 
                         <div class="md:col-span-2 pt-2">
@@ -169,62 +198,161 @@
             </div>
         </main>
 
-        <nav class="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-[#d0e7d9] bg-white/95 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95" aria-label="Mobile navigation">
-            <div class="grid grid-cols-5 gap-1 px-2 py-2">
-                <a href="{{ route('users.main') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isDashboard ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">home</span>
-                    Home
-                </a>
-                <a href="{{ route('users.events') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isEvents ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">event</span>
-                    Events
-                </a>
-                <a href="{{ route('users.announcements') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isAnnouncements ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">campaign</span>
-                    News
-                </a>
-                <a href="{{ route('users.medical-records') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isMedicalRecords ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">health_metrics</span>
-                    Medical
-                </a>
-                <a href="{{ route('users.profile') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isProfile ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">person</span>
-                    Profile
-                </a>
+        @include('partials.users-mobile-nav')
+    </div>
+
+    <div id="changePasswordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div class="w-full max-w-md rounded-2xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-[#e7f3ec] dark:border-gray-700 flex items-center justify-between gap-3">
+                <h2 class="text-lg font-bold text-[#0e1b13] dark:text-white">Change Password</h2>
+                <button type="button" id="closeChangePasswordModalBtn" class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" aria-label="Close change password">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
             </div>
-        </nav>
+
+            <form method="POST" action="{{ route('users.profile.password') }}" class="p-5 space-y-4">
+                @csrf
+
+                @if ($errors->password->any())
+                    <div class="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200">
+                        <ul class="list-disc pl-5 space-y-1">
+                            @foreach ($errors->password->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="password">New Password</label>
+                    <div class="relative">
+                        <input id="password" type="password" name="password" required autocomplete="new-password" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 text-[#0e1b13] dark:text-white px-3 pr-10">
+                        <button type="button" id="togglePasswordBtn" class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" aria-label="Show password" aria-pressed="false">
+                            <span id="passwordEyeOpen" class="material-symbols-outlined text-[20px]">visibility</span>
+                            <span id="passwordEyeClosed" class="material-symbols-outlined text-[20px] hidden">visibility_off</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="password_confirmation">Confirm Password</label>
+                    <div class="relative">
+                        <input id="password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 text-[#0e1b13] dark:text-white px-3 pr-10">
+                        <button type="button" id="togglePasswordConfirmationBtn" class="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300" aria-label="Show password" aria-pressed="false">
+                            <span id="passwordConfirmationEyeOpen" class="material-symbols-outlined text-[20px]">visibility</span>
+                            <span id="passwordConfirmationEyeClosed" class="material-symbols-outlined text-[20px] hidden">visibility_off</span>
+                        </button>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500 dark:text-gray-400">Use at least 8 characters with letters and numbers.</p>
+
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
+                    <button type="button" id="cancelChangePasswordModalBtn" class="w-full sm:w-auto h-10 px-4 rounded-lg border border-[#d0e7d9] dark:border-gray-700 text-sm font-semibold text-[#376f50] dark:text-gray-200">
+                        Cancel
+                    </button>
+                    <button type="submit" class="w-full sm:w-auto h-10 px-4 rounded-lg bg-primary text-sm font-bold text-white">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
-        const dateOfBirth = document.getElementById('dateOfBirth');
-        const computedAge = document.getElementById('computedAge');
-        function updateAgePreview() {
-            if (!dateOfBirth || !computedAge) {
-                return;
+        (function () {
+            const changePasswordModal = document.getElementById('changePasswordModal');
+            const openChangePasswordModalBtn = document.getElementById('openChangePasswordModalBtn');
+            const closeChangePasswordModalBtn = document.getElementById('closeChangePasswordModalBtn');
+            const cancelChangePasswordModalBtn = document.getElementById('cancelChangePasswordModalBtn');
+            const passwordInput = document.getElementById('password');
+            const passwordConfirmationInput = document.getElementById('password_confirmation');
+            const shouldOpenPasswordModal = @json(session('open_password_modal') || $errors->password->any());
+
+            function bindPasswordToggle(toggleBtn, input, eyeOpen, eyeClosed) {
+                if (!toggleBtn || !input || !eyeOpen || !eyeClosed) {
+                    return;
+                }
+
+                toggleBtn.addEventListener('click', () => {
+                    const isHidden = input.getAttribute('type') === 'password';
+                    input.setAttribute('type', isHidden ? 'text' : 'password');
+                    const nowVisible = input.getAttribute('type') === 'text';
+                    toggleBtn.setAttribute('aria-pressed', nowVisible ? 'true' : 'false');
+                    toggleBtn.setAttribute('aria-label', nowVisible ? 'Hide password' : 'Show password');
+                    eyeOpen.classList.toggle('hidden', nowVisible);
+                    eyeClosed.classList.toggle('hidden', !nowVisible);
+                });
             }
 
-            if (!dateOfBirth.value) {
-                computedAge.value = '';
-                return;
+            function resetPasswordVisibility(input, toggleBtn, eyeOpen, eyeClosed) {
+                if (!input) {
+                    return;
+                }
+
+                input.setAttribute('type', 'password');
+                input.value = '';
+
+                if (toggleBtn) {
+                    toggleBtn.setAttribute('aria-pressed', 'false');
+                    toggleBtn.setAttribute('aria-label', 'Show password');
+                }
+
+                eyeOpen?.classList.remove('hidden');
+                eyeClosed?.classList.add('hidden');
             }
 
-            const birthDate = new Date(dateOfBirth.value);
-            const today = new Date();
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
+            bindPasswordToggle(
+                document.getElementById('togglePasswordBtn'),
+                passwordInput,
+                document.getElementById('passwordEyeOpen'),
+                document.getElementById('passwordEyeClosed')
+            );
 
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
+            bindPasswordToggle(
+                document.getElementById('togglePasswordConfirmationBtn'),
+                passwordConfirmationInput,
+                document.getElementById('passwordConfirmationEyeOpen'),
+                document.getElementById('passwordConfirmationEyeClosed')
+            );
+
+            function openChangePasswordModal() {
+                changePasswordModal?.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                window.setTimeout(() => passwordInput?.focus(), 120);
             }
 
-            computedAge.value = age >= 0 ? age : '';
-        }
+            function closeChangePasswordModal() {
+                changePasswordModal?.classList.add('hidden');
+                document.body.style.overflow = '';
+                resetPasswordVisibility(
+                    passwordInput,
+                    document.getElementById('togglePasswordBtn'),
+                    document.getElementById('passwordEyeOpen'),
+                    document.getElementById('passwordEyeClosed')
+                );
+                resetPasswordVisibility(
+                    passwordConfirmationInput,
+                    document.getElementById('togglePasswordConfirmationBtn'),
+                    document.getElementById('passwordConfirmationEyeOpen'),
+                    document.getElementById('passwordConfirmationEyeClosed')
+                );
+            }
 
-        if (dateOfBirth) {
-            dateOfBirth.addEventListener('input', updateAgePreview);
-        }
+            openChangePasswordModalBtn?.addEventListener('click', openChangePasswordModal);
+            closeChangePasswordModalBtn?.addEventListener('click', closeChangePasswordModal);
+            cancelChangePasswordModalBtn?.addEventListener('click', closeChangePasswordModal);
 
-        updateAgePreview();
+            changePasswordModal?.addEventListener('click', (event) => {
+                if (event.target === changePasswordModal) {
+                    closeChangePasswordModal();
+                }
+            });
+
+            if (shouldOpenPasswordModal) {
+                openChangePasswordModal();
+            }
+        })();
 
         const profileUpdateToast = document.getElementById('profileUpdateToast');
         if (profileUpdateToast) {

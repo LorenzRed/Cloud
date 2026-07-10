@@ -2,7 +2,7 @@
 <html class="light" lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    @include('partials.users-viewport')
     <title>Bantay Kalusugan - Profile</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
@@ -104,13 +104,27 @@
                     <span class="material-symbols-outlined text-[22px] text-[#4e976b] dark:text-gray-300">chevron_right</span>
                 </a>
 
-                <a href="{{ route('users.profile.chat-support') }}" class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left">
+                <a href="{{ route('users.profile.chat-support') }}" class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left border-b border-[#e7f3ec] dark:border-gray-700">
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#4e976b] dark:text-gray-400">Health Chat</p>
                         <h2 class="mt-1 text-xl font-bold text-[#0e1b13] dark:text-white">Chat Support</h2>
                         <p class="mt-1 text-sm text-[#376f50] dark:text-gray-300">Open chat help and see how it works.</p>
                     </div>
                     <span class="material-symbols-outlined text-[22px] text-[#4e976b] dark:text-gray-300">chevron_right</span>
+                </a>
+
+                <a href="{{ route('users.profile.bhw-chat') }}" class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left {{ ($unreadBhwChatCount ?? 0) > 0 ? 'bg-[#f2fbf6] dark:bg-gray-700/30' : '' }}">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#4e976b] dark:text-gray-400">Health Worker</p>
+                        <h2 class="mt-1 text-xl font-bold text-[#0e1b13] dark:text-white">Barangay Health Worker</h2>
+                        <p class="mt-1 text-sm text-[#376f50] dark:text-gray-300">Chat directly with your assigned health worker.</p>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 shrink-0">
+                        @if (($unreadBhwChatCount ?? 0) > 0)
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">New</span>
+                        @endif
+                        <span class="material-symbols-outlined text-[22px] text-[#4e976b] dark:text-gray-300">chevron_right</span>
+                    </div>
                 </a>
             </section>
 
@@ -131,30 +145,7 @@
             </div>
         </main>
 
-        <nav class="lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-[#d0e7d9] bg-white/95 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95" aria-label="Mobile navigation">
-            <div class="grid grid-cols-5 gap-1 px-2 py-2">
-                <a href="{{ route('users.main') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isDashboard ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">home</span>
-                    Home
-                </a>
-                <a href="{{ route('users.events') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isEvents ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">event</span>
-                    Events
-                </a>
-                <a href="{{ route('users.announcements') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isAnnouncements ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">campaign</span>
-                    News
-                </a>
-                <a href="{{ route('users.medical-records') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isMedicalRecords ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">health_metrics</span>
-                    Medical
-                </a>
-                <a href="{{ route('users.profile') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isProfile ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-                    <span class="material-symbols-outlined text-[20px]">person</span>
-                    Profile
-                </a>
-            </div>
-        </nav>
+        @include('partials.users-mobile-nav')
     </div>
 
     <script>

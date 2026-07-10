@@ -20,6 +20,18 @@ return new class extends Migration
 
             $table->unique(['barangay_id', 'name']);
         });
+
+        Schema::table('users', function (Blueprint $table) {
+            if (! Schema::hasColumn('users', 'purok_id')) {
+                $table->foreignId('purok_id')->nullable()->after('barangay')->constrained('puroks')->nullOnDelete();
+            }
+        });
+
+        Schema::table('resident_requests', function (Blueprint $table) {
+            if (! Schema::hasColumn('resident_requests', 'purok_id')) {
+                $table->foreignId('purok_id')->nullable()->after('barangay')->constrained('puroks')->nullOnDelete();
+            }
+        });
     }
 
     /**
@@ -27,6 +39,18 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::table('resident_requests', function (Blueprint $table) {
+            if (Schema::hasColumn('resident_requests', 'purok_id')) {
+                $table->dropConstrainedForeignId('purok_id');
+            }
+        });
+
+        Schema::table('users', function (Blueprint $table) {
+            if (Schema::hasColumn('users', 'purok_id')) {
+                $table->dropConstrainedForeignId('purok_id');
+            }
+        });
+
         Schema::dropIfExists('puroks');
     }
 };
