@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+@include('partials.bhw-viewport')
 <title>Bantay Kalusugan - Schedule</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+@include('partials.bhw-shell-styles')
 <style>
     .material-symbols-outlined {
         font-variation-settings:
@@ -16,42 +17,13 @@
         'opsz' 24
     }
 
-    @media (max-width: 768px) {
-        #sidebar {
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            position: fixed;
-            z-index: 40;
-            height: 100vh;
-        }
-
-        #sidebar.active {
-            transform: translateX(0);
-        }
-
-        #overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 30;
-        }
-
-        #overlay.active {
-            display: block;
-        }
-
-        main {
-            width: 100%;
-        }
-    }
+    main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 
     .page-content {
         height: 100%;
         overflow-y: auto;
+        scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch;
     }
 
     .page-content::-webkit-scrollbar {
@@ -84,28 +56,9 @@
         background: #777;
     }
 
-    html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-    }
-
     .nav-item.active {
         background-color: rgba(74, 144, 226, 0.2);
         color: #4A90E2;
-    }
-
-    .main-container {
-        height: 100vh;
-        display: flex;
-    }
-
-    main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
     }
 </style>
 <script>
@@ -142,18 +95,12 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-<div class="main-container">
-    <div class="md:hidden fixed top-4 left-4 z-50">
-        <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-    </div>
+@include('sidebars.bhw')
 
-    <div id="overlay" class=""></div>
+<div id="bhwContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
+    @include('partials.bhw-mobile-topbar')
 
-    @include('sidebars.bhw')
-
-    <main class="flex-1 p-8 overflow-hidden md:ml-0">
+    <main class="flex-1 flex flex-col min-h-0 overflow-hidden pt-3 px-4 pb-24 sm:px-5 lg:px-8 lg:pt-8 lg:pb-6">
         <div class="page-content">
             <div class="max-w-7xl mx-auto">
                 <div class="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-8">
@@ -210,23 +157,11 @@
             </div>
         </div>
     </main>
+
+    @include('partials.bhw-mobile-nav')
 </div>
 
 <script>
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    });
-
-    overlay.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    });
-
     const scheduleNotes = @json($scheduleEvents ?? []);
 
     const monthLabel = document.getElementById('monthLabel');

@@ -12,6 +12,8 @@ class HouseholdMonitoringCase extends Model
 
     public const TYPE_SENIOR = 'senior';
 
+    public const TYPE_GENERAL = 'general';
+
     protected $fillable = [
         'resident_request_id',
         'user_id',
@@ -71,6 +73,7 @@ class HouseholdMonitoringCase extends Model
         return match ($this->member_type) {
             self::TYPE_PREGNANT => 'Pregnant',
             self::TYPE_SENIOR => 'Senior',
+            self::TYPE_GENERAL => 'Monitoring',
             default => ucfirst((string) $this->member_type),
         };
     }

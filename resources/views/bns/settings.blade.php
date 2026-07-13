@@ -92,23 +92,20 @@
                             <input id="full_name" type="text" name="full_name" value="{{ old('full_name', $user->full_name ?: $user->name) }}" required class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 text-sm">
                         </div>
 
-                        <div class="pb-5">
+                        <div>
                             <label class="block text-sm font-medium mb-1" for="email">Email</label>
                             <div class="relative">
-                                <input id="email" type="email" name="email" value="{{ old('email', $user->email) }}" required autocomplete="email" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 text-sm">
+                                <input id="email" type="email" value="{{ $user->email }}" disabled class="w-full h-10 rounded-lg bg-background-light/70 dark:bg-background-dark/70 border border-border-light dark:border-border-dark px-3 text-sm text-text-light/80 dark:text-text-dark/80 cursor-not-allowed">
                                 <button type="button" id="openChangePasswordModalBtn" class="absolute right-0 top-full mt-0.5 text-sm font-semibold text-primary hover:underline leading-none">
                                     Change password
                                 </button>
                             </div>
                         </div>
 
-                        <div class="pt-1">
-                            <label class="block text-sm font-medium mb-1">Barangay</label>
+                        <div>
+                            <label class="block text-sm font-medium mb-1" for="barangay">Barangay</label>
                             <input type="hidden" name="barangay" value="{{ $user->barangay }}">
-                            <div class="profile-static-field w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-background-light/70 dark:bg-background-dark/70 px-3 flex items-center text-sm text-text-light/80 dark:text-text-dark/80">
-                                {{ $user->barangay ?: '—' }}
-                            </div>
-                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Cannot be changed.</p>
+                            <input id="barangay" type="text" value="{{ $user->barangay ?: '—' }}" disabled class="w-full h-10 rounded-lg bg-background-light/70 dark:bg-background-dark/70 border border-border-light dark:border-border-dark px-3 text-sm text-text-light/80 dark:text-text-dark/80 cursor-not-allowed">
                         </div>
 
                         <div class="pt-2">

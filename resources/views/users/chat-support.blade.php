@@ -123,7 +123,7 @@
                         @csrf
                         <div class="flex-1">
                             <label class="sr-only" for="chatSupportInput">Your message</label>
-                            <textarea id="chatSupportInput" rows="2" class="w-full rounded-xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-900/60 px-4 py-3 text-sm text-[#0e1b13] dark:text-gray-100 focus:border-primary focus:ring-2 focus:ring-primary/30 resize-none disabled:cursor-not-allowed disabled:opacity-60" placeholder="Ask health related questions..." disabled required></textarea>
+                            <textarea id="chatSupportInput" rows="2" maxlength="1000" class="w-full rounded-xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-900/60 px-4 py-3 text-sm text-[#0e1b13] dark:text-gray-100 focus:border-primary focus:ring-2 focus:ring-primary/30 resize-none disabled:cursor-not-allowed disabled:opacity-60" placeholder="Ask health related questions..." disabled required></textarea>
                         </div>
                         <button type="submit" class="inline-flex h-[52px] items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-[#0e1b13] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                             <span class="material-symbols-outlined text-[18px]">send</span>
@@ -213,8 +213,15 @@
             form.addEventListener('submit', async (event) => {
                 event.preventDefault();
 
-                const message = input.value.trim();
+                const message = input.value.trim().slice(0, 1000);
                 if (!message) {
+                    return;
+                }
+
+                if (/ignore (all |any )?(previous|prior|above) (instructions|rules|prompts)/i.test(message)
+                    || /system prompt:/i.test(message)
+                    || /reveal (your )?(system|hidden|developer) (prompt|instructions)/i.test(message)) {
+                    status.textContent = 'That message looks invalid. Please ask a normal health or app question.';
                     return;
                 }
 

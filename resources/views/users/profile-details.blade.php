@@ -66,15 +66,82 @@
 <body class="font-display bg-background-light dark:bg-background-dark text-[#0e1b13] dark:text-gray-200">
     @php
         $householdPurok = $user->householdPurokLabel();
-        $isDashboard = request()->routeIs('users.main');
-        $isEvents = request()->routeIs('users.events');
-        $isAnnouncements = request()->routeIs('users.announcements');
         $isProfile = request()->routeIs('users.profile*');
         $isNotifications = request()->routeIs('users.notifications');
-        $isMedicalRecords = request()->routeIs('users.medical-records');
-        $selectedGender = ucfirst(strtolower(trim((string) old('gender', $user->gender))));
-        $selectedCivilStatus = trim((string) old('civil_status', $user->civil_status));
-        $civilStatusOptions = \App\Models\User::CIVIL_STATUSES;
+        $residentRequest = $residentRequest ?? null;
+
+        $lockedInputClass = 'w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 text-gray-700 dark:text-gray-300 cursor-not-allowed';
+
+        $representativeName = trim((string) (
+            $residentRequest?->full_name
+            ?: $user->full_name
+            ?: $user->name
+            ?: ''
+        ));
+        $representativeRole = trim((string) ($residentRequest?->parent_role ?: $user->parent_role ?: ''));
+        $representativeContact = trim((string) ($residentRequest?->contact ?: $user->contact_number ?: ''));
+
+        $spouseDetails = $residentRequest?->spouse_details ?? $user->spouse_details ?? [];
+        if (! is_array($spouseDetails)) {
+            $spouseDetails = [];
+        }
+        $spouseName = trim((string) (
+            $residentRequest?->spouse_full_name
+            ?: $user->spouse_full_name
+            ?: ($spouseDetails['full_name'] ?? '')
+        ));
+        $spouseMeta = collect([
+            $spouseDetails['parent_role'] ?? null,
+            filled($spouseDetails['gender'] ?? null) ? ucfirst(strtolower(trim((string) $spouseDetails['gender']))) : null,
+            filled($spouseDetails['birthdate'] ?? null) ? \Illuminate\Support\Carbon::parse((string) $spouseDetails['birthdate'])->format('M d, Y') : null,
+            $spouseDetails['place_of_birth'] ?? null,
+            $spouseDetails['educational_attainment'] ?? null,
+        ])->filter(fn ($part) => filled($part))->values()->all();
+
+        $householdChildren = collect($residentRequest?->household_children ?? [])
+            ->filter(fn ($child) => is_array($child) && trim((string) ($child['full_name'] ?? $child['name'] ?? '')) !== '')
+            ->map(function (array $child) {
+                $name = trim((string) ($child['full_name'] ?? $child['name'] ?? ''));
+                $meta = collect([
+                    $child['relationship'] ?? null,
+                    filled($child['gender'] ?? null) ? ucfirst(strtolower(trim((string) $child['gender']))) : null,
+                    filled($child['birthdate'] ?? null) ? \Illuminate\Support\Carbon::parse((string) $child['birthdate'])->format('M d, Y') : null,
+                    $child['educational_attainment'] ?? null,
+                    $child['occupation'] ?? null,
+                ])->filter(fn ($part) => filled($part))->implode(' · ');
+
+                return ['full_name' => $name, 'meta' => $meta];
+            })
+            ->values();
+
+        $householdSeniors = collect($residentRequest?->household_seniors ?? [])
+            ->filter(fn ($senior) => is_array($senior) && trim((string) ($senior['full_name'] ?? $senior['name'] ?? '')) !== '')
+            ->map(function (array $senior) {
+                $name = trim((string) ($senior['full_name'] ?? $senior['name'] ?? ''));
+                $age = $senior['age_in_years'] ?? null;
+                if ($age === null && filled($senior['birthdate'] ?? null)) {
+                    $age = \App\Support\PersonAge::ageInYears((string) $senior['birthdate']);
+                }
+                $meta = collect([
+                    $senior['relationship'] ?? null,
+                    filled($senior['gender'] ?? null) ? ucfirst(strtolower(trim((string) $senior['gender']))) : null,
+                    $age !== null ? $age.' yrs' : null,
+                    filled($senior['birthdate'] ?? null) ? \Illuminate\Support\Carbon::parse((string) $senior['birthdate'])->format('M d, Y') : null,
+                    $senior['place_of_birth'] ?? null,
+                    $senior['educational_attainment'] ?? null,
+                    $senior['occupation'] ?? null,
+                ])->filter(fn ($part) => filled($part))->implode(' · ');
+
+                return ['full_name' => $name, 'meta' => $meta];
+            })
+            ->values();
+
+        $hasHouseholdMembers = $spouseName !== '' || $householdChildren->isNotEmpty() || $householdSeniors->isNotEmpty();
+        $familyNumber = trim((string) ($residentRequest?->family_number ?: $user->family_number ?: ''));
+        $placeOfBirth = trim((string) ($residentRequest?->place_of_birth ?: $user->place_of_birth ?: ''));
+        $educationalAttainment = trim((string) ($residentRequest?->educational_attainment ?: $user->educational_attainment ?: ''));
+        $civilStatus = trim((string) ($residentRequest?->civil_status ?: $user->civil_status ?: ''));
+        $gender = trim((string) ($user->gender ?: ''));
     @endphp
     @include('sidebars.users')
 
@@ -90,6 +157,7 @@
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <h1 class="mt-1 text-2xl font-bold text-[#0e1b13] dark:text-white">Profile Details</h1>
+                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Personal and household details are locked. You can still change your password.</p>
                     </div>
                     <a href="{{ route('users.profile') }}" class="inline-flex items-center gap-1 rounded-lg border border-[#d0e7d9] dark:border-gray-700 px-3 py-2 text-sm font-semibold text-[#1f7f4e] dark:text-gray-200">
                         <span class="material-symbols-outlined text-[18px]">arrow_back</span>
@@ -98,7 +166,7 @@
                 </div>
 
                 <section class="rounded-2xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-5 md:p-6">
-                    @if ($errors->any())
+                    @if ($errors->any() && ! $errors->password->any())
                         <div class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-base text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200">
                             <ul class="list-disc pl-5 space-y-1">
                                 @foreach ($errors->all() as $error)
@@ -108,18 +176,16 @@
                         </div>
                     @endif
 
-                    <form id="profileForm" method="POST" action="{{ route('users.profile.update') }}" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        @csrf
-
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-base font-medium mb-1" for="profileFullName">Full Name</label>
-                            <div id="profileFullName" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ $user->full_name ?: $user->name }}</div>
+                            <input id="profileFullName" type="text" value="{{ $representativeName ?: '—' }}" disabled class="{{ $lockedInputClass }}">
                         </div>
 
                         <div>
                             <label class="block text-base font-medium mb-1" for="profileEmail">Email</label>
                             <div class="relative">
-                                <div id="profileEmail" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ $user->email }}</div>
+                                <input id="profileEmail" type="email" value="{{ $user->email }}" disabled class="{{ $lockedInputClass }}">
                                 <button type="button" id="openChangePasswordModalBtn" class="absolute right-0 top-full mt-0.5 text-sm font-semibold text-[#1f7f4e] hover:text-[#176b3d] hover:underline dark:text-primary leading-none">
                                     Change password
                                 </button>
@@ -127,73 +193,146 @@
                         </div>
 
                         <div>
-                            <label class="block text-base font-medium mb-1">Gender</label>
-                            <select name="gender" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
-                                <option value="">Select gender</option>
-                                @foreach (['Male', 'Female', 'Other'] as $gender)
-                                    <option value="{{ $gender }}" @selected($selectedGender === $gender)>{{ $gender }}</option>
-                                @endforeach
-                            </select>
+                            <label class="block text-base font-medium mb-1" for="profileGender">Gender</label>
+                            <input id="profileGender" type="text" value="{{ $gender !== '' ? ucfirst(strtolower($gender)) : '—' }}" disabled class="{{ $lockedInputClass }}">
                         </div>
 
                         <div>
                             <label class="block text-base font-medium mb-1" for="profileDateOfBirth">Date of Birth</label>
-                            <div id="profileDateOfBirth" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ optional($user->date_of_birth)->format('F j, Y') ?: '—' }}</div>
+                            <input id="profileDateOfBirth" type="text" value="{{ optional($user->date_of_birth)->format('F j, Y') ?: '—' }}" disabled class="{{ $lockedInputClass }}">
                         </div>
 
                         <div>
-                            <label class="block text-base font-medium mb-1" for="civil_status">Civil Status</label>
-                            <select id="civil_status" name="civil_status" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
-                                <option value="">Select civil status</option>
-                                @foreach ($civilStatusOptions as $status)
-                                    <option value="{{ $status }}" @selected($selectedCivilStatus === $status)>{{ $status }}</option>
-                                @endforeach
-                                @if ($selectedCivilStatus !== '' && ! in_array($selectedCivilStatus, $civilStatusOptions, true))
-                                    <option value="{{ $selectedCivilStatus }}" selected>{{ $selectedCivilStatus }}</option>
-                                @endif
-                            </select>
+                            <label class="block text-base font-medium mb-1" for="profileCivilStatus">Civil Status</label>
+                            <input id="profileCivilStatus" type="text" value="{{ $civilStatus !== '' ? $civilStatus : '—' }}" disabled class="{{ $lockedInputClass }}">
                         </div>
 
                         <div>
-                            <label class="block text-base font-medium mb-1">Contact Number</label>
-                            <input type="text" name="contact_number" value="{{ old('contact_number', $user->contact_number) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3">
+                            <label class="block text-base font-medium mb-1" for="profileContact">Contact Number</label>
+                            <input id="profileContact" type="text" value="{{ $representativeContact !== '' ? $representativeContact : '—' }}" disabled class="{{ $lockedInputClass }}">
+                        </div>
+
+                        @if ($representativeRole !== '')
+                            <div>
+                                <label class="block text-base font-medium mb-1" for="profileParentRole">Parent Role</label>
+                                <input id="profileParentRole" type="text" value="{{ $representativeRole }}" disabled class="{{ $lockedInputClass }}">
+                            </div>
+                        @endif
+
+                        @if ($placeOfBirth !== '')
+                            <div>
+                                <label class="block text-base font-medium mb-1" for="profilePlaceOfBirth">Place of Birth</label>
+                                <input id="profilePlaceOfBirth" type="text" value="{{ $placeOfBirth }}" disabled class="{{ $lockedInputClass }}">
+                            </div>
+                        @endif
+
+                        @if ($educationalAttainment !== '')
+                            <div>
+                                <label class="block text-base font-medium mb-1" for="profileEducation">Educational Attainment</label>
+                                <input id="profileEducation" type="text" value="{{ $educationalAttainment }}" disabled class="{{ $lockedInputClass }}">
+                            </div>
+                        @endif
+
+                        @if ($familyNumber !== '')
+                            <div>
+                                <label class="block text-base font-medium mb-1" for="profileFamilyNumber">Family Number</label>
+                                <input id="profileFamilyNumber" type="text" value="{{ $familyNumber }}" disabled class="{{ $lockedInputClass }}">
+                            </div>
+                        @endif
+
+                        <div>
+                            <label class="block text-base font-medium mb-1" for="profileHousehold">Household No./Purok</label>
+                            <input id="profileHousehold" type="text" value="{{ $householdPurok ?: '—' }}" disabled class="{{ $lockedInputClass }}">
                         </div>
 
                         <div>
-                            <label class="block text-base font-medium mb-1">Household No./Purok</label>
-                            @if ($user->purok_id)
-                                <input type="hidden" name="household_no" value="{{ old('household_no', $householdPurok) }}">
-                                <div class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ old('household_no', $householdPurok) ?: '—' }}</div>
-                                <p class="text-sm text-[#4e976b] dark:text-gray-400 mt-1">Set from your verification map location.</p>
-                            @else
-                                <input type="text" name="household_no" value="{{ old('household_no', $householdPurok) }}" class="w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-background-light dark:bg-gray-900 px-3" placeholder="---">
-                            @endif
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label class="block text-base font-medium mb-1">Barangay</label>
-                            <input type="hidden" name="barangay" value="{{ old('barangay', $user->barangay) }}">
-                            <div class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ old('barangay', $user->barangay) ?: '—' }}</div>
-                            <p class="text-sm text-[#4e976b] dark:text-gray-400 mt-1">Cannot be changed.</p>
+                            <label class="block text-base font-medium mb-1" for="profileBarangay">Barangay</label>
+                            <input id="profileBarangay" type="text" value="{{ $user->barangay ?: '—' }}" disabled class="{{ $lockedInputClass }}">
                         </div>
 
                         <div>
                             <label class="block text-base font-medium mb-1" for="profileMunicipality">Municipality</label>
-                            <div id="profileMunicipality" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ $user->municipality ?: 'Victoria' }}</div>
+                            <input id="profileMunicipality" type="text" value="{{ $user->municipality ?: 'Victoria' }}" disabled class="{{ $lockedInputClass }}">
                         </div>
 
                         <div>
                             <label class="block text-base font-medium mb-1" for="profileProvince">Province</label>
-                            <div id="profileProvince" class="profile-static-field w-full h-10 rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-gray-100 dark:bg-gray-900/60 px-3 flex items-center text-gray-700 dark:text-gray-300">{{ $user->province ?: 'Oriental Mindoro' }}</div>
+                            <input id="profileProvince" type="text" value="{{ $user->province ?: 'Oriental Mindoro' }}" disabled class="{{ $lockedInputClass }}">
+                        </div>
+                    </div>
+                </section>
+
+                <section class="rounded-2xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-5 md:p-6 space-y-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-[#0e1b13] dark:text-white">Household Members</h2>
+                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Representative, spouse, children, and older members from your registration.</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="rounded-xl border border-[#d0e7d9] dark:border-gray-700 p-4">
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-[#1f7f4e] text-[22px] shrink-0">person</span>
+                                <div class="min-w-0">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Representative</p>
+                                    <p class="mt-1 text-sm font-semibold text-[#0e1b13] dark:text-white break-words">{{ $representativeName !== '' ? $representativeName : '—' }}</p>
+                                    <p class="mt-1 text-xs text-[#4e976b] dark:text-gray-400">
+                                        {{ collect([$representativeRole ?: null, $gender !== '' ? ucfirst(strtolower($gender)) : null, $representativeContact !== '' ? $representativeContact : null])->filter()->implode(' · ') ?: 'Account holder' }}
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="md:col-span-2 pt-2">
-                            <button type="submit" class="inline-flex h-11 items-center gap-2 px-5 rounded-lg bg-primary text-base font-bold text-white">
-                                <span class="material-symbols-outlined text-[18px] text-white">save</span>
-                                <span>Save</span>
-                            </button>
-                        </div>
-                    </form>
+                        @if ($spouseName !== '')
+                            <div class="rounded-xl border border-[#d0e7d9] dark:border-gray-700 p-4">
+                                <div class="flex items-start gap-3">
+                                    <span class="material-symbols-outlined text-[#1f7f4e] text-[22px] shrink-0">favorite</span>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Spouse</p>
+                                        <p class="mt-1 text-sm font-semibold text-[#0e1b13] dark:text-white break-words">{{ $spouseName }}</p>
+                                        @if (! empty($spouseMeta))
+                                            <p class="mt-1 text-xs text-[#4e976b] dark:text-gray-400 break-words">{{ implode(' · ', $spouseMeta) }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @foreach ($householdChildren as $child)
+                            <div class="rounded-xl border border-[#d0e7d9] dark:border-gray-700 p-4">
+                                <div class="flex items-start gap-3">
+                                    <span class="material-symbols-outlined text-[#1f7f4e] text-[22px] shrink-0">child_care</span>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Child</p>
+                                        <p class="mt-1 text-sm font-semibold text-[#0e1b13] dark:text-white break-words">{{ $child['full_name'] }}</p>
+                                        @if ($child['meta'] !== '')
+                                            <p class="mt-1 text-xs text-[#4e976b] dark:text-gray-400 break-words">{{ $child['meta'] }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+
+                        @foreach ($householdSeniors as $senior)
+                            <div class="rounded-xl border border-[#d0e7d9] dark:border-gray-700 p-4">
+                                <div class="flex items-start gap-3">
+                                    <span class="material-symbols-outlined text-[#1f7f4e] text-[22px] shrink-0">elderly</span>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Older</p>
+                                        <p class="mt-1 text-sm font-semibold text-[#0e1b13] dark:text-white break-words">{{ $senior['full_name'] }}</p>
+                                        @if ($senior['meta'] !== '')
+                                            <p class="mt-1 text-xs text-[#4e976b] dark:text-gray-400 break-words">{{ $senior['meta'] }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+
+                        @if (! $hasHouseholdMembers)
+                            <div class="rounded-xl border border-dashed border-[#d0e7d9] dark:border-gray-700 p-4 text-sm text-[#4e976b] dark:text-gray-400">
+                                No spouse, child, or older household members on file. Only the representative is listed.
+                            </div>
+                        @endif
+                    </div>
                 </section>
             </div>
         </main>

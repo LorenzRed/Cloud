@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+@include('partials.submit-guard')
 <title>Bantay Kalusugan - Posts</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+@include('partials.captain-shell-styles')
 <style>
     .material-symbols-outlined {
         font-variation-settings:
@@ -120,26 +122,12 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-@php
-    $isDashboard = request()->routeIs('barangay-captain.main') || request()->routeIs('brgcaptain.main');
-    $isResidents = request()->routeIs('barangay-captain.residents');
-    $isReports = request()->routeIs('barangay-captain.reports');
-    $isEvents = request()->routeIs('barangay-captain.events');
-    $isPosts = request()->routeIs('barangay-captain.posts');
-    $isSettings = request()->routeIs('barangay-captain.settings');
-@endphp
-<div class="main-container">
-    <div class="md:hidden fixed top-4 left-4 z-50">
-        <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-    </div>
+@include('sidebars.barangay_captain')
 
-    <div id="overlay"></div>
+<div id="captainContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
+    @include('partials.captain-mobile-topbar')
 
-    @include('sidebars.barangay_captain')
-
-    <main class="flex-1 p-8 overflow-hidden md:ml-0">
+    <main class="flex-1 flex flex-col min-h-0 pt-3 sm:pt-4 px-4 sm:px-5 md:px-6 lg:px-8 lg:pt-6 pb-24 lg:pb-6 overflow-hidden">
         <div class="page-content">
             <div class="w-full max-w-7xl mx-auto space-y-6">
                 <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -327,26 +315,14 @@
                 </div>
         </div>
     </main>
+
+    @include('partials.captain-mobile-nav')
 </div>
 
 <script>
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    const editModalTriggers = document.querySelectorAll('[data-open-edit-modal]');
+const editModalTriggers = document.querySelectorAll('[data-open-edit-modal]');
     const editModalClosers = document.querySelectorAll('[data-close-edit-modal]');
-
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    });
-
-    overlay.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    });
-
-    editModalTriggers.forEach((trigger) => {
+editModalTriggers.forEach((trigger) => {
         trigger.addEventListener('click', () => {
             const modalId = `editModal-${trigger.getAttribute('data-open-edit-modal')}`;
             const modal = document.getElementById(modalId);

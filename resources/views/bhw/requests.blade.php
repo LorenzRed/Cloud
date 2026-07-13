@@ -2,33 +2,34 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+@include('partials.bhw-viewport')
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <title>Bantay Kalusugan - Resident Requests</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+@include('partials.bhw-shell-styles')
 <style>
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
     @media (max-width: 1023px) {
         #requestDetailPanel:not(.mobile-hidden) {
             min-height: 0;
-            max-height: calc(100dvh - 6.5rem);
+            max-height: calc(100dvh - 10rem);
         }
-    }
-    @media (max-width: 768px) {
-        #sidebar { transform: translateX(-100%); transition: transform 0.3s ease-in-out; position: fixed; z-index: 40; height: 100vh; }
-        #sidebar.active { transform: translateX(0); }
-        #overlay { display: none; position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 30; }
-        #overlay.active { display: block; }
-        main { width: 100%; }
         #requestDetailPanel.mobile-hidden { display: none; }
         #requestListPanel.mobile-hidden { display: none; }
     }
-    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
-    .main-container { height: 100vh; display: flex; }
-    main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
     .page-content { height: 100%; overflow: hidden; display: flex; flex-direction: column; }
+    .requests-page-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        line-height: 1.25;
+        letter-spacing: -0.01em;
+    }
+    @media (min-width: 768px) {
+        .requests-page-title { font-size: 1.25rem; }
+    }
     .request-list-scroll, .chat-scroll, .detail-body-scroll { scrollbar-width: thin; scrollbar-color: #c1c1c1 transparent; }
     .request-list-scroll::-webkit-scrollbar, .chat-scroll::-webkit-scrollbar, .detail-body-scroll::-webkit-scrollbar { width: 6px; }
     .request-list-scroll::-webkit-scrollbar-thumb, .chat-scroll::-webkit-scrollbar-thumb, .detail-body-scroll::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
@@ -85,42 +86,28 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-<div class="main-container">
-    <div class="md:hidden fixed top-4 left-4 z-50">
-        <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-    </div>
-    <div id="overlay"></div>
     @include('sidebars.bhw')
 
-    <main class="flex-1 p-4 md:p-6 lg:p-8 overflow-hidden md:ml-0">
-        <div class="page-content w-full max-w-7xl mx-auto">
-            <header class="flex flex-wrap justify-between items-start gap-4 mb-4 shrink-0">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold leading-tight">Resident Requests</h1>
-                    <p class="text-sm md:text-base text-text-light/70 dark:text-text-dark/70 mt-1">Review verification requests and chat with residents.</p>
-                    </div>
-                <div class="flex items-center gap-3">
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-200">
-                        <span class="material-symbols-outlined text-sm">pending_actions</span>
-                        {{ $pendingRequests->count() }} pending
-                    </span>
-                    <a href="{{ route('bhw.residents') }}" class="inline-flex items-center gap-2 h-10 px-4 bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark rounded-xl text-sm font-semibold hover:bg-background-light dark:hover:bg-background-dark">
-                        <span class="material-symbols-outlined text-lg">groups</span>
-                        Residents
-                    </a>
-                </div>
-                </header>
+<div id="bhwContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
+    @include('partials.bhw-mobile-topbar')
 
+    <main class="flex-1 flex flex-col min-h-0 overflow-hidden p-4 md:p-6 lg:p-8 pb-24 lg:pb-6">
+        <div class="page-content w-full max-w-7xl mx-auto">
             <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)] gap-4">
                 {{-- Request list --}}
                 <section id="requestListPanel" class="flex flex-col min-h-0 rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm overflow-hidden">
-                    <div class="p-4 border-b border-border-light dark:border-border-dark shrink-0">
+                    <div class="p-4 border-b border-border-light dark:border-border-dark shrink-0 space-y-2.5">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h1 class="requests-page-title text-text-light dark:text-text-dark">Resident Requests</h1>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 dark:bg-amber-900/40 px-3 py-1.5 text-xs font-bold text-amber-800 dark:text-amber-200 shrink-0">
+                                <span class="material-symbols-outlined text-sm">pending_actions</span>
+                                {{ $pendingRequests->count() }} pending
+                            </span>
+                        </div>
                         <form method="GET" action="{{ route('bhw.requests') }}">
                         <div class="relative">
                                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-light/50 dark:text-text-dark/50 text-xl">search</span>
-                                <input class="w-full h-11 pl-10 pr-4 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-primary focus:border-primary text-sm" name="search" value="{{ $search }}" placeholder="Search name or email..." type="text"/>
+                                <input class="w-full h-11 pl-10 pr-4 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-primary focus:border-primary text-sm" name="search" value="{{ $search }}" maxlength="100" placeholder="Search name or email..." type="search" autocomplete="off"/>
                             </div>
                         </form>
                     </div>
@@ -288,7 +275,7 @@
                                                 <span class="request-new-badge inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">New message</span>
                                             @endif
                                         </div>
-                                    </div>
+                    </div>
                                     @if ($unreadCount > 0)
                                         <span class="request-new-dot w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 mt-1" aria-hidden="true"></span>
                 @endif
@@ -417,6 +404,8 @@
             </div>
         </div>
     </main>
+
+    @include('partials.bhw-mobile-nav')
 </div>
 
 <div id="idViewerModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true" aria-labelledby="idViewerTitle">
@@ -851,12 +840,6 @@
     } else if (window.innerWidth >= 1024) {
         requestDetailPanel.classList.remove('mobile-hidden');
     }
-
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    menuToggle?.addEventListener('click', () => { sidebar.classList.toggle('active'); overlay.classList.toggle('active'); });
-    overlay?.addEventListener('click', () => { sidebar.classList.remove('active'); overlay.classList.remove('active'); });
 
     @if (session('reopen_accept_request_id') || $errors->has('family_number'))
     (function reopenAcceptModalAfterValidation() {

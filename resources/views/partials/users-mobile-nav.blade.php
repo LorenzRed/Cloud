@@ -2,24 +2,29 @@
     $isDashboard = request()->routeIs('users.main');
     $isAnnouncements = request()->routeIs('users.announcements');
     $isProfile = request()->routeIs('users.profile*');
-    $isMedicalRecords = request()->routeIs('users.medical-records');
+    $isTransactionRecords = request()->routeIs('users.transaction-records');
+    $isMaintenanceRecords = request()->routeIs('users.maintenance-records');
 @endphp
 
 <nav id="usersMobileNav" class="users-mobile-nav lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-[#d0e7d9] bg-white/95 backdrop-blur dark:border-gray-700 dark:bg-gray-800/95" aria-label="Mobile navigation">
-    <div class="grid grid-cols-4 gap-1 px-2 py-2">
-        <a href="{{ route('users.main') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isDashboard ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+    <div class="grid grid-cols-5 gap-0.5 px-1 py-2">
+        <a href="{{ route('users.main') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[10px] font-semibold {{ $isDashboard ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
             <span class="material-symbols-outlined text-[20px]">home</span>
             Home
         </a>
-        <a href="{{ route('users.announcements') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isAnnouncements ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+        <a href="{{ route('users.announcements') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[10px] font-semibold {{ $isAnnouncements ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
             <span class="material-symbols-outlined text-[20px]">campaign</span>
-            Announcements
+            Announce
         </a>
-        <a href="{{ route('users.medical-records') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isMedicalRecords ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
-            <span class="material-symbols-outlined text-[20px]">health_metrics</span>
-            Medical
+        <a href="{{ route('users.transaction-records') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[10px] font-semibold {{ $isTransactionRecords ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+            <span class="material-symbols-outlined text-[20px]">medication</span>
+            Transact
         </a>
-        <a href="{{ route('users.profile') }}" class="relative flex flex-col items-center justify-center rounded-lg py-1.5 text-[11px] font-semibold {{ $isProfile ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+        <a href="{{ route('users.maintenance-records') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[10px] font-semibold {{ $isMaintenanceRecords ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
+            <span class="material-symbols-outlined text-[20px]">health_and_safety</span>
+            Maintain
+        </a>
+        <a href="{{ route('users.profile') }}" class="relative flex flex-col items-center justify-center rounded-lg py-1.5 text-[10px] font-semibold {{ $isProfile ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
             <span class="relative material-symbols-outlined text-[20px]">
                 person
                 @if (($unreadBhwChatCount ?? 0) > 0)

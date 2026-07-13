@@ -1,13 +1,12 @@
-<!-- Sidebar -->
+<!-- Sidebar (desktop) -->
 <aside id="sidebar"
-    class="flex flex-col w-64 p-4 bg-card-light dark:bg-card-dark border-r border-border-light dark:border-border-dark h-full">
+    class="hidden lg:flex fixed left-0 top-0 z-20 flex-col w-64 p-4 bg-card-light dark:bg-card-dark border-r border-border-light dark:border-border-dark h-screen overflow-y-auto">
     @php
         $isDashboard = request()->routeIs('barangay-captain.main') || request()->routeIs('brgcaptain.main');
-        $isResidents = request()->routeIs('barangay-captain.residents');
         $isReports = request()->routeIs('barangay-captain.reports');
         $isBhwWorkers = request()->routeIs('barangay-captain.bhw-workers');
         $isBnsWorkers = request()->routeIs('barangay-captain.bns-workers');
-        $isSettings = request()->routeIs('barangay-captain.settings');
+        $isProfile = request()->routeIs('barangay-captain.my-profile') || request()->routeIs('barangay-captain.settings*');
 
         $activeLinkClass = 'flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-primary/20';
         $inactiveLinkClass = 'flex items-center gap-3 px-3 py-2 rounded hover:bg-primary/10 transition-colors';
@@ -57,22 +56,18 @@
                 <span class="{{ $isBnsWorkers ? $activeIconClass : $inactiveIconClass }}" @if ($isBnsWorkers) style="font-variation-settings: 'FILL' 1;" @endif>nutrition</span>
                 <p class="{{ $isBnsWorkers ? $activeTextClass : $inactiveTextClass }}">BNS Workers</p>
             </a>
-            <a class="{{ $isResidents ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('barangay-captain.residents') }}">
-                <span class="{{ $isResidents ? $activeIconClass : $inactiveIconClass }}" @if ($isResidents) style="font-variation-settings: 'FILL' 1;" @endif>groups</span>
-                <p class="{{ $isResidents ? $activeTextClass : $inactiveTextClass }}">Residents</p>
-            </a>
             <a class="{{ $isReports ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('barangay-captain.reports') }}">
                 <span class="{{ $isReports ? $activeIconClass : $inactiveIconClass }}" @if ($isReports) style="font-variation-settings: 'FILL' 1;" @endif>assessment</span>
                 <p class="{{ $isReports ? $activeTextClass : $inactiveTextClass }}">Reports</p>
             </a>
         </div>
         <div class="flex flex-col gap-4">
-            <a href="{{ route('barangay-captain.settings') }}"
-                class="{{ $isSettings ? $activeLinkClass : 'w-full nav-item flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors duration-200 cursor-pointer text-left' }}"
-                data-page="settings"
-                aria-label="Open settings">
-                <span class="{{ $isSettings ? $activeIconClass : 'material-symbols-outlined' }}" @if ($isSettings) style="font-variation-settings: 'FILL' 1;" @endif>settings</span>
-                <p class="{{ $isSettings ? $activeTextClass : 'text-sm font-medium' }}">Settings</p>
+            <a href="{{ route('barangay-captain.my-profile') }}"
+                class="{{ $isProfile ? $activeLinkClass : 'w-full nav-item flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors duration-200 cursor-pointer text-left' }}"
+                data-page="profile"
+                aria-label="Open profile">
+                <span class="{{ $isProfile ? $activeIconClass : 'material-symbols-outlined' }}" @if ($isProfile) style="font-variation-settings: 'FILL' 1;" @endif>person</span>
+                <p class="{{ $isProfile ? $activeTextClass : 'text-sm font-medium' }}">Profile</p>
             </a>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf

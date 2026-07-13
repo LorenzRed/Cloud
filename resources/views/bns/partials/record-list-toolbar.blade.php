@@ -14,6 +14,8 @@
                 <input
                     id="recordSearch"
                     type="search"
+                    maxlength="100"
+                    autocomplete="off"
                     placeholder="{{ $searchPlaceholder }}"
                     class="w-full h-10 pl-10 pr-3 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm"
                 />

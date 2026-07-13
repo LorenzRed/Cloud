@@ -108,7 +108,7 @@
                                         Announcement
                                     </span>
                                     <span class="text-xs text-[#4e976b] dark:text-gray-400">
-                                        {{ $announcement->event_date?->format('M d, Y') ?? $announcement->created_at?->format('M d, Y') ?? 'TBA' }}
+                                        {{ $announcement->expiresAt()?->format('M d, Y · h:i A') ?? $announcement->event_date?->format('M d, Y') ?? $announcement->created_at?->format('M d, Y') ?? 'TBA' }}
                                     </span>
                                 </div>
 

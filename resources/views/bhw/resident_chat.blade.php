@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+@include('partials.bhw-viewport')
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <title>Bantay Kalusugan - Resident Chat</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+@include('partials.bhw-shell-styles')
 @include('partials.bhw-messenger-chat-styles')
 <script>
     tailwind.config = {
@@ -46,15 +47,9 @@
         : null;
     $purokLabel = $residentRequest->purok?->name ?? 'No purok';
 @endphp
-<div class="main-container">
-    <div id="bhwChatMenuToggle" class="md:hidden fixed top-4 left-4 z-50">
-        <button id="menuToggle" type="button" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-    </div>
-    <div id="overlay"></div>
-    @include('sidebars.bhw')
+@include('sidebars.bhw')
 
+<div id="bhwContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
     <main class="bhw-messenger-main flex-1 min-h-0 flex flex-col overflow-hidden">
         <section class="bhw-messenger-shell flex-1 min-h-0 flex flex-col overflow-hidden">
             @include('partials.bhw-messenger-chat-header', [
@@ -98,13 +93,6 @@
     </main>
 </div>
 
-<script>
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    menuToggle?.addEventListener('click', () => { sidebar?.classList.toggle('active'); overlay?.classList.toggle('active'); });
-    overlay?.addEventListener('click', () => { sidebar?.classList.remove('active'); overlay?.classList.remove('active'); });
-</script>
 @if (session('status'))
 <div data-auto-dismiss="3500" class="fixed top-4 right-4 z-[60] w-[min(92vw,24rem)] rounded-xl border border-green-300 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800 shadow-lg toast-enter dark:bg-green-900/30 dark:border-green-700 dark:text-green-200" role="status" aria-live="polite">
     {{ session('status') }}

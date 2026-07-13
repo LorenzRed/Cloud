@@ -893,7 +893,7 @@
                             <div class="monitoring-search-wrap">
                                 <div class="relative flex-1 min-w-0">
                                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-light/50 dark:text-text-dark/50 text-lg pointer-events-none">search</span>
-                                    <input id="masterlistSearch" type="search" placeholder="Search by name, parent, or purok..." class="w-full h-10 pl-10 pr-3 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm"/>
+                                    <input id="masterlistSearch" type="search" maxlength="100" autocomplete="off" placeholder="Search by name, parent, or purok..." class="w-full h-10 pl-10 pr-3 rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm"/>
                                 </div>
                                 <button type="button" id="toggleFiltersBtn" class="md:hidden h-10 px-3.5 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-xs font-semibold inline-flex items-center justify-center gap-1.5 shrink-0" aria-expanded="false" aria-controls="filtersPanel">
                                     <span class="material-symbols-outlined text-base">tune</span>

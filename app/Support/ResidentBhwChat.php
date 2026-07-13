@@ -248,11 +248,11 @@ class ResidentBhwChat
     public static function storeMessage(Request $request, User $resident, User $bhw, User $sender): ResidentBhwMessage
     {
         $data = $request->validate([
-            'message' => ['nullable', 'string', 'max:500'],
+            'message' => SafeInput::chatMessageRules(false),
             'attachment' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp,pdf'],
         ]);
 
-        $messageText = trim((string) ($data['message'] ?? ''));
+        $messageText = SafeInput::chatMessage($data['message'] ?? null);
 
         if ($messageText === '' && ! $request->hasFile('attachment')) {
             throw \Illuminate\Validation\ValidationException::withMessages([
@@ -286,7 +286,7 @@ class ResidentBhwChat
         }
 
         $message->update([
-            'message' => trim($body),
+            'message' => SafeInput::chatMessage($body),
             'edited_at' => now(),
         ]);
 

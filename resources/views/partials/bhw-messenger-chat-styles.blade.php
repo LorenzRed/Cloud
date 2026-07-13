@@ -1,8 +1,8 @@
 <style>
-    html, body { height: 100%; overflow: hidden; }
+    html, body { height: 100%; }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
 
-    .bhw-messenger-chat-page .main-container {
+    .bhw-messenger-chat-page #bhwContent {
         height: 100dvh;
         height: 100svh;
         display: flex;
@@ -10,7 +10,7 @@
     }
 
     @media (min-width: 1024px) {
-        .bhw-messenger-chat-page .main-container { height: 100vh; }
+        .bhw-messenger-chat-page #bhwContent { height: 100vh; }
     }
 
     .bhw-messenger-shell {
@@ -34,7 +34,7 @@
         background-color: #1a1a1a;
     }
     .bhw-messenger-chat-body .rbhw-chat-scroll {
-        padding-top: 2.5rem !important;
+        padding-top: 0.75rem !important;
         padding-bottom: 0.75rem !important;
         padding-left: 0.75rem !important;
         padding-right: 0.75rem !important;
@@ -87,9 +87,6 @@
     }
 
     @media (max-width: 1023px) {
-        .bhw-messenger-chat-page #sidebar { display: none !important; }
-        .bhw-messenger-chat-page #bhwChatMenuToggle { display: none !important; }
-        .bhw-messenger-chat-page #overlay { display: none !important; }
         .bhw-messenger-chat-page .bhw-messenger-main {
             padding: 0 !important;
             width: 100% !important;
@@ -136,7 +133,7 @@
         .bhw-messenger-chat-body .rbhw-chat-scroll {
             padding-left: 1.25rem !important;
             padding-right: 1.25rem !important;
-            padding-top: 3rem !important;
+            padding-top: 1rem !important;
         }
         .bhw-messenger-chat-body > .shrink-0 {
             padding: 0.75rem 1.25rem 1rem !important;

@@ -2,100 +2,43 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Bantay Kalusugan - Reports</title>
+@include('partials.bhw-viewport')
+<title>Bantay Kalusugan - BHW Head Reports</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+@include('partials.bhw-shell-styles')
 <style>
-    .material-symbols-outlined {
-        font-variation-settings:
-        'FILL' 0,
-        'wght' 400,
-        'GRAD' 0,
-        'opsz' 24
-    }
-    
-    @media (max-width: 768px) {
-        #sidebar {
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            position: fixed;
-            z-index: 40;
-            height: 100vh;
-        }
-        
-        #sidebar.active {
-            transform: translateX(0);
-        }
-        
-        #overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 30;
-        }
-        
-        #overlay.active {
-            display: block;
-        }
-        
-        main {
-            width: 100%;
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+    main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+    .page-content { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    @media (max-width: 639px) {
+        .report-period-grid > *:last-child:nth-child(odd) {
+            grid-column: span 2 / span 2;
         }
     }
-    
-    .page-content {
-        height: 100%;
-        overflow-y: auto;
+
+    .report-scroll-panel {
+        height: 18rem;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
     }
-    
-    .page-content::-webkit-scrollbar {
-        width: 6px;
+
+    .report-scroll-panel thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #FFFFFF;
+        box-shadow: 0 1px 0 #EAEAEA;
     }
-    
-    .page-content::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-    
-    .page-content::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 10px;
-    }
-    
-    .page-content::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
-    }
-    
-    html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-    }
-    
-    .nav-item.active {
-        background-color: rgba(74, 144, 226, 0.2);
-        color: #4A90E2;
-    }
-    
-    .main-container {
-        height: 100vh;
-        display: flex;
-    }
-    
-    main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+
+    .dark .report-scroll-panel thead th {
+        background: #2C2C2C;
+        box-shadow: 0 1px 0 #3D3D3D;
     }
 </style>
 <script>
@@ -104,355 +47,379 @@
         theme: {
             extend: {
                 colors: {
-                    "primary": "#4A90E2",
-                    "secondary": "#50E3C2",
-                    "accent-orange": "#F5A623",
-                    "accent-red": "#D0021B",
-                    "background-light": "#F4F4F4",
-                    "background-dark": "#1A1A1A",
-                    "text-light": "#4A4A4A",
-                    "text-dark": "#E0E0E0",
-                    "card-light": "#FFFFFF",
-                    "card-dark": "#2C2C2C",
-                    "border-light": "#EAEAEA",
-                    "border-dark": "#3D3D3D",
+                    "primary": "#4A90E2", "secondary": "#50E3C2", "accent-orange": "#F5A623", "accent-red": "#D0021B",
+                    "background-light": "#F4F4F4", "background-dark": "#1A1A1A", "text-light": "#4A4A4A", "text-dark": "#E0E0E0",
+                    "card-light": "#FFFFFF", "card-dark": "#2C2C2C", "border-light": "#EAEAEA", "border-dark": "#3D3D3D",
                 },
-                fontFamily: {
-                    "display": ["Manrope", "sans-serif"]
-                },
+                fontFamily: { "display": ["Manrope", "sans-serif"] },
             },
         },
     }
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-<div class="main-container">
-    <div class="md:hidden fixed top-4 left-4 z-50">
-        <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-    </div>
-    
-    <div id="overlay" class=""></div>
-    
-    @include('sidebars.bhw_head')
-    
-    <main class="flex-1 p-8 overflow-hidden md:ml-0">
+@include('sidebars.bhw_head')
+
+<div id="bhwContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
+    @include('partials.bhw-head-mobile-topbar')
+
+    <main class="flex-1 flex flex-col min-h-0 pt-3 sm:pt-4 px-4 sm:px-5 md:px-6 lg:px-8 lg:pt-6 pb-24 lg:pb-6 overflow-hidden">
         <div class="page-content">
-            <div class="w-full max-w-7xl mx-auto">
-                <header class="flex flex-wrap justify-between items-center gap-4 mb-6">
-                    <div class="flex flex-col gap-1">
-                        <h1 class="text-3xl font-bold leading-tight">Reports</h1>
-                        <p class="text-base font-normal leading-normal text-text-light/70 dark:text-text-dark/70">Health reports for residents covered by your BHW team</p>
+            <div class="w-full max-w-7xl mx-auto" id="reportRoot">
+                @php
+                    $report = $report ?? [];
+                    $overview = $report['overview'] ?? [];
+                    $periodActivity = $report['period_activity'] ?? [];
+                    $healthConcerns = $report['health_concerns'] ?? [];
+                    $monitoring = $report['monitoring'] ?? [];
+                    $concernMembers = $report['concern_members'] ?? [];
+                    $householdsByPurok = $report['households_by_purok'] ?? [];
+                    $illnessByPurok = $report['illness_by_purok'] ?? [];
+                    $recentActivities = $report['recent_activities'] ?? [];
+                    $activityChart = $report['activity_chart'] ?? ['labels' => [], 'transactions' => [], 'visits' => [], 'consultations' => []];
+                    $chartGranularity = $report['period']['chart_granularity'] ?? 'monthly';
+                    $activePeriod = $activePeriod ?? ($report['period']['key'] ?? 'this_month');
+                    $periodPresets = [
+                        ['key' => 'this_week', 'label' => 'This week', 'icon' => 'date_range'],
+                        ['key' => 'last_week', 'label' => 'Last week', 'icon' => 'history'],
+                        ['key' => 'this_month', 'label' => 'This month', 'icon' => 'calendar_month'],
+                        ['key' => 'last_month', 'label' => 'Last month', 'icon' => 'event_repeat'],
+                        ['key' => 'all', 'label' => 'All time', 'icon' => 'all_inclusive'],
+                    ];
+                @endphp
+
+                <header class="hidden lg:flex flex-wrap justify-between items-start gap-4 mb-6">
+                    <div class="min-w-0">
+                        <h1 class="text-2xl sm:text-3xl font-bold">Barangay Health Reports</h1>
+                        <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">
+                            Whole-barangay summary from all assigned BHWs · Generated {{ $report['generated_at'] ?? now()->format('M d, Y') }}
+                            · <span class="font-semibold">{{ ucfirst(str_replace('_', ' ', $activePeriod)) }}</span>
+                            · {{ $report['period']['from_label'] ?? 'All time' }} – {{ $report['period']['to_label'] ?? 'Present' }}
+                        </p>
+                        @if (($report['managed_bhw_count'] ?? null) !== null)
+                            <p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
+                                {{ number_format((int) $report['managed_bhw_count']) }} BHW worker(s)
+                                @if (($report['purok_count'] ?? 0) > 0)
+                                    · {{ number_format((int) $report['purok_count']) }} purok(s)
+                                @endif
+                            </p>
+                        @endif
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button id="printReportBtn" type="button" class="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90">
-                            <span class="material-symbols-outlined text-[18px]">print</span>
-                            Print
-                        </button>
-                    </div>
+                    @if (filled($report['assigned_purok_label'] ?? null))
+                        <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary max-w-md">
+                            <span class="material-symbols-outlined text-base shrink-0">location_city</span>
+                            <span class="truncate" title="{{ $report['assigned_purok_label'] }}">{{ $report['assigned_purok_label'] }}</span>
+                        </span>
+                    @endif
                 </header>
 
-                <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-6">
-                    @php
-                        $reportData = $reportData ?? [];
-                        $monthly = $reportData['monthly_barangay_health_report'] ?? [];
-                        $malnutrition = $reportData['malnutrition_summary'] ?? [];
-                        $vaccination = $reportData['vaccination_coverage_report'] ?? [];
-                        $maternal = $reportData['maternal_summary'] ?? [];
-                        $illness = $reportData['illness_case_summary'] ?? [];
-                        $programs = $reportData['health_program_status_report'] ?? [];
+                <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 mb-6 w-full">
+                    <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 mb-3">Quick inspect</p>
+                    <div class="report-period-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full">
+                        @foreach ($periodPresets as $preset)
+                            <a
+                                href="{{ route('bhw-head.reports', ['period' => $preset['key']]) }}"
+                                class="h-10 w-full px-3 sm:px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors {{ $activePeriod === $preset['key'] ? 'bg-primary text-white shadow-sm' : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 hover:text-primary' }}"
+                            >
+                                <span class="material-symbols-outlined text-base shrink-0">{{ $preset['icon'] }}</span>
+                                <span class="truncate">{{ $preset['label'] }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
 
-                        $malnutritionIdentified = (int) ($malnutrition['identified_cases'] ?? 0);
-                        $malnutritionMonitoring = (int) ($malnutrition['under_monitoring'] ?? 0);
-
-                        $vaccinationVaccinated = (int) ($vaccination['vaccinated'] ?? 0);
-                        $vaccinationUnvaccinated = (int) ($vaccination['unvaccinated'] ?? 0);
-
-                        $maternalPregnantWomen = (int) ($maternal['pregnant_women'] ?? 0);
-                        $maternalPrenatalMonitoring = (int) ($maternal['prenatal_monitoring'] ?? 0);
-                        $maternalHighRisk = (int) ($maternal['high_risk_cases'] ?? 0);
-
-                        $illnessActive = (int) ($illness['active_cases'] ?? 0);
-                        $illnessResolved = (int) ($illness['resolved_cases'] ?? 0);
-
-                        $monthlyTotalResidents = (int) ($monthly['total_residents'] ?? 0);
-                        $monthlyTotalHouseholds = (int) ($monthly['total_households'] ?? 0);
-                        $monthlySeniorCitizens = (int) ($monthly['senior_citizens'] ?? 0);
-                    @endphp
-
-                    <div id="reportContent" class="space-y-4">
-                        <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
-                            <h2 class="text-xl font-bold mb-3">Monthly Barangay Health Report</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Total residents</p>
-                                    <p class="text-2xl font-bold" id="monthlyTotalResidents">{{ number_format($monthlyTotalResidents) }}</p>
+                <div id="reportContent" class="space-y-6">
+                    <section>
+                        <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">groups</span> Coverage overview
+                        </h2>
+                        <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+                            @foreach ([
+                                ['label' => 'Households', 'value' => $overview['households'] ?? 0, 'icon' => 'home', 'icon_class' => 'text-primary'],
+                                ['label' => 'Residents', 'value' => $overview['residents'] ?? 0, 'icon' => 'groups', 'icon_class' => 'text-primary'],
+                                ['label' => 'Pending requests', 'value' => $overview['pending_requests'] ?? 0, 'icon' => 'pending_actions', 'icon_class' => 'text-accent-orange'],
+                                ['label' => 'Active monitoring', 'value' => $overview['active_monitoring'] ?? 0, 'icon' => 'monitor_heart', 'icon_class' => 'text-secondary'],
+                                ['label' => 'Health concern cases', 'value' => $overview['health_concern_cases'] ?? 0, 'icon' => 'cardiology', 'icon_class' => 'text-accent-red'],
+                                ['label' => 'Upcoming consultations', 'value' => $overview['upcoming_consultations'] ?? 0, 'icon' => 'event', 'icon_class' => 'text-primary'],
+                            ] as $card)
+                                <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <p class="text-xs text-text-light/60 dark:text-text-dark/60">{{ $card['label'] }}</p>
+                                        <span class="material-symbols-outlined {{ $card['icon_class'] }} text-lg">{{ $card['icon'] }}</span>
+                                    </div>
+                                    <p class="text-2xl font-bold">{{ number_format((int) $card['value']) }}</p>
                                 </div>
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Total households</p>
-                                    <p class="text-2xl font-bold" id="monthlyTotalHouseholds">{{ number_format($monthlyTotalHouseholds) }}</p>
+                            @endforeach
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">event_note</span>
+                            Activity in selected {{ $chartGranularity === 'daily' ? 'week' : ($chartGranularity === 'weekly' ? 'month' : 'period') }}
+                        </h2>
+                        <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+                            @foreach ([
+                                ['label' => 'Transactions', 'value' => $periodActivity['transactions'] ?? 0],
+                                ['label' => 'Medicine pcs', 'value' => $periodActivity['medicine_pcs'] ?? 0],
+                                ['label' => 'Households with concerns', 'value' => $periodActivity['households_with_concern'] ?? 0],
+                                ['label' => 'Monitoring visits', 'value' => $periodActivity['monitoring_visits'] ?? 0],
+                                ['label' => 'Consultations', 'value' => $periodActivity['consultations'] ?? 0],
+                                ['label' => 'Pregnant monitored', 'value' => $periodActivity['pregnant_monitored'] ?? 0],
+                            ] as $card)
+                                <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4">
+                                    <p class="text-xs text-text-light/60 dark:text-text-dark/60 mb-1">{{ $card['label'] }}</p>
+                                    <p class="text-2xl font-bold">{{ number_format((int) $card['value']) }}</p>
                                 </div>
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Senior citizens</p>
-                                    <p class="text-2xl font-bold" id="monthlySeniorCitizens">{{ number_format($monthlySeniorCitizens) }}</p>
+                            @endforeach
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">cardiology</span> Health concerns from transactions
+                        </h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                            @foreach ([
+                                ['label' => 'Hypertension', 'value' => $healthConcerns['Hypertension'] ?? 0, 'icon' => 'monitor_heart', 'icon_class' => 'text-accent-red'],
+                                ['label' => 'Diabetes', 'value' => $healthConcerns['Diabetes'] ?? 0, 'icon' => 'glucose', 'icon_class' => 'text-sky-500'],
+                                ['label' => 'Hyperlipidemia', 'value' => $healthConcerns['Hyperlipidemia'] ?? 0, 'icon' => 'bloodtype', 'icon_class' => 'text-accent-orange'],
+                            ] as $card)
+                                <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <p class="text-xs text-text-light/60 dark:text-text-dark/60">{{ $card['label'] }}</p>
+                                        <span class="material-symbols-outlined {{ $card['icon_class'] }} text-lg">{{ $card['icon'] }}</span>
+                                    </div>
+                                    <p class="text-2xl font-bold">{{ number_format((int) $card['value']) }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+                            <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
+                                <h3 class="text-base font-bold mb-4 shrink-0">Concern distribution</h3>
+                                <div class="h-72 max-w-md mx-auto w-full"><canvas id="concernChart"></canvas></div>
+                            </div>
+                            <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
+                                <h3 class="text-base font-bold mb-4 shrink-0">Members with health concerns</h3>
+                                <div class="report-scroll-panel">
+                                    <table class="w-full min-w-[480px]">
+                                        <thead>
+                                            <tr class="border-b border-border-light dark:border-border-dark">
+                                                <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Member</th>
+                                                <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Household</th>
+                                                <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Purok</th>
+                                                <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Date</th>
+                                                <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Concern</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse ($concernMembers as $row)
+                                                <tr class="border-b border-border-light dark:border-border-dark">
+                                                    <td class="px-2 py-2 text-sm font-medium">{{ $row['member_name'] }}</td>
+                                                    <td class="px-2 py-2 text-sm">{{ $row['household'] }}</td>
+                                                    <td class="px-2 py-2 text-sm">{{ $row['purok'] ?? '—' }}</td>
+                                                    <td class="px-2 py-2 text-sm whitespace-nowrap">{{ $row['date'] }}</td>
+                                                    <td class="px-2 py-2 text-sm">
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-200">{{ $row['conditions'] }}</span>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="5" class="px-2 py-6 text-sm text-center text-text-light/60">No medicine transactions with inferred health concerns in this period.</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
+                    </section>
 
-                        <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
-                            <h2 class="text-xl font-bold mb-3">Malnutrition Summary</h2>
-                            <div class="h-64">
-                                <canvas id="malnutritionChart" aria-label="Malnutrition summary chart"></canvas>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5">
+                            <h2 class="text-lg font-bold mb-4">
+                                @if ($chartGranularity === 'daily')
+                                    Daily activity
+                                @elseif ($chartGranularity === 'weekly')
+                                    Weekly activity
+                                @else
+                                    Monthly activity
+                                @endif
+                            </h2>
+                            <div class="h-72"><canvas id="activityChart"></canvas></div>
+                        </section>
+                        <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5">
+                            <h2 class="text-lg font-bold mb-4">Household monitoring mix</h2>
+                            <div class="h-72 max-w-sm mx-auto"><canvas id="monitoringChart"></canvas></div>
+                            <div class="grid grid-cols-3 gap-2 mt-4 text-center text-sm">
+                                <div><span class="block font-bold text-pink-500">{{ number_format((int) ($monitoring['pregnant'] ?? 0)) }}</span>Pregnant</div>
+                                <div><span class="block font-bold text-violet-500">{{ number_format((int) ($monitoring['senior'] ?? 0)) }}</span>Senior</div>
+                                <div><span class="block font-bold text-primary">{{ number_format((int) ($monitoring['general'] ?? 0)) }}</span>General</div>
                             </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Identified cases</p>
-                                    <p class="text-2xl font-bold" id="malnutritionIdentified">{{ number_format($malnutritionIdentified) }}</p>
-                                </div>
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Under monitoring</p>
-                                    <p class="text-2xl font-bold" id="malnutritionMonitoring">{{ number_format($malnutritionMonitoring) }}</p>
-                                </div>
-                            </div>
-                        </div>
+                        </section>
+                    </div>
 
-                        <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
-                            <h2 class="text-xl font-bold mb-3">Vaccination Coverage Report</h2>
-                            <div class="h-64">
-                                <canvas id="vaccinationChart" aria-label="Vaccination coverage chart"></canvas>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Vaccinated residents</p>
-                                    <p class="text-2xl font-bold" id="vaccinationVaccinated">{{ number_format($vaccinationVaccinated) }}</p>
-                                </div>
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Unvaccinated residents</p>
-                                    <p class="text-2xl font-bold" id="vaccinationUnvaccinated">{{ number_format($vaccinationUnvaccinated) }}</p>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+                        <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
+                            <h2 class="text-lg font-bold mb-4 shrink-0">Households by purok</h2>
+                            <div class="h-72"><canvas id="purokChart"></canvas></div>
+                        </section>
+                        <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
+                            <h2 class="text-lg font-bold mb-4 shrink-0">Illness by purok</h2>
+                            <div class="h-72"><canvas id="illnessByPurokChart"></canvas></div>
+                        </section>
+                    </div>
 
-                        <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
-                            <h2 class="text-xl font-bold mb-3">Maternal Summary</h2>
-                            <div class="h-64">
-                                <canvas id="maternalChart" aria-label="Maternal summary chart"></canvas>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Pregnant women</p>
-                                    <p class="text-2xl font-bold" id="maternalPregnantWomen">{{ number_format($maternalPregnantWomen) }}</p>
-                                </div>
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Prenatal monitoring</p>
-                                    <p class="text-2xl font-bold" id="maternalPrenatalMonitoring">{{ number_format($maternalPrenatalMonitoring) }}</p>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-1 gap-3 mt-3">
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">High-risk cases</p>
-                                    <p class="text-2xl font-bold" id="maternalHighRisk">{{ number_format($maternalHighRisk) }}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
-                            <h2 class="text-xl font-bold mb-3">Illness Case Summary</h2>
-                            <div class="h-64">
-                                <canvas id="illnessChart" aria-label="Illness case summary chart"></canvas>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Active cases</p>
-                                    <p class="text-2xl font-bold" id="illnessActive">{{ number_format($illnessActive) }}</p>
-                                </div>
-                                <div class="rounded-lg bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">Resolved cases</p>
-                                    <p class="text-2xl font-bold" id="illnessResolved">{{ number_format($illnessResolved) }}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
-                            <h2 class="text-xl font-bold mb-3">Health Program Status Report</h2>
-                            <div class="overflow-x-auto">
-                                <table class="w-full">
+                    <div class="grid grid-cols-1 gap-6 items-stretch">
+                        <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
+                            <h2 class="text-lg font-bold mb-4 shrink-0">Recent activities</h2>
+                            <div class="report-scroll-panel">
+                                <table class="w-full min-w-[420px]">
                                     <thead>
                                         <tr class="border-b border-border-light dark:border-border-dark">
-                                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Program</th>
-                                            <th class="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Status</th>
+                                            <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Date</th>
+                                            <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Type</th>
+                                            <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Name</th>
+                                            <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Detail</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse ($programs as $program)
+                                        @forelse ($recentActivities as $activity)
                                             <tr class="border-b border-border-light dark:border-border-dark">
-                                                <td class="px-3 py-2 text-sm">{{ $program['program'] ?? 'N/A' }}</td>
-                                                <td class="px-3 py-2 text-sm">{{ $program['status'] ?? 'N/A' }}</td>
+                                                <td class="px-2 py-2 text-sm whitespace-nowrap">{{ $activity['date'] }}</td>
+                                                <td class="px-2 py-2 text-sm">{{ $activity['type'] }}</td>
+                                                <td class="px-2 py-2 text-sm font-medium">{{ $activity['name'] }}</td>
+                                                <td class="px-2 py-2 text-sm text-text-light/70">{{ $activity['detail'] }}</td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="2" class="px-3 py-3 text-sm text-text-light/70 dark:text-text-dark/70">No health program records found for the selected period.</td>
+                                                <td colspan="4" class="px-2 py-6 text-sm text-center text-text-light/60">No activities recorded for this period yet.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
+                        </section>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+
+    @include('partials.bhw-head-mobile-nav')
 </div>
 
 <script>
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
+    const reportPayload = @json($report);
 
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    });
+    function initCharts() {
+        if (typeof Chart === 'undefined') return;
 
-    overlay.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    });
+        const activity = reportPayload.activity_chart || {};
+        const activityCanvas = document.getElementById('activityChart');
+        if (activityCanvas) {
+            new Chart(activityCanvas, {
+                type: 'bar',
+                data: {
+                    labels: activity.labels || [],
+                    datasets: [
+                        { label: 'Transactions', data: activity.transactions || [], backgroundColor: '#4A90E2' },
+                        { label: 'Visits', data: activity.visits || [], backgroundColor: '#50E3C2' },
+                        { label: 'Consultations', data: activity.consultations || [], backgroundColor: '#F5A623' },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: false },
+                        y: { beginAtZero: true, ticks: { precision: 0 } },
+                    },
+                },
+            });
+        }
 
-    const chartTextColor = document.documentElement.classList.contains('dark') ? '#E0E0E0' : '#4A4A4A';
-    const chartGridColor = document.documentElement.classList.contains('dark') ? 'rgba(224, 224, 224, 0.16)' : 'rgba(74, 74, 74, 0.12)';
+        const concerns = reportPayload.health_concerns?.chart || {};
+        const concernCanvas = document.getElementById('concernChart');
+        if (concernCanvas) {
+            new Chart(concernCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: concerns.labels || [],
+                    datasets: [{
+                        data: concerns.values || [],
+                        backgroundColor: concerns.colors || ['#BE123C', '#0EA5E9', '#F59E0B'],
+                    }],
+                },
+                options: { responsive: true, maintainAspectRatio: false },
+            });
+        }
 
-    const reportSeries = {
-        malnutrition: {
-            identified: {{ $malnutritionIdentified }},
-            monitoring: {{ $malnutritionMonitoring }},
-        },
-        vaccination: {
-            vaccinated: {{ $vaccinationVaccinated }},
-            unvaccinated: {{ $vaccinationUnvaccinated }},
-        },
-        illness: {
-            active: {{ $illnessActive }},
-            resolved: {{ $illnessResolved }},
-        },
-        maternal: {
-            pregnantWomen: {{ $maternalPregnantWomen }},
-            prenatalMonitoring: {{ $maternalPrenatalMonitoring }},
-            highRisk: {{ $maternalHighRisk }},
-        },
-    };
+        const monitoring = reportPayload.monitoring?.chart || {};
+        const monitoringCanvas = document.getElementById('monitoringChart');
+        if (monitoringCanvas) {
+            new Chart(monitoringCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: monitoring.labels || [],
+                    datasets: [{
+                        data: monitoring.values || [],
+                        backgroundColor: monitoring.colors || ['#EC4899', '#8B5CF6', '#4A90E2'],
+                    }],
+                },
+                options: { responsive: true, maintainAspectRatio: false },
+            });
+        }
 
-    const sharedScaleOptions = {
-        beginAtZero: true,
-        ticks: { color: chartTextColor },
-        grid: { color: chartGridColor },
-    };
+        const purokData = reportPayload.households_by_purok || [];
+        const purokCanvas = document.getElementById('purokChart');
+        if (purokCanvas) {
+            new Chart(purokCanvas, {
+                type: 'bar',
+                data: {
+                    labels: purokData.map((row) => row.purok),
+                    datasets: [{
+                        label: 'Households',
+                        data: purokData.map((row) => row.count),
+                        backgroundColor: '#4A90E2',
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
 
-    const sharedPlugins = {
-        legend: {
-            labels: {
-                color: chartTextColor,
-                boxWidth: 14,
-            },
-        },
-    };
-
-    const malnutritionCanvas = document.getElementById('malnutritionChart');
-    if (malnutritionCanvas) {
-        new Chart(malnutritionCanvas, {
-            type: 'bar',
-            data: {
-                labels: ['Identified Cases', 'Under Monitoring'],
-                datasets: [{
-                    label: 'Malnutrition Summary',
-                    data: [reportSeries.malnutrition.identified, reportSeries.malnutrition.monitoring],
-                    backgroundColor: ['#D0021B', '#50E3C2'],
-                    borderRadius: 8,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: sharedPlugins,
-                scales: { y: sharedScaleOptions, x: { ticks: { color: chartTextColor }, grid: { display: false } } },
-            },
-        });
+        const illnessPurok = reportPayload.illness_by_purok || [];
+        const illnessPurokCanvas = document.getElementById('illnessByPurokChart');
+        if (illnessPurokCanvas) {
+            new Chart(illnessPurokCanvas, {
+                type: 'bar',
+                data: {
+                    labels: illnessPurok.map((row) => row.purok),
+                    datasets: [
+                        { label: 'Hypertension', data: illnessPurok.map((row) => row.Hypertension || 0), backgroundColor: '#BE123C' },
+                        { label: 'Diabetes', data: illnessPurok.map((row) => row.Diabetes || 0), backgroundColor: '#0EA5E9' },
+                        { label: 'Hyperlipidemia', data: illnessPurok.map((row) => row.Hyperlipidemia || 0), backgroundColor: '#F59E0B' },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+                    },
+                },
+            });
+        }
     }
 
-    const vaccinationCanvas = document.getElementById('vaccinationChart');
-    if (vaccinationCanvas) {
-        new Chart(vaccinationCanvas, {
-            type: 'doughnut',
-            data: {
-                labels: ['Vaccinated', 'Unvaccinated'],
-                datasets: [{
-                    label: 'Vaccination Coverage',
-                    data: [reportSeries.vaccination.vaccinated, reportSeries.vaccination.unvaccinated],
-                    backgroundColor: ['#50E3C2', '#F5A623'],
-                    borderColor: ['#3ac7a8', '#de941f'],
-                    borderWidth: 1,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: sharedPlugins,
-            },
-        });
-    }
-
-    const illnessCanvas = document.getElementById('illnessChart');
-    if (illnessCanvas) {
-        new Chart(illnessCanvas, {
-            type: 'bar',
-            data: {
-                labels: ['Active Cases', 'Resolved Cases'],
-                datasets: [{
-                    label: 'Illness Case Summary',
-                    data: [reportSeries.illness.active, reportSeries.illness.resolved],
-                    backgroundColor: ['#D0021B', '#50E3C2'],
-                    borderRadius: 8,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: sharedPlugins,
-                scales: { y: sharedScaleOptions, x: { ticks: { color: chartTextColor }, grid: { display: false } } },
-            },
-        });
-    }
-
-    const maternalCanvas = document.getElementById('maternalChart');
-    if (maternalCanvas) {
-        new Chart(maternalCanvas, {
-            type: 'bar',
-            data: {
-                labels: ['Pregnant Women', 'Prenatal Monitoring', 'High-Risk Cases'],
-                datasets: [{
-                    label: 'Maternal Summary',
-                    data: [reportSeries.maternal.pregnantWomen, reportSeries.maternal.prenatalMonitoring, reportSeries.maternal.highRisk],
-                    backgroundColor: ['#4A90E2', '#50E3C2', '#D0021B'],
-                    borderRadius: 8,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: sharedPlugins,
-                scales: { y: sharedScaleOptions, x: { ticks: { color: chartTextColor }, grid: { display: false } } },
-            },
-        });
-    }
-
-    const printReportBtn = document.getElementById('printReportBtn');
-    if (printReportBtn) {
-        printReportBtn.addEventListener('click', () => {
-            window.print();
-        });
-    }
+    initCharts();
 </script>
 </body>
 </html>

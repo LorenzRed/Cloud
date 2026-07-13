@@ -50,7 +50,8 @@
         $isAnnouncements = request()->routeIs('users.announcements');
         $isProfile = request()->routeIs('users.profile');
         $isNotifications = request()->routeIs('users.notifications');
-        $isMedicalRecords = request()->routeIs('users.medical-records');
+        $isMaintenanceRecords = request()->routeIs('users.maintenance-records');
+        $isTransactionRecords = request()->routeIs('users.transaction-records');
 
         $activeLinkClass = 'flex items-center gap-3 rounded-lg px-3 py-2.5 bg-primary/15 text-[#0e1b13] dark:text-white font-semibold';
         $inactiveLinkClass = 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[#376f50] dark:text-gray-300 hover:bg-[#f2fbf6] dark:hover:bg-gray-700 transition-colors';
@@ -88,9 +89,13 @@
             <span class="material-symbols-outlined text-[20px]">campaign</span>
             <span class="sidebar-label">Announcements</span>
         </a>
-        <a href="{{ route('users.medical-records') }}" class="sidebar-link {{ $isMedicalRecords ? $activeLinkClass : $inactiveLinkClass }}">
-            <span class="material-symbols-outlined text-[20px]">health_metrics</span>
-            <span class="sidebar-label">Medical Records</span>
+        <a href="{{ route('users.transaction-records') }}" class="sidebar-link {{ $isTransactionRecords ? $activeLinkClass : $inactiveLinkClass }}">
+            <span class="material-symbols-outlined text-[20px]">medication</span>
+            <span class="sidebar-label">Transactions</span>
+        </a>
+        <a href="{{ route('users.maintenance-records') }}" class="sidebar-link {{ $isMaintenanceRecords ? $activeLinkClass : $inactiveLinkClass }}">
+            <span class="material-symbols-outlined text-[20px]">health_and_safety</span>
+            <span class="sidebar-label">Maintenance</span>
         </a>
         <a href="{{ route('users.profile') }}" class="sidebar-link {{ $isProfile ? $activeLinkClass : $inactiveLinkClass }}">
             <span class="material-symbols-outlined text-[20px]">person</span>

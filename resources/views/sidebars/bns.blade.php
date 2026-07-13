@@ -75,15 +75,6 @@
                 <span class="{{ ($isProfile || $isSettings) ? $activeIconClass : 'material-symbols-outlined' }}" @if ($isProfile || $isSettings) style="font-variation-settings: 'FILL' 1;" @endif>person</span>
                 <p class="{{ ($isProfile || $isSettings) ? $activeTextClass : 'text-sm font-medium' }}">Profile</p>
             </a>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit"
-                    class="w-full nav-item flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors duration-200 cursor-pointer text-left"
-                    data-page="logout">
-                    <span class="material-symbols-outlined">logout</span>
-                    <p class="text-sm font-medium">Logout</p>
-                </button>
-            </form>
         </div>
     </div>
 </aside>

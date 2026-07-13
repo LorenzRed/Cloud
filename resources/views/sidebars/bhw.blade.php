@@ -1,6 +1,6 @@
-<!-- Sidebar -->
+<!-- Sidebar (desktop) -->
 <aside id="sidebar"
-    class="flex flex-col w-64 p-4 bg-card-light dark:bg-card-dark border-r border-border-light dark:border-border-dark h-full">
+    class="hidden lg:flex fixed left-0 top-0 z-20 flex-col w-64 p-4 bg-card-light dark:bg-card-dark border-r border-border-light dark:border-border-dark h-screen overflow-y-auto">
     @php
         $isDashboard = request()->routeIs('bhw.main');
         $isResidents = request()->routeIs('bhw.residents');
@@ -8,7 +8,8 @@
         $isReports = request()->routeIs('bhw.reports');
         $isAnnouncements = request()->routeIs('bhw.announcements');
         $isPosts = request()->routeIs('bhw.posts');
-        $isSettings = request()->routeIs('bhw.settings');
+        $isMyProfile = request()->routeIs('bhw.my-profile');
+        $isSettings = request()->routeIs('bhw.settings*');
 
         $activeLinkClass = 'flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-primary/20';
         $inactiveLinkClass = 'flex items-center gap-3 px-3 py-2 rounded hover:bg-primary/10 transition-colors';
@@ -85,22 +86,13 @@
             </a>
         </div>
         <div class="flex flex-col gap-4">
-            <a href="{{ route('bhw.settings') }}"
-                class="{{ $isSettings ? $activeLinkClass : 'w-full nav-item flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors duration-200 cursor-pointer text-left' }}"
-                data-page="settings"
-                aria-label="Open settings">
-                <span class="{{ $isSettings ? $activeIconClass : 'material-symbols-outlined' }}" @if ($isSettings) style="font-variation-settings: 'FILL' 1;" @endif>settings</span>
-                <p class="{{ $isSettings ? $activeTextClass : 'text-sm font-medium' }}">Settings</p>
+            <a href="{{ route('bhw.my-profile') }}"
+                class="{{ ($isMyProfile || $isSettings) ? $activeLinkClass : 'w-full nav-item flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors duration-200 cursor-pointer text-left' }}"
+                data-page="profile"
+                aria-label="Open profile">
+                <span class="{{ ($isMyProfile || $isSettings) ? $activeIconClass : 'material-symbols-outlined' }}" @if ($isMyProfile || $isSettings) style="font-variation-settings: 'FILL' 1;" @endif>person</span>
+                <p class="{{ ($isMyProfile || $isSettings) ? $activeTextClass : 'text-sm font-medium' }}">Profile</p>
             </a>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit"
-                    class="w-full nav-item flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors duration-200 cursor-pointer text-left"
-                    data-page="logout">
-                    <span class="material-symbols-outlined">logout</span>
-                    <p class="text-sm font-medium">Logout</p>
-                </button>
-            </form>
         </div>
     </div>
 </aside>

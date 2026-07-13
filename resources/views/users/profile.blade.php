@@ -99,7 +99,7 @@
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#4e976b] dark:text-gray-400">Profile</p>
                         <h2 class="mt-1 text-xl font-bold text-[#0e1b13] dark:text-white">Profile Details</h2>
-                        <p class="mt-1 text-sm text-[#376f50] dark:text-gray-300">Open your full editable profile form.</p>
+                        <p class="mt-1 text-sm text-[#376f50] dark:text-gray-300">View your locked profile details and change your password.</p>
                     </div>
                     <span class="material-symbols-outlined text-[22px] text-[#4e976b] dark:text-gray-300">chevron_right</span>
                 </a>

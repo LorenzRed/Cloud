@@ -16,6 +16,57 @@ class ResidentTransaction extends Model
         'gliclazide_pcs' => 'Gliclazide',
     ];
 
+    /**
+     * @return array<string, array{label: string, condition: string, hint: string, icon: string, tone: string}>
+     */
+    public static function medicationCatalog(): array
+    {
+        return [
+            'amlodipine_pcs' => [
+                'label' => 'Amlodipine',
+                'condition' => 'Hypertension',
+                'hint' => 'Used for high blood pressure',
+                'icon' => 'cardiology',
+                'tone' => 'rose',
+            ],
+            'losartan_pcs' => [
+                'label' => 'Losartan',
+                'condition' => 'Hypertension',
+                'hint' => 'Used for high blood pressure',
+                'icon' => 'cardiology',
+                'tone' => 'rose',
+            ],
+            'metoprolol_pcs' => [
+                'label' => 'Metoprolol',
+                'condition' => 'Hypertension',
+                'hint' => 'Used for high blood pressure and heart rate control',
+                'icon' => 'monitor_heart',
+                'tone' => 'rose',
+            ],
+            'simvastatin_pcs' => [
+                'label' => 'Simvastatin',
+                'condition' => 'Hyperlipidemia',
+                'hint' => 'Used for high cholesterol',
+                'icon' => 'bloodtype',
+                'tone' => 'amber',
+            ],
+            'metformin_pcs' => [
+                'label' => 'Metformin',
+                'condition' => 'Diabetes',
+                'hint' => 'Used for blood sugar control',
+                'icon' => 'glucose',
+                'tone' => 'sky',
+            ],
+            'gliclazide_pcs' => [
+                'label' => 'Gliclazide',
+                'condition' => 'Diabetes',
+                'hint' => 'Used for blood sugar control',
+                'icon' => 'glucose',
+                'tone' => 'sky',
+            ],
+        ];
+    }
+
     protected $fillable = [
         'resident_request_id',
         'user_id',
@@ -24,6 +75,9 @@ class ResidentTransaction extends Model
         'transaction_date',
         'gender',
         'philhealth_number',
+        'member_name',
+        'member_source',
+        'member_index',
         'amlodipine_pcs',
         'losartan_pcs',
         'metoprolol_pcs',
@@ -43,7 +97,15 @@ class ResidentTransaction extends Model
             'simvastatin_pcs' => 'integer',
             'metformin_pcs' => 'integer',
             'gliclazide_pcs' => 'integer',
+            'member_index' => 'integer',
         ];
+    }
+
+    public function recipientLabel(): string
+    {
+        $name = trim((string) ($this->member_name ?? ''));
+
+        return $name !== '' ? $name : 'Household member';
     }
 
     public function residentRequest(): BelongsTo
@@ -72,9 +134,12 @@ class ResidentTransaction extends Model
             $pcs = $this->{$field};
 
             if ($pcs !== null && $pcs > 0) {
+                $catalog = self::medicationCatalog()[$field] ?? [];
                 $entries[] = [
                     'label' => $label,
                     'pcs' => $pcs,
+                    'condition' => $catalog['condition'] ?? null,
+                    'hint' => $catalog['hint'] ?? null,
                 ];
             }
         }
@@ -82,9 +147,23 @@ class ResidentTransaction extends Model
         return $entries;
     }
 
+    /**
+     * @return array<int, string>
+     */
+    public function inferredConditions(): array
+    {
+        return collect($this->medicationEntries())
+            ->pluck('condition')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function notificationSummary(): string
     {
         $parts = [
+            'Recipient '.$this->recipientLabel(),
             'Age '.$this->age,
             'Date '.$this->transaction_date?->format('M d, Y'),
             'Gender '.$this->gender,
@@ -97,6 +176,11 @@ class ResidentTransaction extends Model
 
         if ($medicationParts !== []) {
             $parts[] = 'Medications: '.implode(', ', $medicationParts);
+        }
+
+        $conditions = $this->inferredConditions();
+        if ($conditions !== []) {
+            $parts[] = 'Health concerns: '.implode(', ', $conditions);
         }
 
         return implode('. ', $parts).'.';

@@ -52,6 +52,80 @@ class GeoBoundary
         return false;
     }
 
+    /**
+     * Approximate centroid from GeoJSON polygon / multipolygon coordinates.
+     *
+     * @return array{lat: float, lng: float}|null
+     */
+    public static function centroid(?array $geometry): ?array
+    {
+        if (! is_array($geometry) || $geometry === []) {
+            return null;
+        }
+
+        $sumLat = 0.0;
+        $sumLng = 0.0;
+        $count = 0;
+
+        $walk = static function ($node) use (&$walk, &$sumLat, &$sumLng, &$count): void {
+            if (! is_array($node)) {
+                return;
+            }
+
+            if (isset($node['type'], $node['coordinates'])) {
+                $walk($node['coordinates']);
+
+                return;
+            }
+
+            if (isset($node['type'], $node['geometry'])) {
+                $walk($node['geometry']);
+
+                return;
+            }
+
+            if (isset($node['features']) && is_array($node['features'])) {
+                foreach ($node['features'] as $feature) {
+                    $walk($feature);
+                }
+
+                return;
+            }
+
+            if (
+                array_key_exists(0, $node)
+                && array_key_exists(1, $node)
+                && is_numeric($node[0])
+                && is_numeric($node[1])
+                && ! is_array($node[0])
+                && ! is_array($node[1])
+            ) {
+                $sumLng += (float) $node[0];
+                $sumLat += (float) $node[1];
+                $count++;
+
+                return;
+            }
+
+            foreach ($node as $child) {
+                if (is_array($child)) {
+                    $walk($child);
+                }
+            }
+        };
+
+        $walk($geometry);
+
+        if ($count < 1) {
+            return null;
+        }
+
+        return [
+            'lat' => $sumLat / $count,
+            'lng' => $sumLng / $count,
+        ];
+    }
+
     public static function geometryContainsPoint(array $geometry, float $lat, float $lng): bool
     {
         $geometryType = $geometry['type'] ?? '';

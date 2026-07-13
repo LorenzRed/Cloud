@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+@include('partials.submit-guard')
 <title>Bantay Kalusugan - Events</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+@include('partials.captain-shell-styles')
 <style>
     .material-symbols-outlined {
         font-variation-settings:
@@ -125,18 +127,12 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-<div class="main-container">
-    <div class="md:hidden fixed top-4 left-4 z-50">
-        <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-    </div>
-    
-    <div id="overlay" class=""></div>
-    
-    @include('sidebars.barangay_captain')
-    
-    <main class="flex-1 p-8 overflow-hidden md:ml-0">
+@include('sidebars.barangay_captain')
+
+<div id="captainContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
+    @include('partials.captain-mobile-topbar')
+
+    <main class="flex-1 flex flex-col min-h-0 pt-3 sm:pt-4 px-4 sm:px-5 md:px-6 lg:px-8 lg:pt-6 pb-24 lg:pb-6 overflow-hidden">
         <div class="page-content">
             <div class="w-full max-w-7xl mx-auto">
                 <header class="flex flex-wrap justify-between items-center gap-4 mb-6">
@@ -208,24 +204,12 @@
             </div>
         </div>
     </main>
+
+    @include('partials.captain-mobile-nav')
 </div>
 
 <script>
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    });
-    
-    overlay.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    });
-
-    const announcementForm = document.getElementById('announcementForm');
+const announcementForm = document.getElementById('announcementForm');
     const eventForm = document.getElementById('eventForm');
     const notifyForm = document.getElementById('notifyForm');
     const notifyStatus = document.getElementById('notifyStatus');
@@ -251,6 +235,15 @@
         },
     ];
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function renderPendingApprovals() {
         if (!pendingApprovals.length) {
             pendingApprovalsEl.innerHTML = '<p class="text-sm text-text-light/70 dark:text-text-dark/70">No pending BHW/BNS announcements.</p>';
@@ -261,13 +254,13 @@
             <div class="rounded-lg border border-border-light dark:border-border-dark p-3">
                 <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
                     <div>
-                        <p class="font-semibold">${item.title}</p>
-                        <p class="text-sm text-text-light/80 dark:text-text-dark/80">${item.message}</p>
-                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Source: ${item.source} • ${item.createdAt}</p>
+                        <p class="font-semibold">${escapeHtml(item.title)}</p>
+                        <p class="text-sm text-text-light/80 dark:text-text-dark/80">${escapeHtml(item.message)}</p>
+                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Source: ${escapeHtml(item.source)} • ${escapeHtml(item.createdAt)}</p>
                     </div>
                     <div class="flex gap-2">
-                        <button data-approve="${item.id}" class="h-9 px-3 rounded-lg bg-primary text-white text-sm font-semibold">Approve</button>
-                        <button data-reject="${item.id}" class="h-9 px-3 rounded-lg border border-border-light dark:border-border-dark text-sm font-semibold">Reject</button>
+                        <button data-approve="${escapeHtml(item.id)}" class="h-9 px-3 rounded-lg bg-primary text-white text-sm font-semibold">Approve</button>
+                        <button data-reject="${escapeHtml(item.id)}" class="h-9 px-3 rounded-lg border border-border-light dark:border-border-dark text-sm font-semibold">Reject</button>
                     </div>
                 </div>
             </div>

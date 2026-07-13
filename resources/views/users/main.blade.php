@@ -176,45 +176,9 @@
                 $municipality,
                 $province,
             ]));
-            $displayAddress = !empty($addressSegments) ? implode(', ', $addressSegments) : 'N/A';
+            $displayAddress = ! empty($addressSegments) ? implode(', ', $addressSegments) : 'N/A';
         } else {
             $displayAddress = $user->barangay ?: 'N/A';
-        }
-
-        $profileRequiredFields = [
-            'Full name' => $user->full_name,
-            'Gender' => $user->gender,
-            'Date of birth' => $user->date_of_birth,
-            'Civil status' => $user->civil_status,
-            'Contact number' => $user->contact_number,
-            'Barangay' => $user->barangay,
-        ];
-
-        $missingProfileFields = [];
-        foreach ($profileRequiredFields as $label => $value) {
-            if (blank($value)) {
-                $missingProfileFields[] = $label;
-            }
-        }
-
-        $healthTips = [];
-
-        if (!empty($missingProfileFields)) {
-            $previewFields = array_slice($missingProfileFields, 0, 3);
-            $moreCount = count($missingProfileFields) - count($previewFields);
-            $fieldsText = implode(', ', $previewFields) . ($moreCount > 0 ? ' and '.$moreCount.' more' : '');
-
-            $healthTips[] = 'Please complete your Profile Settings. Missing: '.$fieldsText.'.';
-        }
-
-        if ($status !== 'accepted') {
-            $registrationTip = match ($status) {
-                'pending' => 'Your account registration is still pending. Please wait for barangay review.',
-                'rejected' => 'Your registration was not approved. Update your profile details and resubmit for review.',
-                default => 'Your account is not registered yet. Complete your profile and submit your registration request.',
-            };
-
-            $healthTips[] = $registrationTip;
         }
 
         $calendarBaseDate = now();
@@ -241,7 +205,76 @@
         $isNotifications = request()->routeIs('users.notifications');
         $isMedicalRecords = request()->routeIs('users.medical-records');
 
-        $showHealthTip = !empty($healthTips);
+        $weatherBarangay = filled($residentRequest?->barangay)
+            ? trim((string) $residentRequest->barangay)
+            : (filled($user->barangay) ? trim((string) $user->barangay) : null);
+        $weatherPurok = filled($residentRequest?->purok?->name)
+            ? trim((string) $residentRequest->purok->name)
+            : $user->householdPurokLabel();
+        $weatherPlace = collect([
+            $weatherPurok,
+            $weatherBarangay,
+            $municipality ?: 'Victoria',
+            $province ?: 'Oriental Mindoro',
+        ])->filter()->implode(', ');
+
+        // Victoria, Oriental Mindoro (municipality center) — used when no verification pin/boundary exists.
+        $weatherLat = 13.1733849;
+        $weatherLon = 121.2787746;
+
+        $verificationAddress = trim((string) ($residentRequest?->address ?? ''));
+        if ($verificationAddress !== '' && preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/', $verificationAddress, $weatherCoordMatch)) {
+            $weatherLat = (float) $weatherCoordMatch[1];
+            $weatherLon = (float) $weatherCoordMatch[2];
+        } else {
+            $purokCentroid = \App\Support\GeoBoundary::centroid($residentRequest?->purok?->boundary_geojson);
+            $barangayModel = $weatherBarangay
+                ? \App\Models\Barangay::query()->where('name', $weatherBarangay)->first()
+                : null;
+            $barangayCentroid = \App\Support\GeoBoundary::centroid($barangayModel?->boundary_geojson);
+
+            if ($purokCentroid) {
+                $weatherLat = $purokCentroid['lat'];
+                $weatherLon = $purokCentroid['lng'];
+            } elseif ($barangayCentroid) {
+                $weatherLat = $barangayCentroid['lat'];
+                $weatherLon = $barangayCentroid['lng'];
+            }
+        }
+
+        $consultationCalendarItems = ($upcomingConsultations ?? collect())->map(static function ($consultation) {
+            return [
+                'date' => $consultation->scheduled_at?->format('Y-m-d'),
+                'checkup' => $consultation->medical_checkup ?: 'General Consultation',
+                'time' => $consultation->scheduled_at?->format('h:i A'),
+                'note' => $consultation->note,
+            ];
+        })->values()->all();
+
+        $registrationBanner = match ($status) {
+            'rejected' => [
+                'tone' => 'red',
+                'title' => 'Registration not approved',
+                'message' => 'Your previous request was rejected. Update your details and resubmit for review.',
+                'action' => 'Resubmit registration',
+                'route' => 'users.verification',
+            ],
+            'pending' => [
+                'tone' => 'amber',
+                'title' => 'Registration pending',
+                'message' => 'Your account registration is still under barangay review. Please wait for approval.',
+                'action' => null,
+                'route' => null,
+            ],
+            'accepted' => null,
+            default => [
+                'tone' => 'amber',
+                'title' => 'Complete your registration',
+                'message' => 'Your account is not registered yet. Submit your verification request to continue.',
+                'action' => 'Submit registration',
+                'route' => 'users.verification',
+            ],
+        };
     @endphp
 
     @if (session('profile_update_status') || session('profile_update_error'))
@@ -310,19 +343,182 @@
                 </section>
 
                 <section class="lg:col-span-12 space-y-4 md:space-y-5">
-                    @if ($showHealthTip)
-                    <div class="bg-gradient-to-br from-[#e7f3ec] to-white dark:from-gray-800 dark:to-gray-800 rounded-xl p-4 md:p-5 border border-[#d0e7d9] dark:border-gray-700">
-                        <h3 class="font-bold mb-2">Health Tip</h3>
-                        <ul class="space-y-2 text-sm text-[#376f50] dark:text-gray-300">
-                            @foreach ($healthTips as $tip)
-                                <li class="flex items-start gap-2">
-                                    <span class="material-symbols-outlined text-base leading-5 text-[#1f7f4e] dark:text-[#8cefb5]">tips_and_updates</span>
-                                    <span>{{ $tip }}</span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
+                    @if ($registrationBanner)
+                        @php
+                            $bannerTone = $registrationBanner['tone'];
+                            $bannerClasses = $bannerTone === 'red'
+                                ? 'border-red-200 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-900/30 dark:text-red-100'
+                                : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-100';
+                            $buttonClasses = $bannerTone === 'red'
+                                ? 'bg-red-600 hover:bg-red-700 text-white'
+                                : 'bg-amber-600 hover:bg-amber-700 text-white';
+                        @endphp
+                        <div class="rounded-xl border p-4 md:p-5 {{ $bannerClasses }}">
+                            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="font-bold">{{ $registrationBanner['title'] }}</p>
+                                    <p class="mt-1 text-sm opacity-90">{{ $registrationBanner['message'] }}</p>
+                                </div>
+                                @if (! empty($registrationBanner['action']) && ! empty($registrationBanner['route']))
+                                    <a href="{{ route($registrationBanner['route']) }}" class="inline-flex h-10 shrink-0 items-center justify-center rounded-lg px-4 text-sm font-semibold {{ $buttonClasses }}">
+                                        {{ $registrationBanner['action'] }}
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
                     @endif
+
+                    <div
+                        id="weatherCard"
+                        class="bg-gradient-to-br from-[#e7f3ec] to-white dark:from-gray-800 dark:to-gray-800 rounded-xl p-4 md:p-5 border border-[#d0e7d9] dark:border-gray-700"
+                        data-place="{{ $weatherPlace }}"
+                        data-lat="{{ $weatherLat }}"
+                        data-lon="{{ $weatherLon }}"
+                    >
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Weather</p>
+                                <h3 class="font-bold mt-1 text-[#0e1b13] dark:text-white">At your registered location</h3>
+                            </div>
+                            <span class="material-symbols-outlined text-[28px] text-[#1f7f4e] dark:text-[#8cefb5]" id="weatherIcon">partly_cloudy_day</span>
+                        </div>
+
+                        <div id="weatherLoading" class="mt-3 text-sm text-[#376f50] dark:text-gray-300">
+                            Loading weather for your barangay…
+                        </div>
+
+                        <div id="weatherContent" class="hidden mt-3">
+                            <div class="flex flex-wrap items-end gap-3">
+                                <p id="weatherTemp" class="text-3xl font-bold text-[#0e1b13] dark:text-white leading-none">—</p>
+                                <p id="weatherCondition" class="text-sm font-semibold text-[#1f7f4e] dark:text-[#8cefb5]">—</p>
+                            </div>
+                            <p id="weatherPlace" class="mt-2 text-sm text-[#376f50] dark:text-gray-300">—</p>
+                            <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-[#4e976b] dark:text-gray-400">
+                                <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-3 py-2">
+                                    <p class="uppercase tracking-wide">Humidity</p>
+                                    <p id="weatherHumidity" class="mt-1 font-semibold text-[#0e1b13] dark:text-white">—</p>
+                                </div>
+                                <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-3 py-2">
+                                    <p class="uppercase tracking-wide">Wind</p>
+                                    <p id="weatherWind" class="mt-1 font-semibold text-[#0e1b13] dark:text-white">—</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="weatherError" class="hidden mt-3 text-sm text-red-700 dark:text-red-300"></div>
+                    </div>
+
+                    <script>
+                        (function () {
+                            const card = document.getElementById('weatherCard');
+                            if (!card) {
+                                return;
+                            }
+
+                            const placeLabel = card.dataset.place || 'Victoria, Oriental Mindoro';
+                            const savedLat = Number.parseFloat(card.dataset.lat || '');
+                            const savedLon = Number.parseFloat(card.dataset.lon || '');
+                            const hasSavedCoords = Number.isFinite(savedLat) && Number.isFinite(savedLon);
+                            const loadingEl = document.getElementById('weatherLoading');
+                            const contentEl = document.getElementById('weatherContent');
+                            const errorEl = document.getElementById('weatherError');
+                            const iconEl = document.getElementById('weatherIcon');
+
+                            const weatherCodeMap = {
+                                0: { label: 'Clear sky', icon: 'sunny' },
+                                1: { label: 'Mainly clear', icon: 'partly_cloudy_day' },
+                                2: { label: 'Partly cloudy', icon: 'partly_cloudy_day' },
+                                3: { label: 'Overcast', icon: 'cloud' },
+                                45: { label: 'Foggy', icon: 'foggy' },
+                                48: { label: 'Rime fog', icon: 'foggy' },
+                                51: { label: 'Light drizzle', icon: 'rainy_light' },
+                                53: { label: 'Drizzle', icon: 'rainy' },
+                                55: { label: 'Heavy drizzle', icon: 'rainy' },
+                                61: { label: 'Light rain', icon: 'rainy_light' },
+                                63: { label: 'Rain', icon: 'rainy' },
+                                65: { label: 'Heavy rain', icon: 'rainy_heavy' },
+                                71: { label: 'Light snow', icon: 'weather_snowy' },
+                                73: { label: 'Snow', icon: 'weather_snowy' },
+                                75: { label: 'Heavy snow', icon: 'weather_snowy' },
+                                80: { label: 'Rain showers', icon: 'rainy' },
+                                81: { label: 'Rain showers', icon: 'rainy' },
+                                82: { label: 'Violent showers', icon: 'rainy_heavy' },
+                                95: { label: 'Thunderstorm', icon: 'thunderstorm' },
+                                96: { label: 'Thunderstorm with hail', icon: 'thunderstorm' },
+                                99: { label: 'Thunderstorm with hail', icon: 'thunderstorm' },
+                            };
+
+                            function setLoading(message) {
+                                if (loadingEl) {
+                                    loadingEl.textContent = message;
+                                    loadingEl.classList.remove('hidden');
+                                }
+                                contentEl?.classList.add('hidden');
+                                errorEl?.classList.add('hidden');
+                            }
+
+                            function setError(message) {
+                                if (errorEl) {
+                                    errorEl.textContent = message;
+                                    errorEl.classList.remove('hidden');
+                                }
+                                loadingEl?.classList.add('hidden');
+                                contentEl?.classList.add('hidden');
+                            }
+
+                            function renderWeather(payload) {
+                                const code = Number(payload.weatherCode ?? 0);
+                                const meta = weatherCodeMap[code] || { label: 'Weather update', icon: 'partly_cloudy_day' };
+
+                                document.getElementById('weatherTemp').textContent = `${Math.round(payload.temperature)}°C`;
+                                document.getElementById('weatherCondition').textContent = meta.label;
+                                document.getElementById('weatherPlace').textContent = payload.place;
+                                document.getElementById('weatherHumidity').textContent = `${Math.round(payload.humidity)}%`;
+                                document.getElementById('weatherWind').textContent = `${Math.round(payload.wind)} km/h`;
+                                if (iconEl) {
+                                    iconEl.textContent = meta.icon;
+                                }
+
+                                loadingEl?.classList.add('hidden');
+                                errorEl?.classList.add('hidden');
+                                contentEl?.classList.remove('hidden');
+                            }
+
+                            async function fetchWeather(lat, lon) {
+                                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`;
+                                const response = await fetch(url);
+                                if (!response.ok) {
+                                    throw new Error('Weather service unavailable.');
+                                }
+                                const data = await response.json();
+                                const current = data.current || {};
+
+                                renderWeather({
+                                    temperature: current.temperature_2m ?? 0,
+                                    humidity: current.relative_humidity_2m ?? 0,
+                                    wind: current.wind_speed_10m ?? 0,
+                                    weatherCode: current.weather_code ?? 0,
+                                    place: placeLabel,
+                                });
+                            }
+
+                            async function start() {
+                                setLoading(`Loading weather for ${placeLabel}…`);
+
+                                try {
+                                    if (!hasSavedCoords) {
+                                        throw new Error('Registered location coordinates are missing.');
+                                    }
+
+                                    await fetchWeather(savedLat, savedLon);
+                                } catch (error) {
+                                    setError(error.message || 'Unable to load weather for your registered location.');
+                                }
+                            }
+
+                            start();
+                        })();
+                    </script>
 
                     <script>
                         let currentSlide = 0;
@@ -514,14 +710,14 @@
 
                                                 <h4 class="font-bold text-lg mb-2 text-[#0e1b13] dark:text-white">{{ $announcement->title ?: 'Barangay Announcement' }}</h4>
 
-                                                @if ($announcement->message)
-                                                <p class="text-sm text-[#376f50] dark:text-gray-300 mb-3 line-clamp-2 flex-grow">{{ $announcement->message }}</p>
+                                                @if ($announcement->description)
+                                                <p class="text-sm text-[#376f50] dark:text-gray-300 mb-3 line-clamp-2 flex-grow">{{ $announcement->description }}</p>
                                                 @endif
 
                                                 <div class="space-y-2 text-sm text-[#4e976b] dark:text-gray-400">
                                                     <div class="flex items-center gap-2">
                                                         <span class="material-symbols-outlined text-base">calendar_today</span>
-                                                        <span>{{ $announcement->created_at?->format('M d, Y') ?? 'TBA' }}</span>
+                                                        <span>{{ $announcement->expiresAt()?->format('M d, Y · h:i A') ?? $announcement->event_date?->format('M d, Y') ?? 'TBA' }}</span>
                                                     </div>
                                                     <div class="flex items-center gap-2">
                                                         <span class="material-symbols-outlined text-base">schedule</span>
@@ -618,21 +814,35 @@
 
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-5 shadow-sm border border-[#e7f3ec] dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-bold">Medical Summary</h3>
+                            <h3 class="text-lg font-bold">Transaction History</h3>
+                            <a href="{{ route('users.transaction-records') }}" class="text-xs font-semibold text-[#1f7f4e] hover:underline dark:text-[#8cefb5]">View all</a>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                            <div class="p-3 rounded-lg border border-[#d0e7d9] dark:border-gray-700">
-                                <p class="text-[#4e976b] dark:text-gray-400">Last Check-up</p>
-                                <p class="font-semibold mt-1">{{ $lastCheckupLabel ?? 'N/A' }}</p>
-                            </div>
-                            @forelse (($medicalSummaryRecords ?? collect()) as $record)
+                            @forelse (($transactionHistory ?? collect()) as $transaction)
                                 <div class="p-3 rounded-lg border border-[#d0e7d9] dark:border-gray-700">
-                                    <p class="text-[#4e976b] dark:text-gray-400">{{ $record->record_type }}</p>
-                                    <p class="font-semibold mt-1">{{ $record->record_value }}</p>
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <p class="text-[#4e976b] dark:text-gray-400">{{ $transaction->transaction_date?->format('M d, Y') ?: 'No date' }}</p>
+                                            <p class="font-semibold mt-1 truncate">{{ $transaction->recipientLabel() }}</p>
+                                        </div>
+                                        @if (filled($transaction->gender))
+                                            <span class="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-[#1f7f4e] shrink-0">{{ $transaction->gender }}</span>
+                                        @endif
+                                    </div>
+                                    @if ($transaction->medicationEntries() !== [])
+                                        <p class="mt-2 text-[#376f50] dark:text-gray-300 line-clamp-2">
+                                            {{ collect($transaction->medicationEntries())->map(fn ($med) => $med['label'].' '.$med['pcs'].' pc'.($med['pcs'] === 1 ? '' : 's'))->implode(', ') }}
+                                        </p>
+                                    @else
+                                        <p class="mt-2 text-[#4e976b] dark:text-gray-400">No medicines listed.</p>
+                                    @endif
+                                    @if ($transaction->inferredConditions() !== [])
+                                        <p class="mt-2 text-xs font-semibold text-[#1f7f4e] dark:text-[#8cefb5]">{{ implode(' · ', $transaction->inferredConditions()) }}</p>
+                                    @endif
                                 </div>
                             @empty
                                 <div class="sm:col-span-2 p-3 rounded-lg border border-[#d0e7d9] dark:border-gray-700 text-[#4e976b] dark:text-gray-400">
-                                    No medical records yet.
+                                    No medicine transactions yet.
                                 </div>
                             @endforelse
                         </div>
@@ -681,12 +891,13 @@
                 const now = new Date();
 
                 // Build consultation date map
-                const consultations = {!! json_encode(($upcomingConsultations ?? collect())->map(fn($c) => [
-                    'date' => $c->scheduled_at?->format('Y-m-d'),
-                    'checkup' => $c->medical_checkup ?: 'General Consultation',
-                    'time' => $c->scheduled_at?->format('h:i A'),
-                    'note' => $c->note,
-                ])->values()->all()) !!};
+                const consultations = @json($consultationCalendarItems);
+                const escapeHtml = (value) => String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
 
                 const consultationMap = {};
                 consultations.forEach(c => {
@@ -770,7 +981,12 @@
                                     const tooltip = document.createElement('div');
                                     tooltip.id = 'consultationTooltip';
                                     tooltip.className = 'absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 bg-[#0e1b13] dark:bg-white text-white dark:text-[#0e1b13] text-xs font-semibold rounded-lg p-2 whitespace-nowrap';
-                                    tooltip.innerHTML = dayConsultations.map(c => `<div>${c.checkup}<br><span class="text-[10px]">${c.time}</span>${c.note ? '<br><span class="opacity-75">' + c.note + '</span>' : ''}</div>`).join('');
+                                    tooltip.innerHTML = dayConsultations.map((c) => {
+                                        const noteHtml = c.note
+                                            ? `<br><span class="opacity-75">${escapeHtml(c.note)}</span>`
+                                            : '';
+                                        return `<div>${escapeHtml(c.checkup)}<br><span class="text-[10px]">${escapeHtml(c.time)}</span>${noteHtml}</div>`;
+                                    }).join('');
                                     btn.parentNode.style.position = 'relative';
                                     btn.appendChild(tooltip);
                                 };

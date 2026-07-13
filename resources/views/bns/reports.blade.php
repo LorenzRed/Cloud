@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
@@ -14,6 +14,32 @@
 
     main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
     .page-content { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    .report-scroll-panel {
+        height: 18rem;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+
+    .report-scroll-panel thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #FFFFFF;
+        box-shadow: 0 1px 0 #EAEAEA;
+    }
+
+    .dark .report-scroll-panel thead th {
+        background: #2C2C2C;
+        box-shadow: 0 1px 0 #3D3D3D;
+    }
+
+    @media (max-width: 639px) {
+        .report-period-grid > *:last-child:nth-child(odd) {
+            grid-column: span 2 / span 2;
+        }
+    }
 </style>
 <script>
     tailwind.config = {
@@ -32,12 +58,12 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-@include('sidebars.bns')
-
+    @include('sidebars.bns')
+    
 <div id="bnsContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
     @include('partials.bns-mobile-topbar')
 
-    <main class="flex-1 flex flex-col min-h-0 px-4 sm:px-5 md:px-6 lg:px-8 lg:pt-6 pb-24 lg:pb-6 overflow-hidden">
+    <main class="flex-1 flex flex-col min-h-0 pt-3 sm:pt-4 px-4 sm:px-5 md:px-6 lg:px-8 lg:pt-6 pb-24 lg:pb-6 overflow-hidden">
         <div class="page-content">
             <div class="w-full max-w-7xl mx-auto" id="reportRoot">
                 @php
@@ -61,7 +87,7 @@
                     ];
                 @endphp
 
-                <header class="flex flex-wrap justify-between items-start gap-4 mb-6 print-break">
+                <header class="hidden lg:flex flex-wrap justify-between items-start gap-4 mb-6 print-break">
                     <div class="min-w-0">
                         <h1 class="text-2xl sm:text-3xl font-bold">Nutrition Reports</h1>
                         <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Generated {{ $report['generated_at'] ?? now()->format('M d, Y') }} · <span class="font-semibold">{{ ucfirst(str_replace('_', ' ', $activePeriod)) }}</span> · {{ $report['period']['from_label'] ?? 'All time' }} – {{ $report['period']['to_label'] ?? 'Present' }}</p>
@@ -76,7 +102,7 @@
 
                 <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 mb-6 w-full">
                     <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 mb-3">Quick inspect</p>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full">
+                    <div class="report-period-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full">
                         @foreach ($periodPresets as $preset)
                             <a
                                 href="{{ route('bns.reports', ['period' => $preset['key']]) }}"
@@ -107,7 +133,7 @@
                                     <div class="flex items-center justify-between mb-2">
                                         <p class="text-xs text-text-light/60 dark:text-text-dark/60">{{ $card['label'] }}</p>
                                         <span class="material-symbols-outlined {{ $card['icon_class'] }} text-lg">{{ $card['icon'] }}</span>
-                                    </div>
+                        </div>
                                     <p class="text-2xl font-bold" data-report-value>{{ number_format((int) $card['value']) }}</p>
                                 </div>
                             @endforeach
@@ -131,20 +157,20 @@
                                     <div class="flex items-center justify-between mb-2">
                                         <p class="text-xs text-text-light/60 dark:text-text-dark/60">{{ $card['label'] }}</p>
                                         <span class="material-symbols-outlined {{ $card['icon_class'] }} text-lg">{{ $card['icon'] }}</span>
-                                    </div>
+                                </div>
                                     <p class="text-2xl font-bold">{{ number_format((int) $card['value']) }}</p>
                                 </div>
                             @endforeach
                         </div>
 
-                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5">
-                                <h3 class="text-base font-bold mb-4">Nutrition status distribution</h3>
-                                <div class="h-72 max-w-md mx-auto"><canvas id="nutritionChart"></canvas></div>
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+                            <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
+                                <h3 class="text-base font-bold mb-4 shrink-0">Nutrition status distribution</h3>
+                                <div class="h-72 max-w-md mx-auto w-full"><canvas id="nutritionChart"></canvas></div>
                             </div>
-                            <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5">
-                                <h3 class="text-base font-bold mb-4">Children needing attention</h3>
-                                <div class="overflow-x-auto max-h-72 overflow-y-auto">
+                            <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
+                                <h3 class="text-base font-bold mb-4 shrink-0">Children needing attention</h3>
+                                <div class="report-scroll-panel">
                                     <table class="w-full min-w-[480px]">
                                         <thead>
                                             <tr class="border-b border-border-light dark:border-border-dark">
@@ -208,7 +234,7 @@
                                     <p class="text-2xl font-bold">{{ is_numeric($card['value']) ? number_format((int) $card['value']) : $card['value'] }}</p>
                                 </div>
                             @endforeach
-                        </div>
+                                </div>
                     </section>
 
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 print-break">
@@ -233,16 +259,16 @@
                                 <div><span class="block font-bold text-accent-orange">{{ number_format((int) ($immunization['pending'] ?? 0)) }}</span>Pending</div>
                             </div>
                         </section>
-                    </div>
+                        </div>
 
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 print-break">
-                        <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5">
-                            <h2 class="text-lg font-bold mb-4">Children by purok</h2>
+                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 print-break items-stretch">
+                        <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
+                            <h2 class="text-lg font-bold mb-4 shrink-0">Children by purok</h2>
                             <div class="h-72"><canvas id="purokChart"></canvas></div>
                         </section>
-                        <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5">
-                            <h2 class="text-lg font-bold mb-4">Recent activities</h2>
-                            <div class="overflow-x-auto max-h-72 overflow-y-auto">
+                        <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
+                            <h2 class="text-lg font-bold mb-4 shrink-0">Recent activities</h2>
+                            <div class="report-scroll-panel">
                                 <table class="w-full min-w-[420px]">
                                     <thead>
                                         <tr class="border-b border-border-light dark:border-border-dark">

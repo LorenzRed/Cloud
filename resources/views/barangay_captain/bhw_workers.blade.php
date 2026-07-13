@@ -2,25 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    @include('partials.bhw-viewport')
     <title>Bantay Kalusugan - BHW Workers</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    @include('partials.captain-shell-styles')
     <style>
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        @media (max-width: 768px) {
-            #sidebar { transform: translateX(-100%); transition: transform 0.3s ease-in-out; position: fixed; z-index: 40; height: 100vh; }
-            #sidebar.active { transform: translateX(0); }
-            #overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); z-index: 30; }
-            #overlay.active { display: block; }
-            main { width: 100%; }
-        }
-        .page-content { height: 100%; overflow-y: auto; }
-        .worker-list-scroll { max-height: 28rem; overflow-y: auto; }
-        .purok-map { height: 100%; width: 100%; min-height: 45vh; }
+        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+        .page-content { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .worker-list-scroll { max-height: min(28rem, 55dvh); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .purok-map { height: 100%; width: 100%; min-height: 40vh; }
         @media (min-width: 1024px) {
             .purok-map { min-height: 0; }
         }
@@ -29,9 +24,6 @@
         .toast-exit { animation: toast-out 180ms ease-in forwards; }
         @keyframes toast-in { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes toast-out { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-8px); opacity: 0; } }
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
-        .main-container { height: 100vh; display: flex; }
-        main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .leaflet-control-container { z-index: 10; }
         .purok-map-label {
             background: rgba(255, 255, 255, 0.94);
@@ -111,41 +103,44 @@
     </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-<div class="main-container">
-    <div class="md:hidden fixed top-4 left-4 z-50">
-        <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-    </div>
-    <div id="overlay"></div>
+@include('sidebars.barangay_captain')
 
-    @include('sidebars.barangay_captain')
+<div id="captainContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
+    @include('partials.captain-mobile-topbar')
 
-    <main class="flex-1 p-8 overflow-hidden md:ml-0">
+    <main class="flex-1 flex flex-col min-h-0 pt-3 sm:pt-4 px-4 sm:px-5 md:px-6 lg:px-8 lg:pt-6 pb-24 lg:pb-6 overflow-hidden">
         <div class="page-content">
-            <div class="w-full max-w-7xl mx-auto">
-                <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <h1 class="text-3xl font-bold leading-tight">BHW Workers</h1>
-                        <p class="text-base text-text-light/70 dark:text-text-dark/70">View BHW worker names and manage purok for your barangay.</p>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-3">
+            <div class="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-4">
+                <header class="space-y-3">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="min-w-0">
+                            <h1 class="text-2xl sm:text-3xl font-bold leading-tight">BHW Workers</h1>
+                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">View BHW worker names and manage purok for your barangay.</p>
+                        </div>
                         @if ($assignedBarangay)
-                            <span class="inline-flex items-center gap-1 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary">
+                            <span class="inline-flex self-start items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary">
                                 <span class="material-symbols-outlined text-base">location_city</span>
                                 {{ $assignedBarangay->name }}
                             </span>
-                            <button type="button" id="openPurokListModalBtn" class="rounded-lg h-11 px-3 bg-gray-600 text-white hover:bg-gray-700" title="List Purok">
-                                <span class="material-symbols-outlined text-base">list</span>
-                            </button>
-                            <button type="button" id="openAddPurokModalBtn" class="inline-flex items-center gap-2 rounded-lg h-11 px-4 bg-primary text-white text-sm font-bold hover:opacity-90">
-                                <span class="material-symbols-outlined text-base">add_location_alt</span> Create Purok
-                            </button>
-                            <button type="button" id="openAddBhwModalBtn" class="inline-flex items-center gap-2 rounded-lg h-11 px-4 bg-secondary text-white text-sm font-bold hover:opacity-90">
-                                <span class="material-symbols-outlined text-base">person_add</span> Add Health Worker
-                            </button>
                         @endif
                     </div>
+                    @if ($assignedBarangay)
+                        <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+                            <button type="button" id="openPurokListModalBtn" class="inline-flex items-center justify-center gap-1.5 rounded-xl h-11 px-3 bg-gray-600 text-white text-xs sm:text-sm font-bold hover:bg-gray-700" title="List Purok">
+                                <span class="material-symbols-outlined text-base">list</span>
+                                <span class="hidden sm:inline">List</span>
+                            </button>
+                            <button type="button" id="openAddPurokModalBtn" class="inline-flex items-center justify-center gap-1.5 rounded-xl h-11 px-3 sm:px-4 bg-primary text-white text-xs sm:text-sm font-bold hover:opacity-90">
+                                <span class="material-symbols-outlined text-base">add_location_alt</span>
+                                <span>Purok</span>
+                            </button>
+                            <button type="button" id="openAddBhwModalBtn" class="inline-flex items-center justify-center gap-1.5 rounded-xl h-11 px-3 sm:px-4 bg-secondary text-white text-xs sm:text-sm font-bold hover:opacity-90">
+                                <span class="material-symbols-outlined text-base">person_add</span>
+                                <span class="sm:hidden">BHW</span>
+                                <span class="hidden sm:inline">Add BHW</span>
+                            </button>
+                        </div>
+                    @endif
                 </header>
 
                 @if (session('status'))
@@ -156,31 +151,87 @@
                 @endif
 
                 @if (! $assignedBarangay)
-                    <div class="rounded-lg border border-border-light dark:border-border-dark p-4 mb-4 bg-card-light dark:bg-card-dark">
-                        <p class="text-text-light/80 dark:text-text-dark/80">No barangay assigned yet. BHW Workers and purok setup will be available once your barangay is assigned.</p>
+                    <div class="rounded-xl border border-border-light dark:border-border-dark p-4 bg-card-light dark:bg-card-dark">
+                        <p class="text-sm text-text-light/80 dark:text-text-dark/80">No barangay assigned yet. BHW Workers and purok setup will be available once your barangay is assigned.</p>
                     </div>
                 @endif
 
-                <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-6 w-full space-y-5">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-4 sm:p-6 w-full space-y-4 sm:space-y-5">
+                    <div class="flex flex-col gap-3">
                         <h2 class="text-lg font-bold">Worker Names</h2>
-                        <div class="flex flex-col gap-3 w-full sm:ml-auto sm:flex-row sm:items-center sm:w-auto sm:max-w-2xl">
-                            <select id="purokFilter" class="h-10 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 text-sm">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <select id="purokFilter" class="h-11 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 text-sm">
                                 <option value="">All Workers</option>
                                 <option value="unassigned">Not Assigned</option>
                                 @foreach ($manageablePuroks as $purok)
                                     <option value="{{ $purok->name }}">{{ $purok->name }}</option>
                                 @endforeach
                             </select>
-                            <div class="relative w-full sm:max-w-sm">
+                            <div class="relative w-full">
                                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-light/50 dark:text-text-dark/50">search</span>
-                                <input id="workerSearch" type="text" class="w-full h-10 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark pl-10 pr-3 text-sm" placeholder="Search worker name..." />
+                                <input id="workerSearch" type="text" class="w-full h-11 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark pl-10 pr-3 text-sm" placeholder="Search worker name..." />
                             </div>
                         </div>
                     </div>
 
-                    <div class="overflow-x-auto border border-border-light dark:border-border-dark rounded-lg worker-list-scroll">
-                        <table class="w-full">
+                    <div id="workerCards" class="space-y-3 sm:hidden">
+                        @forelse ($bhwWorkers as $worker)
+                            @php
+                                $assignedPurokNames = $worker->assignedPuroks->pluck('name');
+                                $assignedPurokIds = $worker->assignedPuroks->pluck('id');
+                            @endphp
+                            <div class="worker-row rounded-xl border border-border-light dark:border-border-dark p-4 space-y-3"
+                                data-worker-name="{{ strtolower($worker->name) }}"
+                                data-purok-labels="{{ $assignedPurokNames->join('|') }}">
+                                <div class="min-w-0">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <p class="text-base font-bold truncate">{{ $worker->name }}</p>
+                                        @if ($worker->role === 'BHWHead')
+                                            <span class="shrink-0 inline-flex items-center rounded-full bg-secondary/15 px-2.5 py-0.5 text-xs font-semibold text-secondary">BHW Head</span>
+                                        @else
+                                            <span class="shrink-0 inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">BHW</span>
+                                        @endif
+                                    </div>
+                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70 break-all mt-0.5">{{ $worker->email }}</p>
+                                    <p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">{{ $worker->barangay ?: 'Not assigned' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-[11px] font-semibold uppercase tracking-wide text-text-light/50 mb-1.5">Assigned purok</p>
+                                    @if ($assignedPurokNames->isNotEmpty())
+                                        <div class="flex flex-wrap gap-1.5">
+                                            @foreach ($assignedPurokNames as $purokName)
+                                                <span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">{{ $purokName }}</span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <p class="text-sm text-text-light/60">Not assigned</p>
+                                    @endif
+                                </div>
+                                <div class="flex items-center gap-2 pt-1">
+                                    @if ($worker->role === 'BHW')
+                                        <button type="button" class="open-assign-modal-btn flex-1 inline-flex items-center justify-center gap-2 rounded-xl h-11 px-3 bg-primary text-white text-sm font-bold hover:opacity-90"
+                                            data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}"
+                                            data-current-purok-ids="{{ $assignedPurokIds->join(',') }}">
+                                            <span class="material-symbols-outlined text-sm">assignment_ind</span> Assign
+                                        </button>
+                                    @else
+                                        <span class="flex-1 inline-flex items-center justify-center h-11 rounded-xl border border-border-light dark:border-border-dark text-xs text-text-light/50 dark:text-text-dark/50">Supervisor</span>
+                                    @endif
+                                    <button type="button" class="open-kick-modal-btn inline-flex items-center justify-center rounded-xl h-11 w-11 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300"
+                                        data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}" title="Remove permission">
+                                        <span class="material-symbols-outlined text-base">person_remove</span>
+                                    </button>
+                                </div>
+                            </div>
+                        @empty
+                            <div class="rounded-xl border border-border-light dark:border-border-dark px-4 py-8 text-center text-sm text-text-light/70 dark:text-text-dark/70">
+                                No health workers found for your barangay.
+                            </div>
+                        @endforelse
+                    </div>
+
+                    <div class="hidden sm:block overflow-x-auto border border-border-light dark:border-border-dark rounded-lg worker-list-scroll">
+                        <table class="w-full min-w-[640px]">
                             <thead class="sticky top-0 z-10">
                                 <tr class="border-b border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/60">
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Name</th>
@@ -247,16 +298,21 @@
             </div>
         </div>
     </main>
+
+    @include('partials.captain-mobile-nav')
 </div>
 
 <!-- Modals (same as before) -->
-<div id="bhwModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
-    <div class="w-full max-w-lg rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
-        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-3">
-            <div><h2 class="text-xl font-bold">Add Health Worker</h2><p class="text-sm text-text-light/70 dark:text-text-dark/70">Create a BHW or BHW Head account for your barangay.</p></div>
-            <button type="button" id="closeAddBhwModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark"><span class="material-symbols-outlined">close</span></button>
+<div id="bhwModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+    <div class="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
+        <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-4 sm:px-6 py-3">
+            <div class="min-w-0">
+                <h2 class="text-lg sm:text-xl font-bold leading-tight">Add Health Worker</h2>
+                <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-0.5 leading-snug">Create a BHW or BHW Head account for your barangay.</p>
+            </div>
+            <button type="button" id="closeAddBhwModalBtn" class="p-1.5 rounded-lg hover:bg-background-light dark:hover:bg-background-dark shrink-0"><span class="material-symbols-outlined">close</span></button>
         </div>
-        <form method="POST" action="{{ route('barangay-captain.bhw-workers.store') }}" class="space-y-3 px-6 pt-3 pb-5">
+        <form method="POST" action="{{ route('barangay-captain.bhw-workers.store') }}" class="space-y-3 px-4 sm:px-6 pt-2 pb-4">
             @csrf
             <input type="hidden" name="worker_form" value="1" />
             <div>
@@ -311,8 +367,8 @@
     </div>
 </div>
 
-<div id="purokModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4 py-6">
-    <div class="w-full max-w-6xl h-[calc(100vh-3rem)] overflow-hidden rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
+<div id="purokModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-2 sm:px-4 py-2 sm:py-6">
+    <div class="w-full max-w-6xl h-[min(92dvh,calc(100vh-1rem))] sm:h-[calc(100vh-3rem)] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
         <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4 bg-card-light dark:bg-card-dark z-10">
             <div>
                 <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">Create Purok</h2>
@@ -361,13 +417,13 @@
     </div>
 </div>
 
-<div id="assignModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
-    <div class="w-full max-w-3xl rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
-        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
-            <div><h2 class="text-xl font-bold">Assign Purok</h2><p id="assignModalSubtitle" class="text-sm text-text-light/70 dark:text-text-dark/70">Select one or more purok for the chosen BHW worker.</p></div>
+<div id="assignModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+    <div class="w-full sm:max-w-3xl max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
+        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-4 sm:px-6 py-4">
+            <div><h2 class="text-lg sm:text-xl font-bold">Assign Purok</h2><p id="assignModalSubtitle" class="text-sm text-text-light/70 dark:text-text-dark/70">Select one or more purok for the chosen BHW worker.</p></div>
             <button type="button" id="closeAssignModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark"><span class="material-symbols-outlined">close</span></button>
         </div>
-        <div class="px-6 pt-2 pb-5 space-y-2">
+        <div class="px-4 sm:px-6 pt-2 pb-5 space-y-2">
             <form id="assignWorkerForm" method="POST" action="{{ route('barangay-captain.bhw-workers.assign') }}" class="space-y-4">
                 @csrf
                 <input type="hidden" name="worker_id" id="assignWorkerId" value="" />
@@ -397,8 +453,8 @@
     </div>
 </div>
 
-<div id="kickModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
-    <div class="w-full max-w-lg rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
+<div id="kickModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+    <div class="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
         <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
             <div><h2 class="text-xl font-bold text-red-600 dark:text-red-300"><span class="material-symbols-outlined align-text-bottom mr-2">person_remove</span> Remove Permission</h2><p id="kickModalSubtitle" class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">This action cannot be undone.</p></div>
             <button type="button" id="closeKickModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark"><span class="material-symbols-outlined">close</span></button>
@@ -415,8 +471,8 @@
     </div>
 </div>
 
-<div id="deletePurokModal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/50 px-4">
-    <div class="w-full max-w-lg rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
+<div id="deletePurokModal" class="fixed inset-0 z-[70] hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+    <div class="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
         <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
             <div>
                 <h2 class="text-xl font-bold text-red-600 dark:text-red-300"><span class="material-symbols-outlined align-text-bottom mr-2">delete</span> Delete Purok</h2>
@@ -435,8 +491,8 @@
     </div>
 </div>
 
-<div id="purokListModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
-    <div class="w-full max-w-lg rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
+<div id="purokListModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+    <div class="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
         <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
             <h2 class="text-xl font-bold"><span class="material-symbols-outlined align-text-bottom mr-2">list</span> Purok</h2>
             <button type="button" id="closePurokListModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark"><span class="material-symbols-outlined">close</span></button>
@@ -445,8 +501,8 @@
     </div>
 </div>
 
-<div id="editPurokModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 px-4 py-6">
-    <div class="w-full max-w-6xl h-[calc(100vh-3rem)] overflow-hidden rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
+<div id="editPurokModal" class="fixed inset-0 z-[60] hidden items-end sm:items-center justify-center bg-black/50 px-2 sm:px-4 py-2 sm:py-6">
+    <div class="w-full max-w-6xl h-[min(92dvh,calc(100vh-1rem))] sm:h-[calc(100vh-3rem)] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
         <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4 bg-card-light dark:bg-card-dark z-10">
             <div>
                 <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">Edit Purok</h2>
@@ -1658,9 +1714,6 @@
         }
 
         // ---------- UI Logic (modals, toggles, etc.) ----------
-        const menuToggle = document.getElementById('menuToggle');
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('overlay');
         const bhwModal = document.getElementById('bhwModal');
         const purokModal = document.getElementById('purokModal');
         const assignModal = document.getElementById('assignModal');
@@ -1973,18 +2026,6 @@
                     else show = purokLabels.includes(filterValue);
                     row.style.display = show ? '' : 'none';
                 });
-            });
-        }
-
-        // ---------- Sidebar toggle ----------
-        if (menuToggle && sidebar && overlay) {
-            menuToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('active');
-                overlay.classList.toggle('active');
-            });
-            overlay.addEventListener('click', function() {
-                sidebar.classList.remove('active');
-                overlay.classList.remove('active');
             });
         }
 

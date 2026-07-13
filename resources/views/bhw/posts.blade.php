@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+@include('partials.bhw-viewport')
 <title>Bantay Kalusugan - BHW Posts</title>
 <meta name="csrf-token" content="{{ csrf_token() }}"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+@include('partials.bhw-shell-styles')
 <style>
     .material-symbols-outlined {
         font-variation-settings:
@@ -17,42 +18,13 @@
         'opsz' 24
     }
 
-    @media (max-width: 768px) {
-        #sidebar {
-            transform: translateX(-100%);
-            transition: transform 0.3s ease-in-out;
-            position: fixed;
-            z-index: 40;
-            height: 100vh;
-        }
-
-        #sidebar.active {
-            transform: translateX(0);
-        }
-
-        #overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 30;
-        }
-
-        #overlay.active {
-            display: block;
-        }
-
-        main {
-            width: 100%;
-        }
-    }
+    main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 
     .page-content {
         height: 100%;
         overflow-y: auto;
+        scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch;
     }
 
     .page-content::-webkit-scrollbar {
@@ -71,25 +43,6 @@
 
     .page-content::-webkit-scrollbar-thumb:hover {
         background: #a8a8a8;
-    }
-
-    html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-    }
-
-    .main-container {
-        height: 100vh;
-        display: flex;
-    }
-
-    main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
     }
 </style>
 <script>
@@ -120,18 +73,12 @@
 </script>
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
-<div class="main-container">
-    <div class="md:hidden fixed top-4 left-4 z-50">
-        <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-    </div>
+@include('sidebars.bhw')
 
-    <div id="overlay"></div>
+<div id="bhwContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
+    @include('partials.bhw-mobile-topbar')
 
-    @include('sidebars.bhw')
-
-    <main class="flex-1 p-8 overflow-hidden md:ml-0">
+    <main class="flex-1 flex flex-col min-h-0 overflow-hidden pt-3 px-4 pb-24 sm:px-5 lg:px-8 lg:pt-8 lg:pb-6">
         <div class="page-content">
             <div class="w-full max-w-7xl mx-auto space-y-6">
                 <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -169,12 +116,6 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                     @forelse ($posts as $post)
                         @php
-                            $eventImage = $post->image_url;
-                            if ($eventImage) {
-                                if (!\Illuminate\Support\Str::startsWith($eventImage, ['http://', 'https://', '/'])) {
-                                    $eventImage = \Illuminate\Support\Facades\Storage::url($eventImage);
-                                }
-                            }
                             $eventStartTime = null;
                             $eventEndTime = null;
 
@@ -195,13 +136,6 @@
                             }
                         @endphp
                         <article class="overflow-hidden rounded-xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-                            @if ($eventImage)
-                                <img src="{{ $eventImage }}" alt="{{ $post->title }}" class="h-44 w-full object-cover" />
-                            @else
-                                <div class="flex h-44 w-full items-center justify-center bg-[#f2fbf6] dark:bg-gray-700/40 text-[#4e976b] dark:text-gray-400">
-                                    <span class="material-symbols-outlined text-5xl">campaign</span>
-                                </div>
-                            @endif
                             <div class="p-4 md:p-5 flex flex-col">
                                 <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
                                     <div class="flex flex-wrap items-center gap-2">
@@ -217,10 +151,9 @@
                                     </div>
 
                                     <span class="text-xs text-[#4e976b] dark:text-gray-400">
-                                        {{ $post->event_date?->format('M d, Y') ?? 'TBA' }}
+                                        Remove {{ $post->expiresAt()?->format('M d, Y · h:i A') ?? ($post->event_date?->format('M d, Y') ?? 'TBA') }}
                                     </span>
                                 </div>
-
                                 <h2 class="text-lg font-bold leading-tight text-[#0e1b13] dark:text-white">{{ $post->title }}</h2>
 
                                 @if ($post->description)
@@ -301,7 +234,7 @@
                                         </button>
                                     </div>
 
-                                    <form method="POST" action="{{ route('bhw.posts.update', $post) }}" enctype="multipart/form-data" class="space-y-3 p-3 sm:p-4">
+                                    <form method="POST" action="{{ route('bhw.posts.update', $post) }}" class="space-y-3 p-3 sm:p-4">
                                         @csrf
                                         @method('PUT')
                                         <div>
@@ -314,28 +247,29 @@
                                         </div>
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                             <div>
-                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Date</label>
+                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Remove on date</label>
                                                 <input type="date" name="event_date" value="{{ old('event_date', optional($post->event_date)->format('Y-m-d')) }}" required class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
                                             </div>
                                             <div>
-                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Venue / Location</label>
-                                                <input type="text" name="location" value="{{ old('location', $post->location) }}" placeholder="Venue / location" class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
-                                            </div>
-                                        </div>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                            <div>
-                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Start Time</label>
-                                                <input type="time" name="start_time" value="{{ old('start_time', $post->start_time) }}" class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
-                                            </div>
-                                            <div>
-                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">End Time</label>
-                                                <input type="time" name="end_time" value="{{ old('end_time', $post->end_time) }}" class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
+                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Remove at time</label>
+                                                @php
+                                                    $editEndTime = old('end_time');
+                                                    if ($editEndTime === null && $post->end_time) {
+                                                        try {
+                                                            $editEndTime = \Illuminate\Support\Carbon::createFromFormat('H:i:s', $post->end_time)->format('H:i');
+                                                        } catch (\Throwable $e) {
+                                                            $editEndTime = \Illuminate\Support\Carbon::parse($post->end_time)->format('H:i');
+                                                        }
+                                                    }
+                                                @endphp
+                                                <input type="time" name="end_time" value="{{ $editEndTime }}" required class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
                                             </div>
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Image</label>
-                                            <input type="file" name="image" accept="image/*" class="w-full rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 py-2 text-sm">
+                                            <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Venue / Location <span class="font-normal text-[#4e976b]">(optional)</span></label>
+                                            <input type="text" name="location" value="{{ old('location', $post->location) }}" placeholder="Venue / location" class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
                                         </div>
+                                        <input type="hidden" name="start_time" value="">
                                         <div class="flex flex-wrap gap-2 pt-1">
                                             <button type="submit" class="h-10 px-4 rounded-lg bg-primary text-[#0e1b13] text-sm font-semibold">Save changes</button>
                                             <button type="button" class="h-10 px-4 rounded-lg border border-[#d0e7d9] text-[#4e976b] text-sm font-semibold" data-close-edit-modal="{{ $post->id }}">Cancel</button>
@@ -355,24 +289,13 @@
             </div>
         </div>
     </main>
+
+    @include('partials.bhw-mobile-nav')
 </div>
 
 <script>
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
     const editModalTriggers = document.querySelectorAll('[data-open-edit-modal]');
     const editModalClosers = document.querySelectorAll('[data-close-edit-modal]');
-
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    });
-
-    overlay.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    });
 
     editModalTriggers.forEach((trigger) => {
         trigger.addEventListener('click', () => {
