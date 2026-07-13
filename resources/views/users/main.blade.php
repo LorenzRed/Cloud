@@ -3,6 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    @include('partials.submit-guard')
+    @include('partials.users-skeleton-styles')
+    @include('partials.users-swr')
     <title>Bantay Kalusugan - Resident Portal</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
@@ -383,8 +386,22 @@
                             <span class="material-symbols-outlined text-[28px] text-[#1f7f4e] dark:text-[#8cefb5]" id="weatherIcon">partly_cloudy_day</span>
                         </div>
 
-                        <div id="weatherLoading" class="mt-3 text-sm text-[#376f50] dark:text-gray-300">
-                            Loading weather for your barangay…
+                        <div id="weatherLoading" class="mt-3" aria-hidden="true">
+                            <div class="flex flex-wrap items-end gap-3">
+                                <div class="bk-skeleton bk-skeleton-block h-9 w-20"></div>
+                                <div class="bk-skeleton bk-skeleton-line w-28"></div>
+                            </div>
+                            <div class="bk-skeleton bk-skeleton-line mt-3 w-2/3 max-w-xs"></div>
+                            <div class="mt-3 grid grid-cols-2 gap-2">
+                                <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-3 py-2">
+                                    <div class="bk-skeleton bk-skeleton-line w-16 mb-2"></div>
+                                    <div class="bk-skeleton bk-skeleton-line w-10 h-4"></div>
+                                </div>
+                                <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-3 py-2">
+                                    <div class="bk-skeleton bk-skeleton-line w-12 mb-2"></div>
+                                    <div class="bk-skeleton bk-skeleton-line w-14 h-4"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <div id="weatherContent" class="hidden mt-3">
@@ -448,11 +465,8 @@
                                 99: { label: 'Thunderstorm with hail', icon: 'thunderstorm' },
                             };
 
-                            function setLoading(message) {
-                                if (loadingEl) {
-                                    loadingEl.textContent = message;
-                                    loadingEl.classList.remove('hidden');
-                                }
+                            function setLoading() {
+                                loadingEl?.classList.remove('hidden');
                                 contentEl?.classList.add('hidden');
                                 errorEl?.classList.add('hidden');
                             }
@@ -503,7 +517,7 @@
                             }
 
                             async function start() {
-                                setLoading(`Loading weather for ${placeLabel}…`);
+                                setLoading();
 
                                 try {
                                     if (!hasSavedCoords) {

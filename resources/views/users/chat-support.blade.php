@@ -189,6 +189,36 @@
                 container.appendChild(bubble);
                 messages.appendChild(container);
                 messages.scrollTop = messages.scrollHeight;
+                return container;
+            }
+
+            function appendThinkingSkeleton() {
+                const container = document.createElement('div');
+                container.id = 'chatSupportThinking';
+                container.className = 'flex items-start gap-2';
+                container.setAttribute('aria-label', 'Assistant is responding');
+
+                const avatar = document.createElement('div');
+                avatar.className = 'w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5';
+                avatar.innerHTML = '<span class="material-symbols-outlined text-base text-primary">smart_toy</span>';
+
+                const bubble = document.createElement('div');
+                bubble.className = 'max-w-[85%] rounded-2xl rounded-tl-sm border border-[#d0e7d9] bg-[#f7fbf8] px-4 py-3 dark:border-gray-700 dark:bg-gray-800 space-y-2 min-w-[12rem]';
+                bubble.innerHTML = `
+                    <div class="bk-skeleton bk-skeleton-line w-40"></div>
+                    <div class="bk-skeleton bk-skeleton-line w-28"></div>
+                    <div class="bk-skeleton bk-skeleton-line w-32"></div>
+                `;
+
+                container.appendChild(avatar);
+                container.appendChild(bubble);
+                messages.appendChild(container);
+                messages.scrollTop = messages.scrollHeight;
+                return container;
+            }
+
+            function removeThinkingSkeleton() {
+                document.getElementById('chatSupportThinking')?.remove();
             }
 
             btnHowItWorks?.addEventListener('click', (e) => {
@@ -227,7 +257,9 @@
 
                 appendBubble(message, true);
                 input.value = '';
-                status.textContent = 'Thinking...';
+                status.textContent = '';
+                removeThinkingSkeleton();
+                appendThinkingSkeleton();
                 submitButton.disabled = true;
                 input.disabled = true;
 
@@ -245,19 +277,18 @@
                     });
 
                     const data = await response.json().catch(() => ({}));
+                    removeThinkingSkeleton();
 
                     if (!response.ok) {
                         const errorMessage = data?.message || data?.errors?.message?.[0] || 'Unable to send message right now.';
                         appendBubble(errorMessage, false);
-                        status.textContent = '';
                         return;
                     }
 
                     appendBubble(data.message || 'No reply received.', false);
-                    status.textContent = '';
                 } catch (error) {
+                    removeThinkingSkeleton();
                     appendBubble('The chat service is unavailable right now.', false);
-                    status.textContent = '';
                 } finally {
                     submitButton.disabled = false;
                     input.disabled = false;

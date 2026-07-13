@@ -278,6 +278,16 @@ Route::middleware('auth')->group(function () {
         };
     })->name('dashboard');
 
+    Route::get('/users/session/csrf', function () {
+        if (Auth::user()->role !== 'users') {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        return response()->json([
+            'token' => csrf_token(),
+        ])->header('Cache-Control', 'private, no-store');
+    })->name('users.session.csrf');
+
     Route::get('/users', function () {
         if (Auth::user()->role !== 'users') {
             return redirect()->route('dashboard');

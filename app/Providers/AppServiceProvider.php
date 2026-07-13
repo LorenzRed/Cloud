@@ -6,6 +6,7 @@ use App\Models\ResidentRequest;
 use App\Support\BhwResidentScope;
 use App\Support\ResidentBhwChat;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         View::composer('sidebars.bhw', function ($view) {
             $pendingRequestCount = 0;
             $requestMessageUnreadCount = 0;

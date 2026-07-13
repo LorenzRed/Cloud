@@ -1530,11 +1530,20 @@
         showHealthToast._timer = window.setTimeout(() => toast.classList.add('opacity-0'), 2200);
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     function healthRecordDetailHtml(label, value) {
         return `
             <div class="health-record-detail">
-                <span class="health-record-label">${label}</span>
-                <span class="health-record-value">${value}</span>
+                <span class="health-record-label">${escapeHtml(label)}</span>
+                <span class="health-record-value">${escapeHtml(value)}</span>
             </div>
         `;
     }
@@ -1543,7 +1552,7 @@
         return `
             <article class="health-record-card">
                 <div class="health-record-card-head">
-                    <p class="health-record-card-title">${title}</p>
+                    <p class="health-record-card-title">${escapeHtml(title)}</p>
                     ${badgesHtml ? `<div class="health-record-card-badges">${badgesHtml}</div>` : ''}
                 </div>
                 <div>${detailsHtml}</div>
@@ -1552,13 +1561,13 @@
     }
 
     function healthRecordsEmptyHtml(message) {
-        return `<div class="health-records-empty">${message}</div>`;
+        return `<div class="health-records-empty">${escapeHtml(message)}</div>`;
     }
 
     function healthFormFieldHtml(label, inputHtml) {
         return `
             <div class="health-form-field">
-                <span class="health-form-label">${label}</span>
+                <span class="health-form-label">${escapeHtml(label)}</span>
                 ${inputHtml}
             </div>
         `;
@@ -1589,7 +1598,7 @@
     }
 
     function renderVitaminScheduleCard(row) {
-        const statusBadge = `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${immunizationBadgeClass(row.status === 'given' ? 'given' : row.status === 'missed' ? 'missed' : 'pending')}">${row.status}</span>`;
+        const statusBadge = `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${immunizationBadgeClass(row.status === 'given' ? 'given' : row.status === 'missed' ? 'missed' : 'pending')}">${escapeHtml(row.status)}</span>`;
         const details = [
             healthRecordDetailHtml('Due date', row.due_date || '—'),
             healthRecordDetailHtml('Given on', row.given_on || '—'),
@@ -1923,7 +1932,7 @@
             renderChildProfile(child, activeHealthData);
             renderHealthTab();
         } catch (error) {
-            document.getElementById('healthModalBody').innerHTML = `<p class="text-sm text-accent-red">${error.message}</p>`;
+            document.getElementById('healthModalBody').innerHTML = `<p class="text-sm text-accent-red">${escapeHtml(error.message)}</p>`;
         }
     }
 

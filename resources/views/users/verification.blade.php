@@ -5,6 +5,7 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content" name="viewport" />
     @include('partials.submit-guard')
+    @include('partials.users-skeleton-styles')
     <title>Resident Verification</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
@@ -992,10 +993,11 @@
                     <p class="text-xs text-gray-500 leading-relaxed mb-3">Map-based uses your GPS to match the barangay and purok. Inaccurate result may happen sometimes.</p>
                     <div class="relative h-[min(42dvh,360px)] sm:h-[380px] rounded-lg overflow-hidden border border-gray-200">
                         <div id="locationMap" class="h-full w-full min-h-[220px]"></div>
-                        <div id="mapLoadingOverlay" class="hidden absolute inset-0 z-10 bg-black/35 backdrop-blur-[1px] flex items-center justify-center">
-                            <div class="rounded-lg bg-white/95 px-4 py-3 border border-gray-200 shadow flex items-center gap-3">
-                                <span class="inline-block h-5 w-5 rounded-full border-2 border-blue-600 border-t-transparent animate-spin"></span>
-                                <p id="mapLoadingText" class="text-sm font-medium text-gray-700">Getting current location...</p>
+                        <div id="mapLoadingOverlay" class="hidden absolute inset-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-[1px] flex items-center justify-center p-4">
+                            <div class="w-full max-w-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm space-y-3" aria-label="Loading map location">
+                                <div class="bk-skeleton bk-skeleton-block h-28 w-full"></div>
+                                <div class="bk-skeleton bk-skeleton-line w-3/4"></div>
+                                <div class="bk-skeleton bk-skeleton-line w-1/2"></div>
                             </div>
                         </div>
                     </div>
@@ -1752,7 +1754,6 @@
         const confirmCancelBtn = document.getElementById('confirmCancelBtn');
         const confirmOkBtn = document.getElementById('confirmOkBtn');
         const mapLoadingOverlay = document.getElementById('mapLoadingOverlay');
-        const mapLoadingText = document.getElementById('mapLoadingText');
         const barangayBoundaries = @json($barangayBoundaries ?? []);
         const purokBoundaries = @json($purokBoundaries ?? []);
         const purokOptions = @json($purokOptions ?? []);
@@ -4328,11 +4329,11 @@
                 return;
             }
 
-            if (mapLoadingText) {
-                mapLoadingText.textContent = text;
-            }
-
             mapLoadingOverlay.classList.toggle('hidden', !isLoading);
+            mapLoadingOverlay.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+            if (text && !isLoading && /unable|error|fail/i.test(text)) {
+                // Errors are handled by other UI; keep overlay hidden.
+            }
         }
 
         function showNotice(title, message) {

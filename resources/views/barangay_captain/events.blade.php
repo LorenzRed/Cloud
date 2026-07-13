@@ -392,8 +392,12 @@ const announcementForm = document.getElementById('announcementForm');
             }
 
             const previewUrl = URL.createObjectURL(file);
+            const img = document.createElement('img');
+            img.src = previewUrl;
+            img.alt = 'Event image preview';
+            img.className = 'h-36 w-full object-cover';
             eventImagePreview.classList.remove('hidden');
-            eventImagePreview.innerHTML = `<img src="${previewUrl}" alt="Event image preview" class="h-36 w-full object-cover">`;
+            eventImagePreview.replaceChildren(img);
         });
     }
 </script>
