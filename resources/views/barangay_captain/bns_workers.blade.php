@@ -45,24 +45,26 @@
         <div class="page-content">
             <div class="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-4">
                 <header class="space-y-3">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div class="min-w-0">
-                            <h1 class="text-2xl sm:text-3xl font-bold leading-tight">BNS Workers</h1>
-                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Manage Barangay Nutrition Scholar accounts for your barangay only.</p>
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+                        <div class="hidden lg:flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between lg:flex-1 lg:min-w-0">
+                            <div class="min-w-0">
+                                <h1 class="text-2xl sm:text-3xl font-bold leading-tight">BNS Workers</h1>
+                                <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Manage Barangay Nutrition Scholar accounts for your barangay only.</p>
+                            </div>
+                            @if ($assignedBarangay)
+                                <span class="inline-flex self-start items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary">
+                                    <span class="material-symbols-outlined text-base">location_city</span>
+                                    {{ $assignedBarangay->name }}
+                                </span>
+                            @endif
                         </div>
                         @if ($assignedBarangay)
-                            <span class="inline-flex self-start items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary">
-                                <span class="material-symbols-outlined text-base">location_city</span>
-                                {{ $assignedBarangay->name }}
-                            </span>
+                            <button type="button" id="openAddBnsModalBtn" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl h-11 px-4 bg-secondary text-white text-sm font-bold hover:opacity-90 lg:shrink-0">
+                                <span class="material-symbols-outlined text-base">person_add</span>
+                                Add BNS Worker
+                            </button>
                         @endif
                     </div>
-                    @if ($assignedBarangay)
-                        <button type="button" id="openAddBnsModalBtn" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl h-11 px-4 bg-secondary text-white text-sm font-bold hover:opacity-90">
-                            <span class="material-symbols-outlined text-base">person_add</span>
-                            Add BNS Worker
-                        </button>
-                    @endif
                 </header>
 
                 @if (session('status'))

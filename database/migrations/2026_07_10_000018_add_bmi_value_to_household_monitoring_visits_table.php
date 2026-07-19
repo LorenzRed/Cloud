@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('household_monitoring_visits', function (Blueprint $table) {
-            $table->decimal('bmi_value', 4, 1)->nullable()->after('height_cm');
+            $table->decimal('bmi_value', 5, 1)->nullable()->after('height_cm');
         });
     }
 

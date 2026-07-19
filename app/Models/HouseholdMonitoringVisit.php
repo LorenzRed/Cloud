@@ -42,6 +42,50 @@ class HouseholdMonitoringVisit extends Model
         return $this->belongsTo(User::class, 'recorded_by');
     }
 
+    /**
+     * Normalize height to centimeters. Values under 3 are treated as meters (e.g. 1.65 → 165).
+     */
+    public static function normalizeHeightCm(mixed $height): ?float
+    {
+        if ($height === null || $height === '') {
+            return null;
+        }
+
+        $heightCm = (float) $height;
+
+        if ($heightCm <= 0) {
+            return null;
+        }
+
+        // Common mistake: entering meters instead of centimeters.
+        if ($heightCm < 3) {
+            $heightCm = round($heightCm * 100, 1);
+        }
+
+        return $heightCm;
+    }
+
+    /**
+     * Calculate BMI from kg / cm, or null when inputs are incomplete/invalid.
+     */
+    public static function calculateBmi(?float $weightKg, ?float $heightCm): ?float
+    {
+        $heightCm = self::normalizeHeightCm($heightCm);
+
+        if ($weightKg === null || $heightCm === null || $weightKg <= 0 || $heightCm < 30) {
+            return null;
+        }
+
+        $bmi = round($weightKg / (($heightCm / 100) ** 2), 1);
+
+        if (! is_finite($bmi) || $bmi <= 0) {
+            return null;
+        }
+
+        // Keep values within DECIMAL(5,1) storage limits.
+        return min($bmi, 9999.9);
+    }
+
     public function notificationSummary(HouseholdMonitoringCase $case): string
     {
         $parts = [

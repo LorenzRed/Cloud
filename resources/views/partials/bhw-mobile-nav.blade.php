@@ -23,7 +23,11 @@
             <span class="material-symbols-outlined text-[20px]" @if ($isRequests) style="font-variation-settings: 'FILL' 1;" @endif>group_add</span>
             Requests
             @if (($pendingRequestCount ?? 0) > 0)
-                <span class="absolute top-0.5 right-1.5 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-accent-red px-1 text-[9px] font-bold text-white">{{ ($pendingRequestCount ?? 0) > 9 ? '9+' : $pendingRequestCount }}</span>
+                <span class="absolute top-0.5 right-1.5 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white shadow-sm" aria-label="{{ $pendingRequestCount }} pending request{{ $pendingRequestCount === 1 ? '' : 's' }}">
+                    {{ ($pendingRequestCount ?? 0) > 9 ? '9+' : $pendingRequestCount }}
+                </span>
+            @elseif (($requestMessageUnreadCount ?? 0) > 0)
+                <span class="absolute top-1 right-2 h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-card-light dark:ring-card-dark" aria-label="New request messages"></span>
             @endif
         </a>
         <a href="{{ route('bhw.announcements') }}" class="flex flex-col items-center justify-center rounded-lg py-1.5 text-[10px] sm:text-[11px] font-semibold leading-tight {{ $isAnnouncements ? 'text-primary bg-primary/10' : 'text-text-light/70 dark:text-text-dark/70' }}">

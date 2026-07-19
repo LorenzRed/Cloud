@@ -99,18 +99,9 @@
                         @if (($report['managed_bhw_count'] ?? null) !== null)
                             <p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
                                 {{ number_format((int) $report['managed_bhw_count']) }} health worker(s)
-                                @if (($report['purok_count'] ?? 0) > 0)
-                                    · {{ number_format((int) $report['purok_count']) }} purok(s)
-                                @endif
                             </p>
                         @endif
                     </div>
-                    @if (filled($report['assigned_purok_label'] ?? null))
-                        <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary max-w-md">
-                            <span class="material-symbols-outlined text-base shrink-0">location_city</span>
-                            <span class="truncate" title="{{ $report['assigned_purok_label'] }}">{{ $report['assigned_purok_label'] }}</span>
-                        </span>
-                    @endif
                 </header>
 
                 <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 mb-6 w-full">

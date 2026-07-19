@@ -645,6 +645,36 @@
         margin-bottom: 0.5rem;
     }
 
+    @media (max-width: 1023px) {
+        #monitoringCaseFormWrapper {
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 0.5rem;
+            padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+
+        #monitoringCaseFormWrapper .transaction-modal-panel {
+            max-height: calc(100dvh - 1rem);
+            width: 100%;
+            margin-top: 0;
+        }
+
+        #monitoringCaseFormWrapper .transaction-modal-body {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 1.75rem;
+        }
+
+        #monitoringCaseFormWrapper .mnt-vitals-scroll {
+            max-height: none;
+            overflow: visible;
+            padding-right: 0;
+        }
+    }
+
     @media (min-width: 1024px) {
         .mnt-vitals-scroll {
             max-height: 14rem;
@@ -1665,10 +1695,6 @@
                                                                 <label class="block text-sm font-semibold mb-1.5" for="first_period_date">First Period Date</label>
                                                                 <input id="first_period_date" name="first_period_date" value="{{ old('first_period_date') }}" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="date" />
                                                             </div>
-                                                            <div>
-                                                                <label class="block text-sm font-semibold mb-1.5" for="last_period_date">Last Period Date</label>
-                                                                <input id="last_period_date" name="last_period_date" value="{{ old('last_period_date') }}" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="date" />
-                                                            </div>
                                                         </div>
                                                         <div class="mnt-vitals-grid">
                                                         <div class="mnt-metric-card">
@@ -1684,11 +1710,11 @@
                                                             <div class="mnt-metric-fields">
                                                                 <div>
                                                                     <label class="block text-sm font-semibold mb-1.5" for="monitoring_height_cm">Height (cm)</label>
-                                                                    <input id="monitoring_height_cm" name="height_cm" value="{{ old('height_cm') }}" data-visit-height="new" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="0" step="0.1" placeholder="e.g., 165" />
+                                                                    <input id="monitoring_height_cm" name="height_cm" value="{{ old('height_cm') }}" data-visit-height="new" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="30" max="300" step="0.1" placeholder="e.g., 165" />
                                                                 </div>
                                                                 <div>
                                                                     <label class="block text-sm font-semibold mb-1.5" for="monitoring_weight_kg">Weight (kg)</label>
-                                                                    <input id="monitoring_weight_kg" name="weight_kg" value="{{ old('weight_kg') }}" data-visit-weight="new" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="0" step="0.1" placeholder="e.g., 60" />
+                                                                    <input id="monitoring_weight_kg" name="weight_kg" value="{{ old('weight_kg') }}" data-visit-weight="new" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="1" max="500" step="0.1" placeholder="e.g., 60" />
                                                                 </div>
                                                                 <div>
                                                                     <label class="block text-sm font-semibold mb-1.5">BMI (auto)</label>
@@ -1781,9 +1807,16 @@
                                                             </span>
                                                             @if ($monitoringCase->is_active)
                                                                 <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800 dark:bg-green-900/30 dark:text-green-200">Active</span>
+                                                            @else
+                                                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">Completed</span>
                                                             @endif
                                                         </div>
                                                         <h5 class="text-lg font-bold mt-2 text-text-light dark:text-text-dark">{{ $monitoringCase->member_name }}</h5>
+                                                        @if (! $monitoringCase->is_active && $monitoringCase->completed_at)
+                                                            <p class="mt-1 text-xs text-text-light/60 dark:text-text-dark/60">
+                                                                Completed {{ $monitoringCase->completed_at->format('M d, Y') }}
+                                                            </p>
+                                                        @endif
                                                         @if ($monitoringCase->isPregnant() && ($monitoringCase->first_period_date || $monitoringCase->last_period_date))
                                                             <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">
                                                                 Period:
@@ -1796,12 +1829,27 @@
                                                             <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-2">{{ $monitoringCase->issue_notes }}</p>
                                                         @endif
                                                     </div>
-                                                    <button type="button" class="toggle-visit-form inline-flex items-center gap-1 rounded-lg h-9 px-3 border border-border-light dark:border-border-dark text-sm font-semibold hover:bg-card-light dark:hover:bg-card-dark" data-case-id="{{ $monitoringCase->id }}">
-                                                        <span class="material-symbols-outlined text-base">add</span>
-                                                        Add Visit
-                                                    </button>
+                                                    @if ($monitoringCase->is_active)
+                                                        <div class="flex flex-wrap items-center gap-2">
+                                                            <button type="button" class="toggle-visit-form inline-flex items-center gap-1 rounded-lg h-9 px-3 border border-border-light dark:border-border-dark text-sm font-semibold hover:bg-card-light dark:hover:bg-card-dark" data-case-id="{{ $monitoringCase->id }}">
+                                                                <span class="material-symbols-outlined text-base">add</span>
+                                                                Add Visit
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                class="open-complete-monitoring-modal inline-flex items-center gap-1 rounded-lg h-9 px-3 border border-green-300 text-sm font-semibold text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/20"
+                                                                data-complete-url="{{ route('bhw.monitoring-cases.complete', $monitoringCase) }}"
+                                                                data-member-name="{{ $monitoringCase->member_name }}"
+                                                                data-type-label="{{ $monitoringCase->typeLabel() }}"
+                                                            >
+                                                                <span class="material-symbols-outlined text-base">check_circle</span>
+                                                                Mark Completed
+                                                            </button>
+                                                        </div>
+                                                    @endif
                                                 </div>
 
+                                                @if ($monitoringCase->is_active)
                                                 <div id="visitForm-{{ $monitoringCase->id }}" class="hidden mt-4 rounded-lg border border-border-light dark:border-border-dark p-3 bg-card-light dark:bg-card-dark">
                                                     <form method="POST" action="{{ route('bhw.monitoring-cases.visits.store', $monitoringCase) }}" class="space-y-4 monitoring-visit-form" data-case-id="{{ $monitoringCase->id }}">
                                                         @csrf
@@ -1815,11 +1863,11 @@
                                                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                                                 <div>
                                                                     <label class="block text-sm font-semibold mb-1">Height (cm)</label>
-                                                                    <input name="height_cm" data-visit-height="{{ $monitoringCase->id }}" class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm" type="number" min="0" step="0.1" placeholder="e.g., 165" />
+                                                                    <input name="height_cm" data-visit-height="{{ $monitoringCase->id }}" class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm" type="number" min="30" max="300" step="0.1" placeholder="e.g., 165" />
                                                                 </div>
                                                                 <div>
                                                                     <label class="block text-sm font-semibold mb-1">Weight (kg)</label>
-                                                                    <input name="weight_kg" data-visit-weight="{{ $monitoringCase->id }}" class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm" type="number" min="0" step="0.1" placeholder="e.g., 60" />
+                                                                    <input name="weight_kg" data-visit-weight="{{ $monitoringCase->id }}" class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm" type="number" min="1" max="500" step="0.1" placeholder="e.g., 60" />
                                                                 </div>
                                                                 <div>
                                                                     <label class="block text-sm font-semibold mb-1">BMI (auto)</label>
@@ -1848,24 +1896,35 @@
                                                             </div>
                                                         @endif
 
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1">MUAC (cm)</label>
+                                                            <input name="muac_cm" class="w-full sm:max-w-xs h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm" type="number" min="0" max="100" step="0.1" placeholder="Mid-upper arm circumference" />
+                                                        </div>
+
                                                         @if ($monitoringCase->isPregnant())
-                                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                                <div>
-                                                                    <label class="block text-sm font-semibold mb-1">MUAC (cm)</label>
-                                                                    <input name="muac_cm" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm" type="number" min="0" step="0.1" placeholder="Mid-upper arm circumference" />
-                                                                </div>
-                                                                <div>
-                                                                    <label class="block text-sm font-semibold mb-1">Anti-Tetanus</label>
-                                                                    <select name="anti_tetanus" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm">
-                                                                        <option value="">Not given</option>
-                                                                        <option value="TT1">TT1</option>
-                                                                        <option value="TT2">TT2</option>
-                                                                        <option value="TT3">TT3</option>
-                                                                        <option value="TT4">TT4</option>
-                                                                        <option value="TT5">TT5</option>
-                                                                        <option value="Booster">Booster</option>
-                                                                    </select>
-                                                                </div>
+                                                            <div>
+                                                                <label class="block text-sm font-semibold mb-1">Last Period Date <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
+                                                                <input
+                                                                    name="last_period_date"
+                                                                    value="{{ $monitoringCase->last_period_date?->toDateString() }}"
+                                                                    class="w-full sm:max-w-xs h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm"
+                                                                    type="date"
+                                                                    @if ($monitoringCase->first_period_date)
+                                                                        min="{{ $monitoringCase->first_period_date->toDateString() }}"
+                                                                    @endif
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label class="block text-sm font-semibold mb-1">Anti-Tetanus</label>
+                                                                <select name="anti_tetanus" class="w-full sm:max-w-xs h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm">
+                                                                    <option value="">Not given</option>
+                                                                    <option value="TT1">TT1</option>
+                                                                    <option value="TT2">TT2</option>
+                                                                    <option value="TT3">TT3</option>
+                                                                    <option value="TT4">TT4</option>
+                                                                    <option value="TT5">TT5</option>
+                                                                    <option value="Booster">Booster</option>
+                                                                </select>
                                                             </div>
                                                         @endif
 
@@ -1887,10 +1946,17 @@
                                                     </div>
                                                 </form>
                                             </div>
+                                                @endif
 
                                                 @if ($monitoringCase->visits->isNotEmpty())
                                                     <div class="mt-4 space-y-2">
                                                         <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Visit History</p>
+                                                        @if ($monitoringCase->isPregnant())
+                                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg bg-pink-50 px-3 py-2 text-sm text-pink-900 dark:bg-pink-900/20 dark:text-pink-100">
+                                                                <p>First Period: <span class="font-semibold">{{ $monitoringCase->first_period_date?->format('M d, Y') ?? 'Not recorded' }}</span></p>
+                                                                <p>Last Period: <span class="font-semibold">{{ $monitoringCase->last_period_date?->format('M d, Y') ?? 'Not recorded' }}</span></p>
+                                                            </div>
+                                                        @endif
                                                         @foreach ($monitoringCase->visits as $visit)
                                                             <div class="rounded-lg border border-border-light dark:border-border-dark p-3 text-sm">
                                                                 <div class="flex items-center justify-between gap-2">
@@ -1937,6 +2003,39 @@
                                                 <p class="mt-1">Add monitoring for a pregnant family member or a senior with health concerns.</p>
                                             </div>
                                         @endforelse
+                                    </div>
+
+                                    <div id="completeMonitoringModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 py-6">
+                                        <div class="w-full max-w-md rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl" role="dialog" aria-modal="true" aria-labelledby="completeMonitoringModalTitle">
+                                            <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-5 py-4">
+                                                <div class="min-w-0">
+                                                    <h5 id="completeMonitoringModalTitle" class="text-lg font-bold text-text-light dark:text-text-dark">Mark monitoring completed?</h5>
+                                                    <p id="completeMonitoringModalMessage" class="mt-1 text-sm text-text-light/70 dark:text-text-dark/70">
+                                                        Visit records will stay available in monitoring history.
+                                                    </p>
+                                                </div>
+                                                <button type="button" id="closeCompleteMonitoringModal" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark shrink-0" aria-label="Close confirmation">
+                                                    <span class="material-symbols-outlined text-base">close</span>
+                                                </button>
+                                            </div>
+                                            <div class="px-5 py-4">
+                                                <p class="text-sm text-text-light/80 dark:text-text-dark/80">
+                                                    This stops new visits for this case. You can still review all previous records, and you can start a new monitoring case later if needed.
+                                                </p>
+                                            </div>
+                                            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-border-light dark:border-border-dark px-5 py-4">
+                                                <button type="button" id="cancelCompleteMonitoringModal" class="inline-flex items-center justify-center rounded-xl h-11 px-5 border border-border-light dark:border-border-dark text-sm font-semibold hover:bg-background-light dark:hover:bg-background-dark">
+                                                    Cancel
+                                                </button>
+                                                <form id="completeMonitoringForm" method="POST" action="#">
+                                                    @csrf
+                                                    <button type="submit" class="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl h-11 px-5 bg-primary text-white text-sm font-bold">
+                                                        <span class="material-symbols-outlined text-base">check_circle</span>
+                                                        Mark Completed
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -2287,6 +2386,79 @@
 
     function closeMonitoringCaseModal() {
         monitoringCaseFormWrapper?.classList.add('hidden');
+        resetMonitoringModalViewport();
+    }
+
+    function resetMonitoringModalViewport() {
+        if (! monitoringCaseFormWrapper) {
+            return;
+        }
+
+        monitoringCaseFormWrapper.style.top = '';
+        monitoringCaseFormWrapper.style.height = '';
+        monitoringCaseFormWrapper.style.bottom = '';
+
+        const panel = monitoringCaseFormWrapper.querySelector('.transaction-modal-panel');
+        if (panel) {
+            panel.style.maxHeight = '';
+        }
+    }
+
+    function syncMonitoringModalToViewport() {
+        if (! monitoringCaseFormWrapper || monitoringCaseFormWrapper.classList.contains('hidden')) {
+            return;
+        }
+
+        if (window.matchMedia('(min-width: 1024px)').matches || ! window.visualViewport) {
+            resetMonitoringModalViewport();
+            return;
+        }
+
+        const vv = window.visualViewport;
+        const availableHeight = Math.max(240, Math.floor(vv.height) - 8);
+
+        monitoringCaseFormWrapper.style.top = `${Math.max(0, Math.floor(vv.offsetTop))}px`;
+        monitoringCaseFormWrapper.style.height = `${Math.floor(vv.height)}px`;
+        monitoringCaseFormWrapper.style.bottom = 'auto';
+
+        const panel = monitoringCaseFormWrapper.querySelector('.transaction-modal-panel');
+        if (panel) {
+            panel.style.maxHeight = `${availableHeight}px`;
+        }
+    }
+
+    function scrollMonitoringFieldIntoView(target) {
+        if (! target || ! monitoringCaseFormWrapper || monitoringCaseFormWrapper.classList.contains('hidden')) {
+            return;
+        }
+
+        if (! monitoringCaseFormWrapper.contains(target)) {
+            return;
+        }
+
+        const body = monitoringCaseFormWrapper.querySelector('.transaction-modal-body');
+        if (! body) {
+            return;
+        }
+
+        const scrollTarget = () => {
+            const bodyRect = body.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const padding = 24;
+            const visibleBottom = bodyRect.bottom - padding;
+            const visibleTop = bodyRect.top + padding;
+
+            if (targetRect.bottom > visibleBottom) {
+                body.scrollTop += targetRect.bottom - visibleBottom;
+            } else if (targetRect.top < visibleTop) {
+                body.scrollTop -= visibleTop - targetRect.top;
+            }
+        };
+
+        requestAnimationFrame(() => {
+            scrollTarget();
+            window.setTimeout(scrollTarget, 280);
+        });
     }
 
     applyMonitoringMemberSelection();
@@ -2297,11 +2469,29 @@
         syncPregnantPeriodFields();
         calculateVisitBmi('new');
         updateVisitBpPreview('new');
+        syncMonitoringModalToViewport();
         monitoringMemberSelect?.focus();
     });
 
     closeMonitoringCaseFormBtn?.addEventListener('click', closeMonitoringCaseModal);
     cancelMonitoringCaseFormBtn?.addEventListener('click', closeMonitoringCaseModal);
+
+    monitoringCaseFormWrapper?.addEventListener('focusin', (event) => {
+        const target = event.target;
+        if (target instanceof HTMLElement && target.matches('input, select, textarea')) {
+            syncMonitoringModalToViewport();
+            scrollMonitoringFieldIntoView(target);
+        }
+    });
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', syncMonitoringModalToViewport);
+        window.visualViewport.addEventListener('scroll', syncMonitoringModalToViewport);
+    }
+
+    window.addEventListener('orientationchange', () => {
+        window.setTimeout(syncMonitoringModalToViewport, 150);
+    });
 
     document.querySelectorAll('.toggle-visit-form').forEach((button) => {
         button.addEventListener('click', () => {
@@ -2323,7 +2513,7 @@
         const heightCm = parseFloat(heightInput.value);
         const weightKg = parseFloat(weightInput.value);
 
-        if (!Number.isFinite(heightCm) || !Number.isFinite(weightKg) || heightCm <= 0 || weightKg <= 0) {
+        if (!Number.isFinite(heightCm) || !Number.isFinite(weightKg) || heightCm < 30 || weightKg < 1) {
             bmiInput.value = '';
             return;
         }
@@ -2387,6 +2577,7 @@
         syncPregnantPeriodFields();
         calculateVisitBmi('new');
         updateVisitBpPreview('new');
+        syncMonitoringModalToViewport();
     }
 
     if (hasValidationErrors && activeTab === 'medical-history') {
@@ -2401,6 +2592,53 @@
     }
 
     syncPregnantPeriodFields();
+
+    const completeMonitoringModal = document.getElementById('completeMonitoringModal');
+    const completeMonitoringForm = document.getElementById('completeMonitoringForm');
+    const completeMonitoringModalMessage = document.getElementById('completeMonitoringModalMessage');
+    const closeCompleteMonitoringModalBtn = document.getElementById('closeCompleteMonitoringModal');
+    const cancelCompleteMonitoringModalBtn = document.getElementById('cancelCompleteMonitoringModal');
+
+    function openCompleteMonitoringModal(button) {
+        if (! completeMonitoringModal || ! completeMonitoringForm) {
+            return;
+        }
+
+        const memberName = button.dataset.memberName || 'this household member';
+        const typeLabel = button.dataset.typeLabel || 'Monitoring';
+
+        completeMonitoringForm.action = button.dataset.completeUrl || '#';
+        if (completeMonitoringModalMessage) {
+            completeMonitoringModalMessage.textContent = `Mark ${typeLabel.toLowerCase()} monitoring for ${memberName} as completed? Visit records will stay available in history.`;
+        }
+
+        completeMonitoringModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeCompleteMonitoringModal() {
+        completeMonitoringModal?.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.open-complete-monitoring-modal').forEach((button) => {
+        button.addEventListener('click', () => openCompleteMonitoringModal(button));
+    });
+
+    closeCompleteMonitoringModalBtn?.addEventListener('click', closeCompleteMonitoringModal);
+    cancelCompleteMonitoringModalBtn?.addEventListener('click', closeCompleteMonitoringModal);
+
+    completeMonitoringModal?.addEventListener('click', (event) => {
+        if (event.target === completeMonitoringModal) {
+            closeCompleteMonitoringModal();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && completeMonitoringModal && ! completeMonitoringModal.classList.contains('hidden')) {
+            closeCompleteMonitoringModal();
+        }
+    });
 </script>
 </body>
 </html>

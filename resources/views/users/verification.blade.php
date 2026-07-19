@@ -860,8 +860,8 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1" for="contact">Contact Number</label>
-                    <input id="contact" name="contact" type="tel" inputmode="numeric" maxlength="11" pattern="[0-9]{11}"
-                        value="{{ old('contact', $residentRequest?->contact ?? Auth::user()->contact_number) }}" placeholder="09123456789" required @disabled($requestSent ?? false)
+                    <input id="contact" name="contact" type="tel" inputmode="numeric" maxlength="11" pattern="09[0-9]{9}"
+                        value="{{ old('contact', $residentRequest?->contact ?? Auth::user()->contact_number ?? '09') }}" placeholder="09123456789" required @disabled($requestSent ?? false)
                         class="w-full rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
 
@@ -1379,6 +1379,24 @@
             document.getElementById('goHomeLink')?.classList.remove('hidden');
         }
 
+        function scrollToGoHomeLink() {
+            const target = document.getElementById('goHomeLink') || document.getElementById('verificationFooterLinks');
+            if (!target) {
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            });
+        }
+
+        if (requestSent) {
+            showVerificationSentFooterLinks();
+            scrollToGoHomeLink();
+        }
+
         const firstNameInput = document.getElementById('first_name');
         const lastNameInput = document.getElementById('last_name');
         const middleInitialInput = document.getElementById('middle_initial');
@@ -1486,7 +1504,26 @@
         }
 
         function sanitizeContactNumber(value) {
-            return (value || '').replace(/\D/g, '').slice(0, CONTACT_MAX_DIGITS);
+            let digits = (value || '').replace(/\D/g, '');
+
+            if (digits === '' || digits === '0') {
+                return '09';
+            }
+
+            if (digits.startsWith('09')) {
+                return digits.slice(0, CONTACT_MAX_DIGITS);
+            }
+
+            if (digits.startsWith('9')) {
+                return ('0' + digits).slice(0, CONTACT_MAX_DIGITS);
+            }
+
+            const rest = digits.replace(/^0?9?/, '');
+            return ('09' + rest).slice(0, CONTACT_MAX_DIGITS);
+        }
+
+        function isValidContactNumber(value) {
+            return /^09\d{9}$/.test(sanitizeContactNumber(value));
         }
 
         function formatMiddleInitialValue(value) {
@@ -1615,6 +1652,8 @@
 
             if (input.value) {
                 input.value = sanitizeContactNumber(input.value);
+            } else {
+                input.value = '09';
             }
         }
 
@@ -3415,8 +3454,8 @@
                 contactInput.value = contactNumber;
             }
 
-            if (!/^\d{11}$/.test(contactNumber)) {
-                showNotice('Invalid Contact Number', 'Contact number must be exactly 11 digits with no letters or symbols.');
+            if (!isValidContactNumber(contactNumber)) {
+                showNotice('Invalid Contact Number', 'Contact number must start with 09 and be exactly 11 digits (example: 09123456789).');
                 contactInput?.focus();
                 return false;
             }

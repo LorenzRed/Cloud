@@ -186,10 +186,49 @@ class User extends Authenticatable implements CanResetPasswordContract
     }
 
     /**
+     * Purok IDs already assigned to a different BHW.
+     *
+     * @param  list<int>  $purokIds
+     * @return list<int>
+     */
+    public static function purokIdsTakenByOtherBhws(array $purokIds, int $exceptUserId): array
+    {
+        if ($purokIds === []) {
+            return [];
+        }
+
+        return static::query()
+            ->where('role', self::ROLE_BHW)
+            ->whereKeyNot($exceptUserId)
+            ->whereHas('assignedPuroks', fn ($query) => $query->whereIn('puroks.id', $purokIds))
+            ->with(['assignedPuroks' => fn ($query) => $query->whereIn('puroks.id', $purokIds)])
+            ->get()
+            ->flatMap(fn (self $worker) => $worker->assignedPuroks->pluck('id'))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * @param  list<int>  $purokIds
      */
     public function syncBhwPurokAssignments(array $purokIds, ?string $barangayName = null): void
     {
+        $taken = self::purokIdsTakenByOtherBhws($purokIds, (int) $this->id);
+
+        if ($taken !== []) {
+            $names = Purok::query()
+                ->whereIn('id', $taken)
+                ->orderBy('name')
+                ->pluck('name')
+                ->implode(', ');
+
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'purok_ids' => 'Each purok can only have one BHW. Already assigned: '.$names.'.',
+            ]);
+        }
+
         $this->assignedPuroks()->sync($purokIds);
 
         $update = [];

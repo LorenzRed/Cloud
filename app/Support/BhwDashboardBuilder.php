@@ -252,6 +252,35 @@ class BhwDashboardBuilder
             ->unique()
             ->count();
 
+        $peopleInHousehold = static function (ResidentRequest $resident): int {
+            $names = collect([
+                $resident->full_name,
+                $resident->spouse_full_name,
+            ]);
+
+            foreach ([$resident->household_children, $resident->household_seniors] as $members) {
+                foreach (is_array($members) ? $members : [] as $member) {
+                    if (is_array($member)) {
+                        $names->push($member['full_name'] ?? $member['name'] ?? null);
+                    }
+                }
+            }
+
+            return max(1, $names
+                ->filter(fn ($name) => filled($name))
+                ->map(fn ($name) => mb_strtolower(trim((string) $name)))
+                ->unique()
+                ->count());
+        };
+
+        $totalPeopleAssigned = $residents
+            ->groupBy(function (ResidentRequest $resident) {
+                $familyNumber = trim((string) ($resident->family_number ?? ''));
+
+                return $familyNumber !== '' ? 'family:'.$familyNumber : 'resident:'.$resident->id;
+            })
+            ->sum(fn ($household) => $household->max($peopleInHousehold));
+
         $pregnantMonitored = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_PREGNANT)->count();
         $seniorMonitored = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_SENIOR)->count();
         $generalMonitored = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_GENERAL)->count();
@@ -489,6 +518,7 @@ class BhwDashboardBuilder
             'purokCount' => $meta['purok_count'] ?? null,
             'bhwStats' => [
                 'total_households_assigned' => $totalHouseholdsAssigned,
+                'total_people_assigned' => $totalPeopleAssigned,
                 'active_illness_cases' => count($activeIllnessKeys),
                 'households_with_concern' => count($householdsWithConcern),
                 'transactions_this_month' => $transactionsThisMonth,

@@ -34,6 +34,14 @@
     .request-list-scroll::-webkit-scrollbar, .chat-scroll::-webkit-scrollbar, .detail-body-scroll::-webkit-scrollbar { width: 6px; }
     .request-list-scroll::-webkit-scrollbar-thumb, .chat-scroll::-webkit-scrollbar-thumb, .detail-body-scroll::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
     .request-item.is-active { border-color: rgb(74 144 226 / 1); background: rgb(74 144 226 / 0.08); }
+    #requestActionsPanel.is-open {
+        display: flex;
+    }
+    @media (min-width: 1024px) {
+        #requestActionsPanel.is-open {
+            display: flex;
+        }
+    }
     .chat-bubble-out { background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%); }
     .toast-enter { animation: toastIn 0.2s ease-out; }
     .toast-exit { animation: toastOut 0.18s ease-in forwards; }
@@ -303,26 +311,38 @@
 
                     <div id="detailContent" class="hidden flex-1 min-h-0 flex flex-col overflow-hidden">
                         <div class="p-4 md:p-5 border-b border-border-light dark:border-border-dark shrink-0">
-                            <div class="flex items-start gap-3">
-                                <button type="button" id="mobileBackBtn" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark">
-                                    <span class="material-symbols-outlined">arrow_back</span>
-                                </button>
-                                <div class="w-12 h-12 rounded-full bg-primary/15 text-primary flex items-center justify-center text-base font-bold shrink-0" id="detailAvatar">R</div>
-                                <div class="min-w-0 flex-1">
-                                    <h2 class="text-lg font-bold truncate" id="detailName">Resident Name</h2>
-                                    <p class="text-sm text-text-light/60 dark:text-text-dark/60 truncate" id="detailEmail">email@example.com</p>
-                                </div>
-                                <div class="flex gap-2 shrink-0">
-                                    <button type="button" id="openAcceptModalBtn" class="inline-flex items-center gap-1 h-9 px-3 rounded-lg bg-primary text-white text-xs font-bold hover:opacity-90">
-                                        <span class="material-symbols-outlined text-sm">check</span> Accept
+                            <div class="flex flex-col gap-3 lg:flex-row lg:items-start">
+                                <div class="flex items-start gap-3 min-w-0 flex-1">
+                                    <button type="button" id="mobileBackBtn" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark shrink-0">
+                                        <span class="material-symbols-outlined">arrow_back</span>
                                     </button>
-                                    <form id="rejectForm" method="POST" action="">
-                                                    @csrf
-                                        <button type="button" id="openRejectModalBtn" class="inline-flex items-center gap-1 h-9 px-3 rounded-lg bg-accent-red text-white text-xs font-bold hover:opacity-90">
-                                            <span class="material-symbols-outlined text-sm">close</span> Reject
+                                    <div class="w-12 h-12 rounded-full bg-primary/15 text-primary flex items-center justify-center text-base font-bold shrink-0" id="detailAvatar">R</div>
+                                    <div class="min-w-0 flex-1">
+                                        <h2 class="text-base sm:text-lg font-bold break-words leading-snug" id="detailName">Resident Name</h2>
+                                        <p class="text-sm text-text-light/60 dark:text-text-dark/60 break-words" id="detailEmail">email@example.com</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        id="requestActionsToggle"
+                                        class="lg:hidden inline-flex items-center justify-center h-10 w-10 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark shrink-0"
+                                        aria-expanded="false"
+                                        aria-controls="requestActionsPanel"
+                                        aria-label="Show accept and reject actions"
+                                    >
+                                        <span class="material-symbols-outlined" id="requestActionsToggleIcon">expand_more</span>
+                                    </button>
+                                </div>
+                                <div id="requestActionsPanel" class="hidden lg:flex gap-2 w-full lg:w-auto shrink-0">
+                                    <button type="button" id="openAcceptModalBtn" class="inline-flex flex-1 lg:flex-none items-center justify-center gap-1.5 h-10 lg:h-9 px-3 rounded-lg bg-primary text-white text-sm lg:text-xs font-bold hover:opacity-90">
+                                        <span class="material-symbols-outlined text-base lg:text-sm">check</span> Accept
+                                    </button>
+                                    <form id="rejectForm" method="POST" action="" class="flex-1 lg:flex-none">
+                                        @csrf
+                                        <button type="button" id="openRejectModalBtn" class="inline-flex w-full items-center justify-center gap-1.5 h-10 lg:h-9 px-3 rounded-lg bg-accent-red text-white text-sm lg:text-xs font-bold hover:opacity-90">
+                                            <span class="material-symbols-outlined text-base lg:text-sm">close</span> Reject
                                         </button>
-                                                </form>
-                                            </div>
+                                    </form>
+                                </div>
                             </div>
                         </div>
 
@@ -536,6 +556,9 @@
     const rejectConfirmSubmitBtn = document.getElementById('rejectConfirmSubmitBtn');
     const detailName = document.getElementById('detailName');
     const mobileBackBtn = document.getElementById('mobileBackBtn');
+    const requestActionsToggle = document.getElementById('requestActionsToggle');
+    const requestActionsPanel = document.getElementById('requestActionsPanel');
+    const requestActionsToggleIcon = document.getElementById('requestActionsToggleIcon');
     const openChatLink = document.getElementById('openChatLink');
     const openChatNewBadge = document.getElementById('openChatNewBadge');
     const openChatSubtitle = document.getElementById('openChatSubtitle');
@@ -547,6 +570,28 @@
     const idViewerSubtitle = document.getElementById('idViewerSubtitle');
     const idViewerTabs = document.getElementById('idViewerTabs');
     const closeIdViewerBtn = document.getElementById('closeIdViewerBtn');
+
+    function setRequestActionsOpen(open) {
+        if (!requestActionsPanel || !requestActionsToggle) {
+            return;
+        }
+
+        requestActionsPanel.classList.toggle('is-open', open);
+        requestActionsToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        requestActionsToggle.setAttribute(
+            'aria-label',
+            open ? 'Hide accept and reject actions' : 'Show accept and reject actions'
+        );
+
+        if (requestActionsToggleIcon) {
+            requestActionsToggleIcon.textContent = open ? 'expand_less' : 'expand_more';
+        }
+    }
+
+    requestActionsToggle?.addEventListener('click', () => {
+        const isOpen = requestActionsToggle.getAttribute('aria-expanded') === 'true';
+        setRequestActionsOpen(!isOpen);
+    });
 
     let activeIdPhotos = { front: '', back: '' };
 
@@ -818,6 +863,7 @@
         detailEmptyState.classList.add('hidden');
         detailContent.classList.remove('hidden');
         detailContent.classList.add('flex');
+        setRequestActionsOpen(false);
 
         if (window.innerWidth < 1024) {
             requestListPanel.classList.add('mobile-hidden');
@@ -830,6 +876,7 @@
     });
 
     mobileBackBtn?.addEventListener('click', () => {
+        setRequestActionsOpen(false);
         requestDetailPanel.classList.add('mobile-hidden');
         requestListPanel.classList.remove('mobile-hidden');
     });

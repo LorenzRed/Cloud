@@ -96,12 +96,6 @@
                             · {{ $report['period']['from_label'] ?? 'All time' }} – {{ $report['period']['to_label'] ?? 'Present' }}
                         </p>
                     </div>
-                    @if (filled($report['assigned_purok_label'] ?? null))
-                        <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary">
-                            <span class="material-symbols-outlined text-base">home_pin</span>
-                            {{ $report['assigned_purok_label'] }}
-                        </span>
-                    @endif
                 </header>
 
                 <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 mb-6 w-full">

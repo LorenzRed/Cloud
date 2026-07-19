@@ -93,9 +93,15 @@
                                     @endif
                                 </div>
                                 <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 {{ $monitoringCase->is_active ? 'bg-primary/15 text-[#1f7f4e]' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}">
-                                    {{ $monitoringCase->is_active ? 'Active' : 'Inactive' }}
+                                    {{ $monitoringCase->is_active ? 'Active' : 'Completed' }}
                                 </span>
                             </div>
+
+                            @if (! $monitoringCase->is_active && $monitoringCase->completed_at)
+                                <p class="mt-2 text-xs text-[#4e976b] dark:text-gray-400">
+                                    Monitoring completed {{ $monitoringCase->completed_at->format('M d, Y') }}. Previous visits remain available below.
+                                </p>
+                            @endif
 
                             @if ($monitoringCase->isPregnant() && ($monitoringCase->first_period_date || $monitoringCase->last_period_date))
                                 <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-[#376f50] dark:text-gray-300">
@@ -111,6 +117,12 @@
                             @if ($monitoringCase->visits->isNotEmpty())
                                 <div class="mt-4 space-y-2">
                                     <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Visit history</p>
+                                    @if ($monitoringCase->isPregnant())
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg bg-pink-50 px-3 py-2 text-sm text-pink-900 dark:bg-pink-900/20 dark:text-pink-100">
+                                            <p>First Period: <span class="font-semibold">{{ $monitoringCase->first_period_date?->format('M d, Y') ?? 'Not recorded' }}</span></p>
+                                            <p>Last Period: <span class="font-semibold">{{ $monitoringCase->last_period_date?->format('M d, Y') ?? 'Not recorded' }}</span></p>
+                                        </div>
+                                    @endif
                                     @foreach ($monitoringCase->visits as $visit)
                                         <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 p-3 text-sm">
                                             <div class="flex items-center justify-between gap-2">

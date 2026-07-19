@@ -26,6 +26,7 @@ class HouseholdMonitoringCase extends Model
         'first_period_date',
         'last_period_date',
         'is_active',
+        'completed_at',
     ];
 
     protected function casts(): array
@@ -35,6 +36,7 @@ class HouseholdMonitoringCase extends Model
             'first_period_date' => 'date',
             'last_period_date' => 'date',
             'is_active' => 'boolean',
+            'completed_at' => 'datetime',
         ];
     }
 

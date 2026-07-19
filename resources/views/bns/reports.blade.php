@@ -92,12 +92,6 @@
                         <h1 class="text-2xl sm:text-3xl font-bold">Nutrition Reports</h1>
                         <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Generated {{ $report['generated_at'] ?? now()->format('M d, Y') }} · <span class="font-semibold">{{ ucfirst(str_replace('_', ' ', $activePeriod)) }}</span> · {{ $report['period']['from_label'] ?? 'All time' }} – {{ $report['period']['to_label'] ?? 'Present' }}</p>
                     </div>
-                    @if (filled($report['barangay_name'] ?? null))
-                        <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary">
-                            <span class="material-symbols-outlined text-base">location_city</span>
-                            {{ $report['barangay_name'] }}
-                        </span>
-                    @endif
                 </header>
 
                 <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 mb-6 w-full">

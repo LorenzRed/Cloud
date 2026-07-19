@@ -29,7 +29,7 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        View::composer('sidebars.bhw', function ($view) {
+        View::composer(['sidebars.bhw', 'partials.bhw-mobile-nav'], function ($view) {
             $pendingRequestCount = 0;
             $requestMessageUnreadCount = 0;
             $residentMessageUnreadCount = 0;

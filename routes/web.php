@@ -939,7 +939,7 @@ Route::middleware('auth')->group(function () {
             'location_mode' => ['required', Rule::in(['map', 'manual'])],
             'barangay' => ['required', 'string', 'max:255'],
             'purok' => ['required', 'string', 'max:255', Rule::notIn([PurokLocator::NON_NAME])],
-            'contact' => ['required', 'string', 'regex:/^\d{11}$/'],
+            'contact' => ['required', 'string', 'regex:/^09\d{9}$/'],
             'address' => [Rule::requiredIf(fn () => $request->input('location_mode') === 'map'), 'nullable', 'string', 'max:255'],
             'age' => ['nullable', 'integer', 'min:1', 'max:120'],
             'birthdate_display' => ['required', 'date', 'before:today'],
@@ -1006,7 +1006,7 @@ Route::middleware('auth')->group(function () {
             'educational_attainment.required' => 'Please select your educational attainment.',
             'educational_attainment.in' => 'Please select a valid educational attainment.',
             'contact.required' => 'Please enter your contact number.',
-            'contact.regex' => 'Contact number must be exactly 11 digits with no letters or symbols.',
+            'contact.regex' => 'Contact number must start with 09 and be exactly 11 digits (example: 09123456789).',
             'address.required' => 'Please use map-based tracking and save your location first.',
             'barangay.required' => 'Please set your barangay and purok before sending your request.',
             'purok.required' => 'Please select a purok.',
@@ -1510,7 +1510,10 @@ Route::middleware('auth')->group(function () {
                 'household_no' => $resolvedPurok?->name,
             ]);
 
-        return redirect()->route('users.verification')->with('request_sent_state', true);
+        return redirect()
+            ->route('users.verification')
+            ->with('request_sent_state', true)
+            ->withFragment('goHomeLink');
     })->name('users.verification.submit');
 
     Route::get('/lgu', function () {
@@ -2202,6 +2205,7 @@ Route::middleware('auth')->group(function () {
                 ->get();
 
             $puroks = Purok::query()
+                ->with(['bhwWorkers' => fn ($query) => $query->select('users.id', 'users.name', 'users.full_name', 'users.email')])
                 ->where('barangay_id', $assignedBarangay->id)
                 ->orderBy('name')
                 ->get();
@@ -3095,6 +3099,7 @@ Route::middleware('auth')->group(function () {
             PurokLocator::ensureNonPurok($assignedBarangay);
 
             $puroks = Purok::query()
+                ->with(['bhwWorkers' => fn ($query) => $query->select('users.id', 'users.name', 'users.full_name', 'users.email')])
                 ->where('barangay_id', $assignedBarangay->id)
                 ->orderBy('name')
                 ->get();
@@ -3593,6 +3598,35 @@ Route::middleware('auth')->group(function () {
             ->unique()
             ->count();
 
+        $peopleInHousehold = static function (ResidentRequest $resident): int {
+            $names = collect([
+                $resident->full_name,
+                $resident->spouse_full_name,
+            ]);
+
+            foreach ([$resident->household_children, $resident->household_seniors] as $members) {
+                foreach (is_array($members) ? $members : [] as $member) {
+                    if (is_array($member)) {
+                        $names->push($member['full_name'] ?? $member['name'] ?? null);
+                    }
+                }
+            }
+
+            return max(1, $names
+                ->filter(fn ($name) => filled($name))
+                ->map(fn ($name) => mb_strtolower(trim((string) $name)))
+                ->unique()
+                ->count());
+        };
+
+        $totalPeopleAssigned = $assignedResidents
+            ->groupBy(function (ResidentRequest $resident) {
+                $familyNumber = trim((string) ($resident->family_number ?? ''));
+
+                return $familyNumber !== '' ? 'family:'.$familyNumber : 'resident:'.$resident->id;
+            })
+            ->sum(fn ($household) => $household->max($peopleInHousehold));
+
         $pendingRequests = ResidentRequest::query()
             ->forBhw($bhw)
             ->where('status', 'pending')
@@ -3666,6 +3700,7 @@ Route::middleware('auth')->group(function () {
 
         $bhwStats = [
             'total_households_assigned' => $totalHouseholdsAssigned,
+            'total_people_assigned' => $totalPeopleAssigned,
             'active_illness_cases' => count($activeIllnessKeys),
             'households_with_concern' => count($householdsWithConcern),
             'transactions_this_month' => $transactionsThisMonth,
@@ -4134,9 +4169,17 @@ Route::middleware('auth')->group(function () {
             ->with('status', 'Transaction saved and sent to resident notifications.');
     })->name('bhw.residents.medical-history.store');
 
-    Route::post('/bhw/residents/{residentRequest}/monitoring-cases', function (Request $request, ResidentRequest $residentRequest) {
+    Route::match(['get', 'post'], '/bhw/residents/{residentRequest}/monitoring-cases', function (Request $request, ResidentRequest $residentRequest) {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');
+        }
+
+        // Browser refresh after a failed POST hits this URL with GET — send them back to the form.
+        if ($request->isMethod('get')) {
+            return redirect()->route('bhw.residents.profile', [
+                'residentRequest' => $residentRequest,
+                'tab' => 'maintenance',
+            ]);
         }
 
         if (! $residentRequest->isAccessibleByBhw(Auth::user())) {
@@ -4147,6 +4190,12 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('bhw.residents')->with('status', 'Resident profile is only available for accepted residents.');
         }
 
+        if ($request->filled('height_cm')) {
+            $request->merge([
+                'height_cm' => HouseholdMonitoringVisit::normalizeHeightCm($request->input('height_cm')),
+            ]);
+        }
+
         $data = $request->validate([
             'member_type' => ['nullable', 'in:pregnant,senior'],
             'member_name' => ['required', 'string', 'max:255'],
@@ -4155,13 +4204,14 @@ Route::middleware('auth')->group(function () {
             'visit_date' => ['required', 'date'],
             'issue_notes' => ['nullable', 'string', 'max:1000'],
             'first_period_date' => ['nullable', 'date', 'required_if:member_type,pregnant'],
-            'last_period_date' => ['nullable', 'date', 'after_or_equal:first_period_date'],
-            'height_cm' => ['nullable', 'numeric', 'min:0', 'max:300'],
-            'weight_kg' => ['nullable', 'numeric', 'min:0', 'max:500'],
+            'height_cm' => ['nullable', 'numeric', 'min:30', 'max:300'],
+            'weight_kg' => ['nullable', 'numeric', 'min:1', 'max:500'],
             'bp_systolic' => ['nullable', 'integer', 'min:50', 'max:300'],
             'bp_diastolic' => ['nullable', 'integer', 'min:30', 'max:200'],
             'muac_cm' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'anti_tetanus' => ['nullable', 'string', 'max:100'],
+        ], [
+            'height_cm.min' => 'Height must be at least 30 cm (enter centimeters, e.g. 165).',
         ]);
 
         $memberType = filled($data['member_type'] ?? null)
@@ -4178,17 +4228,13 @@ Route::middleware('auth')->group(function () {
             'member_index' => $data['member_index'] ?? null,
             'issue_notes' => filled($data['issue_notes'] ?? null) ? trim((string) $data['issue_notes']) : null,
             'first_period_date' => $data['first_period_date'] ?? null,
-            'last_period_date' => $data['last_period_date'] ?? null,
+            'last_period_date' => null,
             'is_active' => true,
         ]);
 
         $weightKg = isset($data['weight_kg']) && $data['weight_kg'] !== '' ? (float) $data['weight_kg'] : null;
         $heightCm = isset($data['height_cm']) && $data['height_cm'] !== '' ? (float) $data['height_cm'] : null;
-        $bmiValue = null;
-
-        if ($weightKg !== null && $heightCm !== null && $heightCm > 0) {
-            $bmiValue = round($weightKg / pow($heightCm / 100, 2), 1);
-        }
+        $bmiValue = HouseholdMonitoringVisit::calculateBmi($weightKg, $heightCm);
 
         $bloodPressure = null;
         $systolic = $data['bp_systolic'] ?? null;
@@ -4219,7 +4265,7 @@ Route::middleware('auth')->group(function () {
             ->with('status', 'Household monitoring case added successfully.');
     })->name('bhw.residents.monitoring-cases.store');
 
-    Route::post('/bhw/monitoring-cases/{monitoringCase}/visits', function (Request $request, HouseholdMonitoringCase $monitoringCase) {
+    Route::post('/bhw/monitoring-cases/{monitoringCase}/complete', function (HouseholdMonitoringCase $monitoringCase) {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');
         }
@@ -4234,16 +4280,70 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('bhw.residents')->with('status', 'Resident profile is only available for accepted residents.');
         }
 
+        if ($monitoringCase->is_active) {
+            $monitoringCase->update([
+                'is_active' => false,
+                'completed_at' => now(),
+            ]);
+        }
+
+        return redirect()->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'maintenance'])
+            ->with('status', $monitoringCase->typeLabel().' monitoring completed. Its records are kept in monitoring history.');
+    })->name('bhw.monitoring-cases.complete');
+
+    Route::match(['get', 'post'], '/bhw/monitoring-cases/{monitoringCase}/visits', function (Request $request, HouseholdMonitoringCase $monitoringCase) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $residentRequest = $monitoringCase->residentRequest;
+
+        // Browser refresh after a failed POST hits this URL with GET — send them back to the form.
+        if ($request->isMethod('get')) {
+            if ($residentRequest) {
+                return redirect()->route('bhw.residents.profile', [
+                    'residentRequest' => $residentRequest,
+                    'tab' => 'maintenance',
+                ]);
+            }
+
+            return redirect()->route('bhw.residents');
+        }
+
+        if (! $residentRequest || ! $residentRequest->isAccessibleByBhw(Auth::user())) {
+            return redirect()->route('bhw.residents')->with('status', 'This resident is outside your assigned purok.');
+        }
+
+        if ($residentRequest->status !== 'accepted') {
+            return redirect()->route('bhw.residents')->with('status', 'Resident profile is only available for accepted residents.');
+        }
+
+        if (! $monitoringCase->is_active) {
+            return redirect()->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'maintenance'])
+                ->with('status', 'This monitoring record is completed. Start a new record to continue monitoring.');
+        }
+
+        if ($request->filled('height_cm')) {
+            $request->merge([
+                'height_cm' => HouseholdMonitoringVisit::normalizeHeightCm($request->input('height_cm')),
+            ]);
+        }
+
         $rules = [
             'visit_date' => ['required', 'date'],
-            'weight_kg' => ['nullable', 'numeric', 'min:0', 'max:500'],
-            'height_cm' => ['nullable', 'numeric', 'min:0', 'max:300'],
+            'weight_kg' => ['nullable', 'numeric', 'min:1', 'max:500'],
+            'height_cm' => ['nullable', 'numeric', 'min:30', 'max:300'],
+            'muac_cm' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
 
         if ($monitoringCase->isPregnant()) {
-            $rules['muac_cm'] = ['nullable', 'numeric', 'min:0', 'max:100'];
             $rules['anti_tetanus'] = ['nullable', 'string', 'max:100'];
+            $rules['last_period_date'] = ['nullable', 'date'];
+
+            if ($monitoringCase->first_period_date) {
+                $rules['last_period_date'][] = 'after_or_equal:'.$monitoringCase->first_period_date->toDateString();
+            }
         }
 
         if ($monitoringCase->isSenior()) {
@@ -4252,15 +4352,14 @@ Route::middleware('auth')->group(function () {
             $rules['maintenance_medicines'] = ['nullable', 'string', 'max:1000'];
         }
 
-        $data = $request->validate($rules);
+        $data = $request->validate($rules, [
+            'height_cm.min' => 'Height must be at least 30 cm (enter centimeters, e.g. 165).',
+            'last_period_date.after_or_equal' => 'Last period date must be on or after the first period date.',
+        ]);
 
         $weightKg = isset($data['weight_kg']) && $data['weight_kg'] !== '' ? (float) $data['weight_kg'] : null;
         $heightCm = isset($data['height_cm']) && $data['height_cm'] !== '' ? (float) $data['height_cm'] : null;
-        $bmiValue = null;
-
-        if ($weightKg !== null && $heightCm !== null && $heightCm > 0) {
-            $bmiValue = round($weightKg / pow($heightCm / 100, 2), 1);
-        }
+        $bmiValue = HouseholdMonitoringVisit::calculateBmi($weightKg, $heightCm);
 
         $bloodPressure = null;
 
@@ -4273,6 +4372,12 @@ Route::middleware('auth')->group(function () {
             }
         }
 
+        if ($monitoringCase->isPregnant() && array_key_exists('last_period_date', $data)) {
+            $monitoringCase->update([
+                'last_period_date' => $data['last_period_date'] ?: null,
+            ]);
+        }
+
         $visit = HouseholdMonitoringVisit::query()->create([
             'household_monitoring_case_id' => $monitoringCase->id,
             'recorded_by' => Auth::id(),
@@ -4280,7 +4385,7 @@ Route::middleware('auth')->group(function () {
             'weight_kg' => $weightKg,
             'height_cm' => $heightCm,
             'bmi_value' => $bmiValue,
-            'muac_cm' => $monitoringCase->isPregnant() ? ($data['muac_cm'] ?? null) : null,
+            'muac_cm' => $data['muac_cm'] ?? null,
             'anti_tetanus' => $monitoringCase->isPregnant() ? ($data['anti_tetanus'] ?? null) : null,
             'blood_pressure' => $bloodPressure,
             'maintenance_medicines' => $monitoringCase->isSenior() ? ($data['maintenance_medicines'] ?? null) : null,

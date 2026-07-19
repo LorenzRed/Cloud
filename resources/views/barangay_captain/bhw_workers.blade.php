@@ -20,6 +20,8 @@
             .purok-map { min-height: 0; }
         }
         .purok-option.is-selected > div { border-color: rgb(74 144 226 / 1); background-color: rgb(74 144 226 / 0.10); box-shadow: 0 0 0 1px rgb(74 144 226 / 0.18); }
+        .purok-option.is-occupied-locked { cursor: not-allowed; opacity: 0.72; }
+        .purok-option.is-occupied-locked > div { border-color: rgb(148 163 184 / 0.9); background-color: rgb(148 163 184 / 0.12); }
         .toast-enter { animation: toast-in 180ms ease-out; }
         .toast-exit { animation: toast-out 180ms ease-in forwards; }
         @keyframes toast-in { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -112,35 +114,37 @@
         <div class="page-content">
             <div class="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-4">
                 <header class="space-y-3">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div class="min-w-0">
-                            <h1 class="text-2xl sm:text-3xl font-bold leading-tight">BHW Workers</h1>
-                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">View BHW worker names and manage purok for your barangay.</p>
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+                        <div class="hidden lg:flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between lg:flex-1 lg:min-w-0">
+                            <div class="min-w-0">
+                                <h1 class="text-2xl sm:text-3xl font-bold leading-tight">BHW Workers</h1>
+                                <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">View BHW worker names and manage purok for your barangay.</p>
+                            </div>
+                            @if ($assignedBarangay)
+                                <span class="inline-flex self-start items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary">
+                                    <span class="material-symbols-outlined text-base">location_city</span>
+                                    {{ $assignedBarangay->name }}
+                                </span>
+                            @endif
                         </div>
                         @if ($assignedBarangay)
-                            <span class="inline-flex self-start items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-primary/10 text-primary">
-                                <span class="material-symbols-outlined text-base">location_city</span>
-                                {{ $assignedBarangay->name }}
-                            </span>
+                            <div class="grid grid-cols-3 gap-2 lg:flex lg:flex-nowrap lg:items-center lg:justify-end lg:shrink-0">
+                                <button type="button" id="openPurokListModalBtn" class="inline-flex items-center justify-center gap-1.5 rounded-xl h-11 px-3 bg-gray-600 text-white text-xs sm:text-sm font-bold hover:bg-gray-700" title="List Purok">
+                                    <span class="material-symbols-outlined text-base">list</span>
+                                    <span class="hidden sm:inline">List</span>
+                                </button>
+                                <button type="button" id="openAddPurokModalBtn" class="inline-flex items-center justify-center gap-1.5 rounded-xl h-11 px-3 sm:px-4 bg-primary text-white text-xs sm:text-sm font-bold hover:opacity-90">
+                                    <span class="material-symbols-outlined text-base">add_location_alt</span>
+                                    <span>Purok</span>
+                                </button>
+                                <button type="button" id="openAddBhwModalBtn" class="inline-flex items-center justify-center gap-1.5 rounded-xl h-11 px-3 sm:px-4 bg-secondary text-white text-xs sm:text-sm font-bold hover:opacity-90">
+                                    <span class="material-symbols-outlined text-base">person_add</span>
+                                    <span class="sm:hidden">BHW</span>
+                                    <span class="hidden sm:inline">Add BHW</span>
+                                </button>
+                            </div>
                         @endif
                     </div>
-                    @if ($assignedBarangay)
-                        <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:justify-end">
-                            <button type="button" id="openPurokListModalBtn" class="inline-flex items-center justify-center gap-1.5 rounded-xl h-11 px-3 bg-gray-600 text-white text-xs sm:text-sm font-bold hover:bg-gray-700" title="List Purok">
-                                <span class="material-symbols-outlined text-base">list</span>
-                                <span class="hidden sm:inline">List</span>
-                            </button>
-                            <button type="button" id="openAddPurokModalBtn" class="inline-flex items-center justify-center gap-1.5 rounded-xl h-11 px-3 sm:px-4 bg-primary text-white text-xs sm:text-sm font-bold hover:opacity-90">
-                                <span class="material-symbols-outlined text-base">add_location_alt</span>
-                                <span>Purok</span>
-                            </button>
-                            <button type="button" id="openAddBhwModalBtn" class="inline-flex items-center justify-center gap-1.5 rounded-xl h-11 px-3 sm:px-4 bg-secondary text-white text-xs sm:text-sm font-bold hover:opacity-90">
-                                <span class="material-symbols-outlined text-base">person_add</span>
-                                <span class="sm:hidden">BHW</span>
-                                <span class="hidden sm:inline">Add BHW</span>
-                            </button>
-                        </div>
-                    @endif
                 </header>
 
                 @if (session('status'))
@@ -420,7 +424,7 @@
 <div id="assignModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
     <div class="w-full sm:max-w-3xl max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
         <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-4 sm:px-6 py-4">
-            <div><h2 class="text-lg sm:text-xl font-bold">Assign Purok</h2><p id="assignModalSubtitle" class="text-sm text-text-light/70 dark:text-text-dark/70">Select one or more purok for the chosen BHW worker.</p></div>
+            <div><h2 class="text-lg sm:text-xl font-bold">Assign Purok</h2><p id="assignModalSubtitle" class="text-sm text-text-light/70 dark:text-text-dark/70">Select one or more purok for the chosen BHW worker. Each purok can only have one BHW.</p></div>
             <button type="button" id="closeAssignModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="px-4 sm:px-6 pt-2 pb-5 space-y-2">
@@ -436,8 +440,25 @@
                 <div class="max-h-[28rem] overflow-y-auto border border-border-light dark:border-border-dark rounded-lg">
                     <div id="purokOptions" class="grid grid-cols-1 md:grid-cols-2 gap-3 p-3">
                         @forelse ($manageablePuroks as $purok)
-                            <button type="button" class="purok-option text-left cursor-pointer" data-purok-id="{{ $purok->id }}" data-purok-name="{{ strtolower($purok->name) }}" data-purok-label="{{ $purok->name }}">
-                                <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 transition"><p class="font-semibold">{{ $purok->name }}</p></div>
+                            @php
+                                $assignedBhw = $purok->bhwWorkers->first();
+                                $assignedBhwLabel = $assignedBhw
+                                    ? trim((string) ($assignedBhw->full_name ?: $assignedBhw->name))
+                                    : '';
+                            @endphp
+                            <button type="button"
+                                class="purok-option text-left cursor-pointer"
+                                data-purok-id="{{ $purok->id }}"
+                                data-purok-name="{{ strtolower($purok->name) }}"
+                                data-purok-label="{{ $purok->name }}"
+                                data-assigned-bhw-id="{{ $assignedBhw?->id }}"
+                                data-assigned-bhw-name="{{ $assignedBhwLabel }}">
+                                <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 transition">
+                                    <p class="font-semibold">{{ $purok->name }}</p>
+                                    <p class="purok-assign-status mt-1 text-xs text-text-light/60 dark:text-text-dark/60">
+                                        {{ $assignedBhwLabel !== '' ? 'Assigned to '.$assignedBhwLabel : 'Available' }}
+                                    </p>
+                                </div>
                             </button>
                         @empty
                             <div class="col-span-full rounded-xl border border-dashed border-border-light dark:border-border-dark p-4 text-sm text-text-light/70 dark:text-text-dark/70">No purok available. Create one first.</div>
@@ -1787,16 +1808,40 @@
             }
         }
 
+        function refreshAssignPurokAvailability(workerId) {
+            const workerKey = String(workerId || '');
+            purokOptions.forEach((option) => {
+                const assignedId = String(option.dataset.assignedBhwId || '');
+                const assignedName = option.dataset.assignedBhwName || '';
+                const statusEl = option.querySelector('.purok-assign-status');
+                const isOwn = assignedId !== '' && assignedId === workerKey;
+                const isTaken = assignedId !== '' && !isOwn;
+
+                option.classList.toggle('is-occupied-locked', isTaken);
+                option.disabled = isTaken;
+
+                if (!statusEl) return;
+                if (isTaken) {
+                    statusEl.textContent = `Assigned to ${assignedName || 'another BHW'}`;
+                } else if (isOwn) {
+                    statusEl.textContent = 'Currently assigned to this BHW';
+                } else {
+                    statusEl.textContent = 'Available';
+                }
+            });
+        }
+
         function openAssignModal(workerId, currentPurokIds = []) {
             if (!assignModal || !assignWorkerId) return;
             assignWorkerId.value = workerId;
-            assignModalSubtitle.textContent = 'Select one or more purok for this BHW worker. Click a purok again to deselect it.';
+            assignModalSubtitle.textContent = 'Select one or more available purok for this BHW worker. Each purok can only have one BHW.';
             assignModal.classList.remove('hidden');
             assignModal.classList.add('flex');
             clearSelectedPurok();
+            refreshAssignPurokAvailability(workerId);
             currentPurokIds.forEach((purokId) => {
                 const presetOption = document.querySelector(`.purok-option[data-purok-id="${purokId}"]`);
-                if (presetOption) {
+                if (presetOption && !presetOption.classList.contains('is-occupied-locked')) {
                     presetOption.classList.add('is-selected');
                 }
             });
@@ -1845,6 +1890,9 @@
         };
         purokOptions.forEach(option => {
             option.addEventListener('click', function() {
+                if (option.classList.contains('is-occupied-locked') || option.disabled) {
+                    return;
+                }
                 option.classList.toggle('is-selected');
                 updateAssignSelectionSummary();
             });

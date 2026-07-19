@@ -175,15 +175,12 @@ class BhwReportBuilder
             ? collect()
             : ResidentTransaction::query()
                 ->whereIn('resident_request_id', $residentIds)
-                ->with('residentRequest')
+                ->with(['residentRequest.purok', 'residentRequest.user.purok'])
                 ->orderByDesc('transaction_date')
                 ->orderByDesc('id')
                 ->get();
 
         $periodTransactions = self::filterByDate($transactions, 'transaction_date', $from, $to);
-
-        // Ensure purok is available for illness-by-purok breakdown when relation was lazy.
-        $periodTransactions->loadMissing(['residentRequest.purok', 'residentRequest.user.purok']);
 
         $monitoringCases = $residentIds->isEmpty()
             ? collect()

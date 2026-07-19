@@ -34,5 +34,25 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e, Request $request) {
+            $path = trim($request->path(), '/');
+
+            if (preg_match('#^bhw/residents/(\d+)/monitoring-cases$#', $path, $matches)) {
+                return redirect()->route('bhw.residents.profile', [
+                    'residentRequest' => $matches[1],
+                    'tab' => 'maintenance',
+                ]);
+            }
+
+            if (preg_match('#^bhw/monitoring-cases/(\d+)/visits$#', $path, $matches)
+                && ($case = \App\Models\HouseholdMonitoringCase::query()->find($matches[1]))
+                && $case->resident_request_id) {
+                return redirect()->route('bhw.residents.profile', [
+                    'residentRequest' => $case->resident_request_id,
+                    'tab' => 'maintenance',
+                ]);
+            }
+
+            return null;
+        });
     })->create();

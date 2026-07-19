@@ -256,7 +256,7 @@
                     ];
 
                     $primaryKpis = [
-                        ['label' => 'Households covered', 'key' => 'total_households_assigned', 'icon' => 'home', 'tone' => 'bg-primary/10 text-primary'],
+                        ['label' => 'Households covered', 'key' => 'total_households_assigned', 'icon' => 'home', 'tone' => 'bg-primary/10 text-primary', 'coverage_selector' => true],
                         ['label' => 'Active health concerns', 'key' => 'active_illness_cases', 'icon' => 'cardiology', 'tone' => 'bg-accent-red/10 text-accent-red'],
                         ['label' => 'Transactions this month', 'key' => 'transactions_this_month', 'icon' => 'medication', 'tone' => 'bg-secondary/15 text-teal-700 dark:text-secondary'],
                     ];
@@ -371,14 +371,36 @@
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-3">At a glance</h2>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         @foreach ($primaryKpis as $card)
-                            <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 shadow-sm">
+                            <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 shadow-sm {{ ($card['coverage_selector'] ?? false) ? 'dash-coverage-card' : '' }}">
                                 <div class="flex items-start justify-between gap-2 mb-3">
-                                    <span class="inline-flex size-10 items-center justify-center rounded-xl {{ $card['tone'] }}">
+                                    <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl {{ $card['tone'] }}">
                                         <span class="material-symbols-outlined text-xl">{{ $card['icon'] }}</span>
                                     </span>
+                                    @if ($card['coverage_selector'] ?? false)
+                                        <select id="coverageCountSelector" class="coverage-count-selector hidden sm:block h-8 max-w-[8.5rem] shrink-0 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-2 text-xs font-semibold" aria-label="Choose coverage count">
+                                            <option value="households">Households</option>
+                                            <option value="people">Total residents</option>
+                                        </select>
+                                    @endif
                                 </div>
-                                <p class="text-2xl md:text-3xl font-bold tabular-nums">{{ number_format((int) ($bhwStats[$card['key']] ?? 0)) }}</p>
-                                <p class="text-xs sm:text-sm text-text-light/60 dark:text-text-dark/60 mt-1 leading-snug">{{ $card['label'] }}</p>
+                                <p
+                                    class="text-2xl md:text-3xl font-bold tabular-nums"
+                                    @if ($card['coverage_selector'] ?? false)
+                                        id="coverageCountValue"
+                                        data-households="{{ (int) ($bhwStats['total_households_assigned'] ?? 0) }}"
+                                        data-people="{{ (int) ($bhwStats['total_people_assigned'] ?? 0) }}"
+                                    @endif
+                                >{{ number_format((int) ($bhwStats[$card['key']] ?? 0)) }}</p>
+                                <p
+                                    class="text-xs sm:text-sm text-text-light/60 dark:text-text-dark/60 mt-1 leading-snug"
+                                    @if ($card['coverage_selector'] ?? false) id="coverageCountLabel" @endif
+                                >{{ $card['label'] }}</p>
+                                @if ($card['coverage_selector'] ?? false)
+                                    <select id="coverageCountSelectorMobile" class="coverage-count-selector mt-2 block sm:hidden w-full h-8 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-2 text-xs font-semibold" aria-label="Choose coverage count">
+                                        <option value="households">Households</option>
+                                        <option value="people">Total residents</option>
+                                    </select>
+                                @endif
                             </div>
                         @endforeach
                     </div>
@@ -591,6 +613,42 @@
     const defaultChartPeriod = @json($defaultChartPeriod);
     const monitoringMix = @json($monitoringMix);
     const illnessByPurok = @json($illnessByPurok);
+    const coverageCountSelectors = Array.from(document.querySelectorAll('.coverage-count-selector'));
+    const coverageCountValue = document.getElementById('coverageCountValue');
+    const coverageCountLabel = document.getElementById('coverageCountLabel');
+
+    function updateCoverageCount(mode) {
+        if (! coverageCountValue || ! coverageCountLabel) {
+            return;
+        }
+
+        const showPeople = mode === 'people';
+        const value = Number(showPeople ? coverageCountValue.dataset.people : coverageCountValue.dataset.households) || 0;
+
+        coverageCountValue.textContent = value.toLocaleString();
+        coverageCountLabel.textContent = showPeople ? 'Total residents' : 'Households covered';
+    }
+
+    if (coverageCountSelectors.length > 0) {
+        const savedCoverageMode = localStorage.getItem('captainDashboardCoverageMode');
+        const initialMode = (savedCoverageMode === 'people' || savedCoverageMode === 'households')
+            ? savedCoverageMode
+            : 'households';
+
+        coverageCountSelectors.forEach((selector) => {
+            selector.value = initialMode;
+            selector.addEventListener('change', () => {
+                const mode = selector.value;
+                coverageCountSelectors.forEach((other) => {
+                    other.value = mode;
+                });
+                updateCoverageCount(mode);
+                localStorage.setItem('captainDashboardCoverageMode', mode);
+            });
+        });
+
+        updateCoverageCount(initialMode);
+    }
 
     const trendSubtitleByPeriod = {
         week: 'Daily medicine transactions this week',
