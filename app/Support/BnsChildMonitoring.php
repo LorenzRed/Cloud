@@ -182,7 +182,8 @@ class BnsChildMonitoring
                     'father_name' => $parents['father_name'],
                     'mother_name' => $parents['mother_name'],
                     'representative_name' => $parents['parent_name'],
-                    'contact' => trim((string) ($request->contact ?? '')) ?: '—',
+                    'contact' => trim((string) ($request->contact ?? ''))
+                        ?: (trim((string) ($request->user?->contact_number ?? '')) ?: '—'),
                     'full_name' => $fullName,
                     'birthdate' => $birthdate,
                     'birthdate_label' => $birthdateLabel,
@@ -234,13 +235,41 @@ class BnsChildMonitoring
      *     totalChildren: int,
      *     purokCount: int,
      *     householdCount: int,
-     *     nutritionStats: array<string, int>
+     *     nutritionStats: array<string, int>,
+     *     immunizationOverview: array<string, int>,
+     *     managedBnsCount: int|null,
+     *     dashboardCharts: array<string, mixed>
      * }
      */
     public static function dashboardPayloadFor(User $bns): array
     {
-        $barangayName = self::barangayNameFor($bns);
-        $monitoredChildren = self::childrenUnderFiveFor($bns);
+        return self::dashboardPayloadForBarangay(self::barangayNameFor($bns));
+    }
+
+    /**
+     * Barangay-wide child nutrition dashboard (used by BNS and Barangay Captain).
+     *
+     * @return array{
+     *     barangayName: string|null,
+     *     monitoredChildren: Collection<int, array<string, mixed>>,
+     *     totalChildren: int,
+     *     purokCount: int,
+     *     householdCount: int,
+     *     nutritionStats: array<string, int>,
+     *     immunizationOverview: array<string, int>,
+     *     managedBnsCount: int|null,
+     *     dashboardCharts: array<string, mixed>
+     * }
+     */
+    public static function dashboardPayloadForBarangay(?string $barangayName, bool $includeWorkerCount = false): array
+    {
+        $barangayName = filled($barangayName) ? trim((string) $barangayName) : null;
+
+        if ($barangayName === null || $barangayName === '') {
+            return self::emptyDashboardPayload();
+        }
+
+        $monitoredChildren = self::childrenUnderFiveForBarangay($barangayName);
         $totalChildren = $monitoredChildren->count();
         $purokCount = $monitoredChildren->pluck('purok')->unique()->count();
         $householdCount = $monitoredChildren->pluck('resident_request_id')->unique()->count();
@@ -260,6 +289,12 @@ class BnsChildMonitoring
             'no_weight_record' => $nutritionCounts['no_weight_record'],
         ];
 
+        $immunizationOverview = [
+            'fully_immunized' => collect($healthSummaries)->filter(fn ($s) => $s['fully_immunized'] ?? false)->count(),
+            'with_missed_doses' => collect($healthSummaries)->filter(fn ($s) => ($s['immunization_missed'] ?? 0) > 0)->count(),
+            'incomplete' => $totalChildren - collect($healthSummaries)->filter(fn ($s) => $s['fully_immunized'] ?? false)->count(),
+        ];
+
         $chartPeriods = [];
         foreach (['week', 'month', 'year'] as $period) {
             [$from, $to] = self::periodBounds($period);
@@ -270,6 +305,14 @@ class BnsChildMonitoring
             ];
         }
 
+        $managedBnsCount = null;
+        if ($includeWorkerCount) {
+            $managedBnsCount = User::query()
+                ->where('role', User::ROLE_BNS)
+                ->where('barangay', $barangayName)
+                ->count();
+        }
+
         return [
             'barangayName' => $barangayName,
             'monitoredChildren' => $monitoredChildren,
@@ -277,6 +320,8 @@ class BnsChildMonitoring
             'purokCount' => $purokCount,
             'householdCount' => $householdCount,
             'nutritionStats' => $nutritionStats,
+            'immunizationOverview' => $immunizationOverview,
+            'managedBnsCount' => $managedBnsCount,
             'dashboardCharts' => [
                 'default_period' => 'month',
                 'chart_periods' => $chartPeriods,
@@ -288,6 +333,72 @@ class BnsChildMonitoring
                         $nutritionCounts['overweight_cases'],
                         $nutritionCounts['no_weight_record'],
                     ],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array{
+     *     barangayName: null,
+     *     monitoredChildren: Collection<int, array<string, mixed>>,
+     *     totalChildren: int,
+     *     purokCount: int,
+     *     householdCount: int,
+     *     nutritionStats: array<string, int>,
+     *     immunizationOverview: array<string, int>,
+     *     managedBnsCount: int,
+     *     dashboardCharts: array<string, mixed>
+     * }
+     */
+    private static function emptyDashboardPayload(): array
+    {
+        $emptyCategories = self::formatNutritionCategories([
+            'severely' => 0,
+            'underweight' => 0,
+            'normal' => 0,
+            'overweight' => 0,
+        ], 0);
+
+        $chartPeriods = [];
+        foreach (['week', 'month', 'year'] as $period) {
+            [$from, $to] = self::periodBounds($period);
+            $chartPeriods[$period] = [
+                'range_label' => self::periodRangeLabel($from, $to),
+                'nutrition_categories' => $emptyCategories,
+                'weight_trend' => ['labels' => [], 'values' => [], 'unit' => 'kg'],
+            ];
+        }
+
+        return [
+            'barangayName' => null,
+            'monitoredChildren' => collect(),
+            'totalChildren' => 0,
+            'purokCount' => 0,
+            'householdCount' => 0,
+            'nutritionStats' => [
+                'total_children_0_5' => 0,
+                'households_covered' => 0,
+                'puroks_covered' => 0,
+                'underweight_cases' => 0,
+                'severely_underweight_cases' => 0,
+                'normal_bmi_count' => 0,
+                'overweight_cases' => 0,
+                'malnutrition_cases' => 0,
+                'no_weight_record' => 0,
+            ],
+            'immunizationOverview' => [
+                'fully_immunized' => 0,
+                'with_missed_doses' => 0,
+                'incomplete' => 0,
+            ],
+            'managedBnsCount' => 0,
+            'dashboardCharts' => [
+                'default_period' => 'month',
+                'chart_periods' => $chartPeriods,
+                'nutrition_split' => [
+                    'labels' => ['Malnourished', 'Normal', 'Overweight', 'No record'],
+                    'values' => [0, 0, 0, 0],
                 ],
             ],
         ];

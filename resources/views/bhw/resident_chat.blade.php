@@ -46,15 +46,20 @@
         ? route('profile.picture', ['user' => Auth::id(), 'v' => optional(Auth::user()->updated_at)->timestamp])
         : null;
     $purokLabel = $residentRequest->purok?->name ?? 'No purok';
+    $fromUnread = request()->query('from') === 'unread';
+    $chatBackUrl = $fromUnread
+        ? route('bhw.unread-chats')
+        : route('bhw.residents.profile', $residentRequest);
+    $chatBackAria = $fromUnread ? 'Back to unread chats' : 'Back to resident profile';
 @endphp
 @include('sidebars.bhw')
 
-<div id="bhwContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
+<div id="bhwContent" data-chat-keyboard-shell class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
     <main class="bhw-messenger-main flex-1 min-h-0 flex flex-col overflow-hidden">
         <section class="bhw-messenger-shell flex-1 min-h-0 flex flex-col overflow-hidden">
             @include('partials.bhw-messenger-chat-header', [
-                'backUrl' => route('bhw.residents.profile', $residentRequest),
-                'backAriaLabel' => 'Back to resident profile',
+                'backUrl' => $chatBackUrl,
+                'backAriaLabel' => $chatBackAria,
                 'peerAvatarUrl' => $peerAvatarUrl,
                 'peerInitials' => $residentInitials,
                 'peerName' => $residentRequest->full_name,
@@ -108,5 +113,6 @@
     });
 </script>
 @endif
+@include('partials.mobile-chat-keyboard')
 </body>
 </html>

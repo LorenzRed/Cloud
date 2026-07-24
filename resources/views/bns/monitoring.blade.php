@@ -404,9 +404,58 @@
     .health-record-card-badges {
         display: flex;
         flex-wrap: wrap;
+        align-items: center;
         justify-content: flex-end;
-        gap: 0.25rem;
+        gap: 0.375rem;
         flex-shrink: 0;
+    }
+
+    .weight-edit-icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 0.5rem;
+        border: 1px solid #EAEAEA;
+        background: #F4F4F4;
+        color: #4A90E2;
+        flex-shrink: 0;
+        padding: 0;
+        line-height: 1;
+    }
+    .dark .weight-edit-icon-btn {
+        border-color: #3D3D3D;
+        background: #1A1A1A;
+        color: #7EB6F0;
+    }
+    .weight-edit-icon-btn:hover {
+        background: rgba(74, 144, 226, 0.12);
+        border-color: rgba(74, 144, 226, 0.35);
+    }
+    .weight-edit-icon-btn .material-symbols-outlined {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .weight-edit-icon-btn.is-danger {
+        color: #D0021B;
+    }
+    .dark .weight-edit-icon-btn.is-danger {
+        color: #F87171;
+    }
+    .weight-edit-icon-btn.is-danger:hover {
+        background: rgba(208, 2, 27, 0.1);
+        border-color: rgba(208, 2, 27, 0.35);
+    }
+
+    #dewormingDeleteModal,
+    #immunizationNotifyModal { display: none; }
+    #dewormingDeleteModal.active,
+    #immunizationNotifyModal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
     .health-record-detail {
@@ -458,6 +507,156 @@
     .dark .health-records-empty {
         border-color: #3D3D3D;
         color: rgba(224, 224, 224, 0.6);
+    }
+
+    .vita-tip {
+        display: flex;
+        gap: 0.625rem;
+        align-items: flex-start;
+        padding: 0.75rem 0.875rem;
+        border-radius: 0.875rem;
+        background: rgba(74, 144, 226, 0.08);
+        border: 1px solid rgba(74, 144, 226, 0.18);
+    }
+    .dark .vita-tip {
+        background: rgba(74, 144, 226, 0.12);
+        border-color: rgba(74, 144, 226, 0.28);
+    }
+    .vita-tip-icon {
+        color: #4A90E2;
+        font-size: 1.25rem;
+        line-height: 1;
+        margin-top: 0.1rem;
+    }
+    .vita-date-field input[type="date"] {
+        height: 2.75rem;
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+    }
+    .vita-schedule-card,
+    .vita-log-card {
+        border: 1px solid #EAEAEA;
+        border-radius: 0.875rem;
+        background: #fff;
+        overflow: hidden;
+    }
+    .dark .vita-schedule-card,
+    .dark .vita-log-card {
+        border-color: #3D3D3D;
+        background: #2C2C2C;
+    }
+    .vita-schedule-card + .vita-schedule-card,
+    .vita-log-card + .vita-log-card {
+        margin-top: 0.625rem;
+    }
+    .vita-schedule-card.is-missed {
+        border-color: rgba(208, 2, 27, 0.28);
+        background: rgba(208, 2, 27, 0.04);
+    }
+    .dark .vita-schedule-card.is-missed {
+        background: rgba(208, 2, 27, 0.1);
+    }
+    .vita-schedule-card.is-due {
+        border-color: rgba(245, 166, 35, 0.35);
+        background: rgba(245, 166, 35, 0.06);
+    }
+    .dark .vita-schedule-card.is-due {
+        background: rgba(245, 166, 35, 0.1);
+    }
+    .vita-schedule-card.is-given {
+        border-color: rgba(80, 227, 194, 0.35);
+    }
+    .vita-card-main {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.875rem;
+    }
+    .vita-card-meta {
+        min-width: 0;
+        flex: 1;
+    }
+    .vita-card-title {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: #4A4A4A;
+        line-height: 1.25;
+    }
+    .dark .vita-card-title {
+        color: #E0E0E0;
+    }
+    .vita-card-sub {
+        margin-top: 0.25rem;
+        font-size: 0.8125rem;
+        color: rgba(74, 74, 74, 0.65);
+        line-height: 1.35;
+    }
+    .dark .vita-card-sub {
+        color: rgba(224, 224, 224, 0.65);
+    }
+    .vita-card-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.375rem;
+        flex-shrink: 0;
+    }
+    .vita-edit-panel {
+        display: none;
+        padding: 0 0.875rem 0.875rem;
+        border-top: 1px solid #EAEAEA;
+        background: rgba(244, 244, 244, 0.55);
+    }
+    .dark .vita-edit-panel {
+        border-top-color: #3D3D3D;
+        background: rgba(26, 26, 26, 0.45);
+    }
+    .vita-edit-panel.is-open {
+        display: block;
+        padding-top: 0.875rem;
+    }
+    .vita-edit-row {
+        display: none;
+    }
+    .vita-edit-row.is-open {
+        display: table-row;
+    }
+    .vita-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+        min-height: 2rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        line-height: 1;
+        border: 1px solid transparent;
+    }
+    .vita-btn-primary {
+        background: #4A90E2;
+        color: #fff;
+    }
+    .vita-btn-secondary {
+        background: transparent;
+        color: #4A90E2;
+        border-color: rgba(74, 144, 226, 0.35);
+    }
+    .dark .vita-btn-secondary {
+        color: #7eb6ef;
+        border-color: rgba(74, 144, 226, 0.45);
+    }
+    .vita-btn-ghost {
+        background: transparent;
+        color: rgba(74, 74, 74, 0.7);
+        border-color: #EAEAEA;
+    }
+    .dark .vita-btn-ghost {
+        color: rgba(224, 224, 224, 0.7);
+        border-color: #3D3D3D;
     }
 
     @media (min-width: 768px) {
@@ -1146,13 +1345,60 @@
     </div>
 </div>
 
+<div id="dewormingDeleteModal" class="fixed inset-0 z-[70] p-4 bg-black/50" aria-hidden="true">
+    <div class="w-full max-w-sm rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl p-5" role="dialog" aria-modal="true" aria-labelledby="dewormingDeleteTitle">
+        <div class="flex items-start gap-3 mb-4">
+            <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-red/10 text-accent-red">
+                <span class="material-symbols-outlined">delete</span>
+            </span>
+            <div class="min-w-0">
+                <h3 id="dewormingDeleteTitle" class="text-base font-bold text-text-light dark:text-text-dark">Delete deworming record?</h3>
+                <p id="dewormingDeleteMessage" class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">This will permanently remove this deworming record.</p>
+            </div>
+        </div>
+        <div class="flex justify-end gap-2">
+            <button type="button" id="dewormingDeleteCancel" class="vita-btn vita-btn-ghost">Cancel</button>
+            <button type="button" id="dewormingDeleteConfirm" class="h-10 px-4 rounded-lg bg-accent-red text-white text-sm font-semibold hover:opacity-90">Delete</button>
+        </div>
+    </div>
+</div>
+
+<div id="immunizationNotifyModal" class="fixed inset-0 z-[70] p-4 bg-black/50" aria-hidden="true">
+    <div class="w-full max-w-sm rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl p-5" role="dialog" aria-modal="true" aria-labelledby="immunizationNotifyTitle">
+        <div class="flex items-start gap-3 mb-4">
+            <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-secondary">
+                <span class="material-symbols-outlined">notifications</span>
+            </span>
+            <div class="min-w-0">
+                <h3 id="immunizationNotifyTitle" class="text-base font-bold text-text-light dark:text-text-dark">Notify consultation date</h3>
+                <p id="immunizationNotifyMessage" class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">
+                    Residents will get an inbox message and a date-only announcement (no exact time).
+                </p>
+            </div>
+        </div>
+        <div class="mb-4">
+            <label for="immunizationNotifyDate" class="block text-xs font-semibold text-text-light/60 dark:text-text-dark/60 mb-1">Consultation date</label>
+            <input id="immunizationNotifyDate" type="date" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm text-text-light dark:text-text-dark focus:outline-none focus:ring-2 focus:ring-secondary/30 focus:border-secondary">
+        </div>
+        <div class="flex justify-end gap-2">
+            <button type="button" id="immunizationNotifyCancel" class="vita-btn vita-btn-ghost">Cancel</button>
+            <button type="button" id="immunizationNotifyConfirm" class="h-10 px-4 rounded-lg bg-secondary text-white text-sm font-semibold hover:opacity-90">Send notify</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const bnsHealthRoutes = {
         health: @json(route('bns.monitoring.health', ['childKey' => '__KEY__'])),
         weight: @json(route('bns.monitoring.weight.store', ['childKey' => '__KEY__'])),
+        weightUpdate: @json(route('bns.monitoring.weight.update', ['childKey' => '__KEY__', 'log' => '__ID__'])),
         deworming: @json(route('bns.monitoring.deworming.store', ['childKey' => '__KEY__'])),
+        dewormingUpdate: @json(route('bns.monitoring.deworming.update', ['childKey' => '__KEY__', 'log' => '__ID__'])),
+        dewormingDelete: @json(route('bns.monitoring.deworming.delete', ['childKey' => '__KEY__', 'log' => '__ID__'])),
         vitaminA: @json(route('bns.monitoring.vitamin-a.store', ['childKey' => '__KEY__'])),
+        vitaminAUpdate: @json(route('bns.monitoring.vitamin-a.update', ['childKey' => '__KEY__', 'log' => '__ID__'])),
         immunization: @json(route('bns.monitoring.immunization.update', ['childKey' => '__KEY__', 'immunization' => '__ID__'])),
+        immunizationNotify: @json(route('bns.monitoring.immunization.notify', ['childKey' => '__KEY__', 'immunization' => '__ID__'])),
     };
 
     const immunizationDisplayLayout = @json(\App\Support\BnsImmunizationSchedule::displayLayout());
@@ -1193,6 +1439,22 @@
         const data = await response.json();
         if (!response.ok) {
             const message = data.message || Object.values(data.errors || {}).flat().join(' ') || 'Save failed.';
+            throw new Error(message);
+        }
+        return data;
+    }
+
+    async function deleteHealth(url) {
+        const response = await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            const message = data.message || Object.values(data.errors || {}).flat().join(' ') || 'Delete failed.';
             throw new Error(message);
         }
         return data;
@@ -1292,38 +1554,6 @@
         return `<div class="flex flex-col gap-1">${nutritionBadgeHtml(nutrition)}${immunizationBadge}</div>`;
     }
 
-    function nutritionDetailHtml(nutrition, muac) {
-        if (!nutrition?.has_data && !muac) {
-            return '<p class="text-sm text-text-light/60 dark:text-text-dark/60">Record weight, height, and MUAC to assess nutritional status.</p>';
-        }
-
-        const rows = [
-            nutrition?.has_data ? ['Overall', nutrition.label] : null,
-            nutrition?.weight_for_age ? ['Weight-for-age', nutrition.weight_for_age.label] : null,
-            nutrition?.height_for_age ? ['Height-for-age', nutrition.height_for_age.label] : null,
-            nutrition?.weight_for_height ? ['Weight-for-height', nutrition.weight_for_height.label] : null,
-            muac ? ['MUAC (mid-upper arm)', muac.label] : null,
-        ].filter(Boolean);
-
-        return `
-            <div class="rounded-lg border border-border-light dark:border-border-dark p-4 mb-4">
-                <div class="flex flex-wrap items-center gap-2 mb-3">
-                    <p class="text-sm font-semibold">Nutritional status</p>
-                    ${nutrition?.has_data ? nutritionBadgeHtml(nutrition) : ''}
-                    ${muac ? logMuacBadgeHtml(muac) : ''}
-                </div>
-                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                    ${rows.map(([label, value]) => `
-                        <div class="rounded-lg bg-background-light/70 dark:bg-background-dark/70 px-3 py-2">
-                            <dt class="text-xs uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">${label}</dt>
-                            <dd class="font-medium mt-0.5">${value}</dd>
-                        </div>
-                    `).join('')}
-                </dl>
-            </div>
-        `;
-    }
-
     function logMuacBadgeHtml(muac) {
         if (!muac) return '—';
         return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${nutritionBadgeClass(muac.severity)}">${muac.summary_label || muac.label}</span>`;
@@ -1362,6 +1592,9 @@
     }
 
     function renderImmunizationCardHtml(row, today) {
+        const canNotify = row.status !== 'given';
+        const defaultConsult = (row.due_date_raw && row.due_date_raw >= today) ? row.due_date_raw : today;
+
         return `
             <article class="immunization-vaccine-card rounded-xl border p-3 sm:p-4 ${immunizationCardClass(row.status, row.is_overdue)}">
                 <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
@@ -1371,7 +1604,22 @@
                             Due when <strong>${row.due_age_label || '—'}</strong> · <span class="whitespace-nowrap">${row.due_date || '—'}</span>
                         </p>
                     </div>
-                    <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold shrink-0 ${immunizationBadgeClass(row.status, row.is_overdue)}">${row.status_label}</span>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        ${canNotify ? `
+                            <button
+                                type="button"
+                                class="weight-edit-icon-btn immunization-notify-btn"
+                                data-id="${row.id}"
+                                data-vaccine="${escapeHtml(row.vaccine_name || '')}"
+                                data-due="${escapeHtml(defaultConsult || today)}"
+                                aria-label="Notify consultation date"
+                                title="Notify consultation date"
+                            >
+                                <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+                            </button>
+                        ` : ''}
+                        <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${immunizationBadgeClass(row.status, row.is_overdue)}">${row.status_label}</span>
+                    </div>
                 </div>
 
                 ${row.status === 'given' && row.given_date ? `
@@ -1514,20 +1762,126 @@
                 }
             });
         });
+
+        document.querySelectorAll('.immunization-notify-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                openImmunizationNotifyModal({
+                    immunizationId: btn.dataset.id,
+                    vaccineName: btn.dataset.vaccine || 'vaccine',
+                    dueDate: btn.dataset.due || '',
+                });
+            });
+        });
     }
 
-    function showHealthToast(message) {
-        let toast = document.getElementById('healthToast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'healthToast';
-            toast.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-lg bg-secondary text-white text-sm font-semibold shadow-lg opacity-0 pointer-events-none transition-opacity duration-300';
-            document.body.appendChild(toast);
+    let pendingImmunizationNotify = null;
+
+    function openImmunizationNotifyModal({ immunizationId, vaccineName, dueDate }) {
+        pendingImmunizationNotify = { immunizationId, vaccineName };
+        const modal = document.getElementById('immunizationNotifyModal');
+        const message = document.getElementById('immunizationNotifyMessage');
+        const dateInput = document.getElementById('immunizationNotifyDate');
+        if (message) {
+            message.textContent = `Notify residents about the consultation date for ${vaccineName}. This creates a date-only announcement (no exact time) and inbox messages.`;
         }
-        toast.textContent = message;
-        toast.classList.remove('opacity-0');
-        window.clearTimeout(showHealthToast._timer);
-        showHealthToast._timer = window.setTimeout(() => toast.classList.add('opacity-0'), 2200);
+        if (dateInput) {
+            const today = new Date().toISOString().slice(0, 10);
+            dateInput.min = today;
+            dateInput.value = dueDate && dueDate >= today ? dueDate : today;
+        }
+        modal?.classList.add('active');
+        modal?.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeImmunizationNotifyModal() {
+        pendingImmunizationNotify = null;
+        const modal = document.getElementById('immunizationNotifyModal');
+        modal?.classList.remove('active');
+        modal?.setAttribute('aria-hidden', 'true');
+    }
+
+    async function confirmImmunizationNotify() {
+        if (!pendingImmunizationNotify?.immunizationId || !activeChildKey) {
+            return;
+        }
+
+        const dateInput = document.getElementById('immunizationNotifyDate');
+        const consultationDate = dateInput?.value || '';
+        if (!consultationDate) {
+            showHealthToast('Please choose a consultation date.', 'error');
+            return;
+        }
+
+        const confirmBtn = document.getElementById('immunizationNotifyConfirm');
+        const originalLabel = confirmBtn?.textContent || 'Send notify';
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Sending...';
+        }
+
+        try {
+            const response = await postHealth(
+                healthRoute(bnsHealthRoutes.immunizationNotify, activeChildKey, pendingImmunizationNotify.immunizationId),
+                { consultation_date: consultationDate }
+            );
+            closeImmunizationNotifyModal();
+            showHealthToast(response?.message || 'Residents notified about the consultation date.');
+        } catch (error) {
+            showHealthToast(error.message || 'Unable to send notify.', 'error');
+        } finally {
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = originalLabel;
+            }
+        }
+    }
+
+    function showHealthToast(message, type = 'success') {
+        let stack = document.getElementById('health-alert-stack');
+        if (!stack) {
+            stack = document.createElement('div');
+            stack.id = 'health-alert-stack';
+            stack.className = 'fixed top-4 inset-x-5 z-[100] flex flex-col gap-2 sm:inset-x-4 sm:left-auto sm:right-4 sm:max-w-md sm:ml-auto pointer-events-none';
+            document.body.appendChild(stack);
+        }
+
+        const isError = type === 'error';
+        const alert = document.createElement('div');
+        alert.className = isError
+            ? 'pointer-events-auto flex items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm text-red-900 shadow-lg transition-all duration-300 dark:border-red-800 dark:bg-red-950/90 dark:text-red-100'
+            : 'pointer-events-auto flex items-start gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm text-emerald-900 shadow-lg transition-all duration-300 dark:border-emerald-800 dark:bg-emerald-950/90 dark:text-emerald-100';
+        alert.setAttribute('role', isError ? 'alert' : 'status');
+        alert.style.opacity = '0';
+        alert.style.transform = 'translateY(-6px)';
+        alert.innerHTML = `
+            <span class="material-symbols-outlined shrink-0 text-base sm:text-lg ${isError ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}">${isError ? 'error' : 'check_circle'}</span>
+            <p class="flex-1 pt-0.5"></p>
+            <button type="button" class="shrink-0 rounded-lg p-1 ${isError ? 'text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-900/50' : 'text-emerald-700 hover:bg-emerald-100 dark:text-emerald-300 dark:hover:bg-emerald-900/50'}" aria-label="Dismiss notification">
+                <span class="material-symbols-outlined text-lg">close</span>
+            </button>
+        `;
+        alert.querySelector('p').textContent = message;
+
+        const removeAlert = () => {
+            alert.style.opacity = '0';
+            alert.style.transform = 'translateY(-6px)';
+            window.setTimeout(() => {
+                alert.remove();
+                if (stack && !stack.children.length) {
+                    stack.remove();
+                }
+            }, 300);
+        };
+
+        alert.querySelector('button')?.addEventListener('click', removeAlert);
+        stack.appendChild(alert);
+
+        window.requestAnimationFrame(() => {
+            alert.style.opacity = '1';
+            alert.style.transform = 'translateY(0)';
+        });
+
+        window.setTimeout(removeAlert, 2000);
     }
 
     function escapeHtml(value) {
@@ -1573,47 +1927,391 @@
         `;
     }
 
-    function renderWeightLogCard(log) {
+    function weightEditIconButton(panelId) {
+        return `
+            <button type="button" class="weight-edit-icon-btn vita-toggle-edit" data-panel="${panelId}" aria-label="Edit weight record" title="Edit">
+                <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+            </button>
+        `;
+    }
+
+    function renderWeightLogCard(log, birthMin, today) {
+        const panelId = `weight-edit-${log.id}`;
+        const recordedRaw = escapeHtml(log.recorded_on_raw || '');
+        const weightVal = Number(log.weight_kg).toFixed(2);
+        const heightVal = log.height_cm != null ? Number(log.height_cm).toFixed(1) : '';
+        const muacVal = log.muac_cm != null ? Number(log.muac_cm).toFixed(1) : '';
+        const inputClass = 'w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 text-sm';
+
         let details = [
             healthRecordDetailHtml('Age', `${log.age_in_months ?? '—'} mo`),
-            healthRecordDetailHtml('Weight', `${Number(log.weight_kg).toFixed(2)} kg`),
+            healthRecordDetailHtml('Weight', `${weightVal} kg`),
             healthRecordDetailHtml('Height', log.height_cm ? `${Number(log.height_cm).toFixed(1)} cm` : '—'),
             healthRecordDetailHtml('MUAC', log.muac_cm ? `${Number(log.muac_cm).toFixed(1)} cm` : '—'),
         ].join('');
 
-        if (log.muac) {
-            details += `<div class="pt-2">${logMuacBadgeHtml(log.muac)}</div>`;
+        details += `
+            <div class="vita-edit-panel mt-3" id="${panelId}">
+                <form class="weight-edit-form grid grid-cols-1 gap-3" data-log-id="${log.id}">
+                    ${healthFormFieldHtml('Weight (kg)', `<input type="number" name="weight_kg" step="0.01" min="0.1" max="50" required value="${weightVal}" class="${inputClass}">`)}
+                    ${healthFormFieldHtml('Height (cm)', `<input type="number" name="height_cm" step="0.1" min="1" max="200" value="${heightVal}" placeholder="e.g. 85.0" class="${inputClass}">`)}
+                    ${healthFormFieldHtml('MUAC (cm)', `<input type="number" name="muac_cm" step="0.1" min="5" max="25" value="${muacVal}" placeholder="e.g. 13.5" class="${inputClass}">`)}
+                    ${healthFormFieldHtml('Date recorded', `<input type="date" name="recorded_on" value="${recordedRaw}" min="${escapeHtml(birthMin || '')}" max="${today}" required class="${inputClass}">`)}
+                    <div class="flex flex-wrap gap-2">
+                        <button type="submit" class="vita-btn vita-btn-primary">Save changes</button>
+                        <button type="button" class="vita-btn vita-btn-ghost vita-cancel-edit" data-panel="${panelId}">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        const badgesHtml = `${weightEditIconButton(panelId)}${logNutritionBadgeHtml(log.nutrition)}`;
+
+        return healthRecordCardHtml(log.recorded_on, details, badgesHtml);
+    }
+
+    function scrollEditPanelIntoView(panel) {
+        if (!panel) return;
+        const isMobile = window.matchMedia('(max-width: 767px)').matches;
+        const scrollPanel = () => {
+            panel.scrollIntoView({ behavior: 'smooth', block: isMobile ? 'center' : 'nearest', inline: 'nearest' });
+        };
+        requestAnimationFrame(() => {
+            scrollPanel();
+            if (!isMobile) return;
+            const firstField = panel.querySelector('input:not([type="hidden"]), textarea, select');
+            if (!firstField) return;
+            setTimeout(() => {
+                firstField.focus({ preventScroll: true });
+                scrollPanel();
+            }, 120);
+        });
+    }
+
+    function bindWeightForms() {
+        document.querySelectorAll('.vita-edit-panel.is-open, .vita-edit-row.is-open').forEach((el) => {
+            el.classList.remove('is-open');
+        });
+
+        document.querySelectorAll('.vita-toggle-edit').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const panel = document.getElementById(btn.dataset.panel);
+                if (!panel) return;
+                const willOpen = !panel.classList.contains('is-open');
+                document.querySelectorAll('.vita-edit-panel.is-open, .vita-edit-row.is-open').forEach((el) => {
+                    el.classList.remove('is-open');
+                });
+                if (willOpen) {
+                    panel.classList.add('is-open');
+                    scrollEditPanelIntoView(panel);
+                }
+            });
+        });
+
+        document.querySelectorAll('.vita-cancel-edit').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                document.getElementById(btn.dataset.panel)?.classList.remove('is-open');
+            });
+        });
+
+        document.querySelectorAll('.weight-edit-form').forEach((form) => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                try {
+                    activeHealthData = await postHealth(healthRoute(bnsHealthRoutes.weightUpdate, activeChildKey, form.dataset.logId), {
+                        weight_kg: form.weight_kg.value,
+                        height_cm: form.height_cm.value || null,
+                        muac_cm: form.muac_cm.value || null,
+                        recorded_on: form.recorded_on.value,
+                    });
+                    updateMasterlistRowSummary(activeChildKey, activeHealthData);
+                    renderHealthTab();
+                } catch (error) {
+                    alert(error.message);
+                }
+            });
+        });
+    }
+
+    function renderDewormingLogCard(log, today) {
+        const panelId = `deworm-edit-${log.id}`;
+        const givenRaw = escapeHtml(log.given_on_raw || '');
+        const doseValue = log.medicine || '';
+        const inputClass = 'w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 text-sm';
+
+        let details = [
+            healthRecordDetailHtml('Dose received', doseValue || '—'),
+        ].join('');
+
+        details += `
+            <div class="vita-edit-panel mt-3" id="${panelId}">
+                <form class="deworming-edit-form grid grid-cols-1 gap-3" data-log-id="${log.id}">
+                    ${healthFormFieldHtml('Date given', `<input type="date" name="given_on" value="${givenRaw}" max="${today}" required class="${inputClass}">`)}
+                    ${healthFormFieldHtml('Dose received', doseReceivedSelectHtml(doseValue, inputClass))}
+                    <div class="flex flex-wrap gap-2">
+                        <button type="submit" class="vita-btn vita-btn-primary">Save changes</button>
+                        <button type="button" class="vita-btn vita-btn-ghost vita-cancel-edit" data-panel="${panelId}">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        const badgesHtml = `
+            <button type="button" class="weight-edit-icon-btn vita-toggle-edit" data-panel="${panelId}" aria-label="Edit deworming record" title="Edit">
+                <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+            </button>
+            <button type="button" class="weight-edit-icon-btn is-danger deworming-delete-btn" data-log-id="${log.id}" data-label="${escapeHtml(log.given_on || '')}" aria-label="Delete deworming record" title="Delete">
+                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+            </button>
+        `;
+
+        return healthRecordCardHtml(log.given_on, details, badgesHtml);
+    }
+
+    let pendingDewormingDeleteId = null;
+
+    function openDewormingDeleteModal(logId, label) {
+        pendingDewormingDeleteId = logId;
+        const modal = document.getElementById('dewormingDeleteModal');
+        const message = document.getElementById('dewormingDeleteMessage');
+        if (message) {
+            message.textContent = label
+                ? `This will permanently remove the deworming record from ${label}.`
+                : 'This will permanently remove this deworming record.';
+        }
+        modal?.classList.add('active');
+        modal?.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeDewormingDeleteModal() {
+        pendingDewormingDeleteId = null;
+        const modal = document.getElementById('dewormingDeleteModal');
+        modal?.classList.remove('active');
+        modal?.setAttribute('aria-hidden', 'true');
+        const confirmBtn = document.getElementById('dewormingDeleteConfirm');
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Delete';
+        }
+    }
+
+    function bindDewormingForms() {
+        document.querySelectorAll('.vita-edit-panel.is-open, .vita-edit-row.is-open').forEach((el) => {
+            el.classList.remove('is-open');
+        });
+
+        document.querySelectorAll('.vita-toggle-edit').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const panel = document.getElementById(btn.dataset.panel);
+                if (!panel) return;
+                const willOpen = !panel.classList.contains('is-open');
+                document.querySelectorAll('.vita-edit-panel.is-open, .vita-edit-row.is-open').forEach((el) => {
+                    el.classList.remove('is-open');
+                });
+                if (willOpen) {
+                    panel.classList.add('is-open');
+                    scrollEditPanelIntoView(panel);
+                }
+            });
+        });
+
+        document.querySelectorAll('.vita-cancel-edit').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                document.getElementById(btn.dataset.panel)?.classList.remove('is-open');
+            });
+        });
+
+        document.querySelectorAll('.deworming-edit-form').forEach((form) => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                try {
+                    activeHealthData = await postHealth(healthRoute(bnsHealthRoutes.dewormingUpdate, activeChildKey, form.dataset.logId), {
+                        given_on: form.given_on.value,
+                        medicine: form.medicine.value || null,
+                    });
+                    renderHealthTab();
+                } catch (error) {
+                    alert(error.message);
+                }
+            });
+        });
+
+        document.querySelectorAll('.deworming-delete-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                openDewormingDeleteModal(btn.dataset.logId, btn.dataset.label || '');
+            });
+        });
+    }
+
+    function vitaminStatusLabel(status) {
+        return ({
+            given: 'Given',
+            missed: 'Missed',
+            due: 'Due now',
+            upcoming: 'Upcoming',
+        })[status] || status;
+    }
+
+    function doseReceivedSelectHtml(selected = '', inputClass = 'w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 text-sm') {
+        const selectedValue = String(selected || '');
+        const doses = ['1/2 tablet', '1 tablet'];
+        const options = [
+            `<option value="">Select dose</option>`,
+            ...doses.map((dose) => `<option value="${escapeHtml(dose)}" ${selectedValue === dose ? 'selected' : ''}>${escapeHtml(dose)}</option>`),
+        ];
+        if (selectedValue && !doses.includes(selectedValue)) {
+            options.splice(1, 0, `<option value="${escapeHtml(selectedValue)}" selected>${escapeHtml(selectedValue)}</option>`);
+        }
+        return `<select name="medicine" required class="${inputClass}">${options.join('')}</select>`;
+    }
+
+    function renderVitaminScheduleCard(row, birthMin, today) {
+        const status = row.status || 'upcoming';
+        const statusBadge = `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${immunizationBadgeClass(status === 'given' ? 'given' : status === 'missed' ? 'missed' : 'pending')}">${escapeHtml(vitaminStatusLabel(status))}</span>`;
+        const canCatchUp = status === 'missed' || status === 'due';
+        const canEdit = status === 'given' && row.log_id;
+        const defaultDate = row.given_on_raw || (canCatchUp ? (row.due_date_raw && row.due_date_raw <= today ? row.due_date_raw : today) : today);
+        const doseValue = row.notes || '';
+        let actionHtml = '';
+        let panelHtml = '';
+
+        if (canEdit) {
+            actionHtml = `<button type="button" class="vita-btn vita-btn-secondary vita-toggle-edit" data-panel="vita-schedule-edit-${row.due_month}">Edit date</button>`;
+            panelHtml = `
+                <div class="vita-edit-panel" id="vita-schedule-edit-${row.due_month}">
+                    <form class="vitamin-a-edit-form grid grid-cols-1 gap-3" data-log-id="${row.log_id}">
+                        <div class="health-form-field vita-date-field">
+                            <span class="health-form-label">Date given</span>
+                            <input type="date" name="given_on" value="${escapeHtml(defaultDate || '')}" min="${escapeHtml(birthMin || '')}" max="${today}" required class="w-full rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 text-sm">
+                        </div>
+                        <div class="health-form-field">
+                            <span class="health-form-label">Dose received</span>
+                            ${doseReceivedSelectHtml(doseValue)}
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="submit" class="vita-btn vita-btn-primary flex-1">Save date</button>
+                            <button type="button" class="vita-btn vita-btn-ghost vita-cancel-edit" data-panel="vita-schedule-edit-${row.due_month}">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        } else if (canCatchUp) {
+            actionHtml = `<button type="button" class="vita-btn vita-btn-primary vita-toggle-edit" data-panel="vita-schedule-add-${row.due_month}">Add date</button>`;
+            panelHtml = `
+                <div class="vita-edit-panel" id="vita-schedule-add-${row.due_month}">
+                    <form class="vitamin-a-create-form grid grid-cols-1 gap-3">
+                        <div class="health-form-field vita-date-field">
+                            <span class="health-form-label">Date given</span>
+                            <input type="date" name="given_on" value="${escapeHtml(defaultDate || today)}" min="${escapeHtml(birthMin || '')}" max="${today}" required class="w-full rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 text-sm">
+                        </div>
+                        <div class="health-form-field">
+                            <span class="health-form-label">Dose received</span>
+                            ${doseReceivedSelectHtml()}
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="submit" class="vita-btn vita-btn-primary flex-1">Save Vitamin A</button>
+                            <button type="button" class="vita-btn vita-btn-ghost vita-cancel-edit" data-panel="vita-schedule-add-${row.due_month}">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            `;
         }
 
-        return healthRecordCardHtml(log.recorded_on, details, logNutritionBadgeHtml(log.nutrition));
+        const givenLine = row.given_on
+            ? `Given on <strong>${escapeHtml(row.given_on)}</strong>${doseValue ? ` · ${escapeHtml(doseValue)}` : ''}`
+            : `Due ${escapeHtml(row.due_date || '—')}`;
+
+        return `
+            <article class="vita-schedule-card is-${escapeHtml(status)}">
+                <div class="vita-card-main">
+                    <div class="vita-card-meta">
+                        <p class="vita-card-title">${escapeHtml(String(row.due_month))} months</p>
+                        <p class="vita-card-sub">${givenLine}</p>
+                    </div>
+                    <div class="vita-card-actions">
+                        ${statusBadge}
+                        ${actionHtml}
+                    </div>
+                </div>
+                ${panelHtml}
+            </article>
+        `;
     }
 
-    function renderDewormingLogCard(log) {
-        const details = [
-            healthRecordDetailHtml('Medicine', log.medicine || '—'),
-            healthRecordDetailHtml('Notes', log.notes || '—'),
-        ].join('');
+    function bindVitaminAForms() {
+        const closeAllVitaminPanels = () => {
+            document.querySelectorAll('.vita-edit-panel.is-open, .vita-edit-row.is-open').forEach((el) => {
+                el.classList.remove('is-open');
+            });
+        };
 
-        return healthRecordCardHtml(log.given_on, details);
-    }
+        document.querySelectorAll('.vita-toggle-edit').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const panel = document.getElementById(btn.dataset.panel);
+                if (!panel) return;
+                const opening = !panel.classList.contains('is-open');
+                closeAllVitaminPanels();
+                if (opening) {
+                    panel.classList.add('is-open');
+                    scrollEditPanelIntoView(panel);
+                }
+            });
+        });
 
-    function renderVitaminScheduleCard(row) {
-        const statusBadge = `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${immunizationBadgeClass(row.status === 'given' ? 'given' : row.status === 'missed' ? 'missed' : 'pending')}">${escapeHtml(row.status)}</span>`;
-        const details = [
-            healthRecordDetailHtml('Due date', row.due_date || '—'),
-            healthRecordDetailHtml('Given on', row.given_on || '—'),
-        ].join('');
+        document.querySelectorAll('.vita-cancel-edit').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                document.getElementById(btn.dataset.panel)?.classList.remove('is-open');
+            });
+        });
 
-        return healthRecordCardHtml(`${row.due_month} months`, details, statusBadge);
-    }
+        const saveCreate = async (form) => {
+            activeHealthData = await postHealth(healthRoute(bnsHealthRoutes.vitaminA, activeChildKey), {
+                given_on: form.given_on.value,
+                medicine: form.medicine.value || null,
+            });
+            renderHealthTab();
+            updateMasterlistRowSummary(activeChildKey, activeHealthData);
+        };
 
-    function renderVitaminLogCard(log) {
-        const details = [
-            healthRecordDetailHtml('Age', `${log.age_in_months ?? '—'} mo`),
-            healthRecordDetailHtml('Notes', log.notes || '—'),
-        ].join('');
+        const saveUpdate = async (form) => {
+            activeHealthData = await postHealth(healthRoute(bnsHealthRoutes.vitaminAUpdate, activeChildKey, form.dataset.logId), {
+                given_on: form.given_on.value,
+                medicine: form.medicine.value || null,
+            });
+            renderHealthTab();
+            updateMasterlistRowSummary(activeChildKey, activeHealthData);
+        };
 
-        return healthRecordCardHtml(log.given_on, details);
+        document.getElementById('vitaminAForm')?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            try {
+                await saveCreate(event.target);
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        document.querySelectorAll('.vitamin-a-create-form').forEach((form) => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                try {
+                    await saveCreate(event.target);
+                } catch (error) {
+                    alert(error.message);
+                }
+            });
+        });
+
+        document.querySelectorAll('.vitamin-a-edit-form').forEach((form) => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                try {
+                    await saveUpdate(event.target);
+                } catch (error) {
+                    alert(error.message);
+                }
+            });
+        });
     }
 
     function renderHealthTab() {
@@ -1626,16 +2324,16 @@
         if (activeHealthTab === 'weight') {
             const weightLogs = data.weight_logs || [];
             const inputClass = 'w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 text-sm';
+            const birthMin = (data.child && data.child.birthdate) ? String(data.child.birthdate).slice(0, 10) : '';
 
             body.innerHTML = `
-                ${nutritionDetailHtml(data.nutrition, data.muac)}
                 <div class="rounded-lg border border-border-light dark:border-border-dark p-4">
                     <p class="health-section-title">Add weight record</p>
                     <form id="weightForm" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         ${healthFormFieldHtml('Weight (kg)', `<input type="number" name="weight_kg" step="0.01" min="0.1" max="50" required placeholder="e.g. 12.5" class="${inputClass}">`)}
                         ${healthFormFieldHtml('Height (cm)', `<input type="number" name="height_cm" step="0.1" min="1" max="200" placeholder="e.g. 85.0" class="${inputClass}">`)}
                         ${healthFormFieldHtml('MUAC (cm)', `<input type="number" name="muac_cm" step="0.1" min="5" max="25" placeholder="e.g. 13.5" title="Mid-upper arm circumference" class="${inputClass}">`)}
-                        ${healthFormFieldHtml('Date recorded', `<input type="date" name="recorded_on" value="${today}" max="${today}" required class="${inputClass}">`)}
+                        ${healthFormFieldHtml('Date recorded', `<input type="date" name="recorded_on" value="${today}" min="${escapeHtml(birthMin)}" max="${today}" required class="${inputClass}">`)}
                         <div class="sm:col-span-3">
                             <button type="submit" class="health-form-submit h-10 px-4 rounded-lg bg-primary text-white text-sm font-semibold">Save record</button>
                         </div>
@@ -1645,7 +2343,7 @@
                     <p class="health-section-title">Weight history</p>
                     <div class="health-records-mobile">
                         ${weightLogs.length
-                            ? weightLogs.map((log) => renderWeightLogCard(log)).join('')
+                            ? weightLogs.map((log) => renderWeightLogCard(log, birthMin, today)).join('')
                             : healthRecordsEmptyHtml('No weight records yet.')}
                     </div>
                     <div class="health-records-desktop overflow-x-auto rounded-lg border border-border-light dark:border-border-dark">
@@ -1659,16 +2357,41 @@
                                 <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Status</th>
                             </tr></thead>
                             <tbody>
-                                ${weightLogs.length ? weightLogs.map((log) => `
+                                ${weightLogs.length ? weightLogs.map((log) => {
+                                    const panelId = `weight-desk-edit-${log.id}`;
+                                    const recordedRaw = escapeHtml(log.recorded_on_raw || '');
+                                    const weightVal = Number(log.weight_kg).toFixed(2);
+                                    const heightVal = log.height_cm != null ? Number(log.height_cm).toFixed(1) : '';
+                                    const muacVal = log.muac_cm != null ? Number(log.muac_cm).toFixed(1) : '';
+                                    return `
                                     <tr class="border-b border-border-light dark:border-border-dark">
                                         <td class="px-3 py-2 text-sm">${log.recorded_on}</td>
                                         <td class="px-3 py-2 text-sm">${log.age_in_months ?? '—'}</td>
-                                        <td class="px-3 py-2 text-sm">${Number(log.weight_kg).toFixed(2)} kg</td>
+                                        <td class="px-3 py-2 text-sm">${weightVal} kg</td>
                                         <td class="px-3 py-2 text-sm">${log.height_cm ? Number(log.height_cm).toFixed(1) + ' cm' : '—'}</td>
-                                        <td class="px-3 py-2 text-sm">${log.muac_cm ? Number(log.muac_cm).toFixed(1) + ' cm' : '—'}${log.muac ? `<div class="mt-1">${logMuacBadgeHtml(log.muac)}</div>` : ''}</td>
-                                        <td class="px-3 py-2 text-sm">${logNutritionBadgeHtml(log.nutrition)}</td>
+                                        <td class="px-3 py-2 text-sm">${log.muac_cm ? Number(log.muac_cm).toFixed(1) + ' cm' : '—'}</td>
+                                        <td class="px-3 py-2 text-sm">
+                                            <div class="inline-flex items-center gap-1.5 flex-wrap">
+                                                ${weightEditIconButton(panelId)}
+                                                ${logNutritionBadgeHtml(log.nutrition)}
+                                            </div>
+                                        </td>
                                     </tr>
-                                `).join('') : `<tr><td colspan="6" class="px-3 py-4 text-sm text-center text-text-light/60">No weight records yet.</td></tr>`}
+                                    <tr class="vita-edit-row border-b border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40" id="${panelId}">
+                                        <td colspan="6" class="px-3 py-3">
+                                            <form class="weight-edit-form grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end" data-log-id="${log.id}">
+                                                ${healthFormFieldHtml('Weight (kg)', `<input type="number" name="weight_kg" step="0.01" min="0.1" max="50" required value="${weightVal}" class="${inputClass}">`)}
+                                                ${healthFormFieldHtml('Height (cm)', `<input type="number" name="height_cm" step="0.1" min="1" max="200" value="${heightVal}" class="${inputClass}">`)}
+                                                ${healthFormFieldHtml('MUAC (cm)', `<input type="number" name="muac_cm" step="0.1" min="5" max="25" value="${muacVal}" class="${inputClass}">`)}
+                                                ${healthFormFieldHtml('Date recorded', `<input type="date" name="recorded_on" value="${recordedRaw}" min="${escapeHtml(birthMin)}" max="${today}" required class="${inputClass}">`)}
+                                                <div class="flex flex-wrap gap-2">
+                                                    <button type="submit" class="vita-btn vita-btn-primary">Save</button>
+                                                    <button type="button" class="vita-btn vita-btn-ghost vita-cancel-edit" data-panel="${panelId}">Cancel</button>
+                                                </div>
+                                            </form>
+                                        </td>
+                                    </tr>`;
+                                }).join('') : `<tr><td colspan="6" class="px-3 py-4 text-sm text-center text-text-light/60">No weight records yet.</td></tr>`}
                             </tbody>
                         </table>
                     </div>
@@ -1693,6 +2416,8 @@
                     alert(error.message);
                 }
             });
+
+            bindWeightForms();
             return;
         }
 
@@ -1705,8 +2430,7 @@
                     <p class="health-section-title">Add deworming record</p>
                     <form id="dewormingForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         ${healthFormFieldHtml('Date given', `<input type="date" name="given_on" value="${today}" max="${today}" required class="${inputClass}">`)}
-                        ${healthFormFieldHtml('Medicine', `<input type="text" name="medicine" placeholder="Medicine name" class="${inputClass}">`)}
-                        ${healthFormFieldHtml('Notes (optional)', `<input type="text" name="notes" placeholder="Add notes" class="${inputClass}">`)}
+                        ${healthFormFieldHtml('Dose received', doseReceivedSelectHtml('', inputClass))}
                         <div class="sm:col-span-2">
                             <button type="submit" class="health-form-submit h-10 px-4 rounded-lg bg-primary text-white text-sm font-semibold">Save deworming</button>
                         </div>
@@ -1716,22 +2440,43 @@
                     <p class="health-section-title">Deworming history</p>
                     <div class="health-records-mobile">
                         ${dewormingLogs.length
-                            ? dewormingLogs.map((log) => renderDewormingLogCard(log)).join('')
+                            ? dewormingLogs.map((log) => renderDewormingLogCard(log, today)).join('')
                             : healthRecordsEmptyHtml('No deworming records yet.')}
                     </div>
                     <div class="health-records-desktop overflow-x-auto rounded-lg border border-border-light dark:border-border-dark">
-                        <table class="w-full min-w-[480px]">
+                        <table class="w-full min-w-[420px]">
                             <thead><tr class="border-b border-border-light dark:border-border-dark">
                                 <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Date given</th>
-                                <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Medicine</th>
-                                <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Notes</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Dose received</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Action</th>
                             </tr></thead>
                             <tbody>
                                 ${dewormingLogs.length ? dewormingLogs.map((log) => `
                                     <tr class="border-b border-border-light dark:border-border-dark">
                                         <td class="px-3 py-2 text-sm">${log.given_on}</td>
                                         <td class="px-3 py-2 text-sm">${log.medicine || '—'}</td>
-                                        <td class="px-3 py-2 text-sm">${log.notes || '—'}</td>
+                                        <td class="px-3 py-2 text-sm">
+                                            <div class="inline-flex items-center gap-1.5">
+                                                <button type="button" class="weight-edit-icon-btn vita-toggle-edit" data-panel="deworm-desk-edit-${log.id}" aria-label="Edit deworming record" title="Edit">
+                                                    <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                                                </button>
+                                                <button type="button" class="weight-edit-icon-btn is-danger deworming-delete-btn" data-log-id="${log.id}" data-label="${escapeHtml(log.given_on || '')}" aria-label="Delete deworming record" title="Delete">
+                                                    <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="vita-edit-row border-b border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40" id="deworm-desk-edit-${log.id}">
+                                        <td colspan="3" class="px-3 py-3">
+                                            <form class="deworming-edit-form grid grid-cols-1 sm:grid-cols-3 gap-3 items-end" data-log-id="${log.id}">
+                                                ${healthFormFieldHtml('Date given', `<input type="date" name="given_on" value="${escapeHtml(log.given_on_raw || '')}" max="${today}" required class="${inputClass}">`)}
+                                                ${healthFormFieldHtml('Dose received', doseReceivedSelectHtml(log.medicine || '', inputClass))}
+                                                <div class="flex gap-2">
+                                                    <button type="submit" class="vita-btn vita-btn-primary">Save</button>
+                                                    <button type="button" class="vita-btn vita-btn-ghost vita-cancel-edit" data-panel="deworm-desk-edit-${log.id}">Cancel</button>
+                                                </div>
+                                            </form>
+                                        </td>
                                     </tr>
                                 `).join('') : `<tr><td colspan="3" class="px-3 py-4 text-sm text-center text-text-light/60">No deworming records yet.</td></tr>`}
                             </tbody>
@@ -1747,105 +2492,143 @@
                     activeHealthData = await postHealth(healthRoute(bnsHealthRoutes.deworming, activeChildKey), {
                         given_on: form.given_on.value,
                         medicine: form.medicine.value || null,
-                        notes: form.notes.value || null,
                     });
                     renderHealthTab();
                 } catch (error) {
                     alert(error.message);
                 }
             });
+
+            bindDewormingForms();
             return;
         }
 
         if (activeHealthTab === 'vitamin-a') {
             const eligible = data.eligible_vitamin_a;
             const vitaminSchedule = data.vitamin_a_schedule || [];
-            const vitaminLogs = data.vitamin_a_logs || [];
+            const birthMin = (data.child && data.child.birthdate) ? String(data.child.birthdate).slice(0, 10) : '';
+            const needsCatchUp = vitaminSchedule.some((row) => row.status === 'missed' || row.status === 'due');
+            const canRecord = eligible || needsCatchUp;
             const inputClass = 'w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 text-sm';
+            const dateInputClass = `${inputClass} font-semibold text-base h-11`;
 
             body.innerHTML = `
-                <div class="rounded-lg border border-border-light dark:border-border-dark p-4 ${eligible ? '' : 'opacity-70'}">
-                    <p class="text-sm text-text-light/70 dark:text-text-dark/70 mb-3">${eligible ? 'Vitamin A is given at 6, 12, 18, 24, 30, 36, 42, 48, and 54 months.' : 'This child is not yet eligible (must be 6–59 months old).'}</p>
-                    <p class="health-section-title">Add Vitamin A record</p>
-                    <form id="vitaminAForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3" ${eligible ? '' : 'inert'}>
-                        ${healthFormFieldHtml('Date given', `<input type="date" name="given_on" value="${today}" max="${today}" required class="${inputClass}">`)}
-                        ${healthFormFieldHtml('Notes (optional)', `<input type="text" name="notes" placeholder="Add notes" class="${inputClass}">`)}
-                        <div class="sm:col-span-2">
-                            <button type="submit" class="health-form-submit h-10 px-4 rounded-lg bg-primary text-white text-sm font-semibold" ${eligible ? '' : 'disabled'}>Save Vitamin A</button>
+                <div class="vita-tip">
+                    <span class="material-symbols-outlined vita-tip-icon" aria-hidden="true">calendar_month</span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-bold text-text-light dark:text-text-dark">Record the date Vitamin A was given</p>
+                        <p class="text-xs text-text-light/70 dark:text-text-dark/70 mt-0.5 leading-relaxed">Rounds at 6, 12, 18, 24, 30, 36, 42, 48, and 54 months. The schedule below is also the giving history—use <strong>Add date</strong> or <strong>Edit date</strong> when needed.</p>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-border-light dark:border-border-dark p-4 ${canRecord ? '' : 'opacity-70'}">
+                    <p class="health-section-title">Give Vitamin A</p>
+                    ${canRecord
+                        ? ''
+                        : `<p class="text-sm text-text-light/70 dark:text-text-dark/70 mb-3">This child is not yet eligible (must be 6–59 months old).</p>`}
+                    <form id="vitaminAForm" class="grid grid-cols-1 gap-3" ${canRecord ? '' : 'inert'}>
+                        <div class="health-form-field vita-date-field">
+                            <span class="health-form-label">Date given</span>
+                            <input type="date" name="given_on" value="${today}" min="${escapeHtml(birthMin)}" max="${today}" required class="${dateInputClass}">
+                        </div>
+                        ${healthFormFieldHtml('Dose received', doseReceivedSelectHtml('', inputClass))}
+                        <div>
+                            <button type="submit" class="health-form-submit h-11 px-4 rounded-lg bg-primary text-white text-sm font-semibold" ${canRecord ? '' : 'disabled'}>Save date given</button>
                         </div>
                     </form>
                 </div>
-                <div class="mt-4">
-                    <p class="health-section-title">Vitamin A schedule</p>
+
+                <div class="mt-1">
+                    <p class="health-section-title">Vitamin A schedule & history</p>
                     <div class="health-records-mobile mb-4">
                         ${vitaminSchedule.length
-                            ? vitaminSchedule.map((row) => renderVitaminScheduleCard(row)).join('')
+                            ? vitaminSchedule.map((row) => renderVitaminScheduleCard(row, birthMin, today)).join('')
                             : healthRecordsEmptyHtml('No schedule available.')}
                     </div>
                     <div class="health-records-desktop overflow-x-auto rounded-lg border border-border-light dark:border-border-dark mb-4">
-                        <table class="w-full min-w-[520px]">
+                        <table class="w-full min-w-[640px]">
                             <thead><tr class="border-b border-border-light dark:border-border-dark">
                                 <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Due at</th>
                                 <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Due date</th>
                                 <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Status</th>
-                                <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Given on</th>
-                            </tr></thead>
-                            <tbody>
-                                ${vitaminSchedule.map((row) => `
-                                    <tr class="border-b border-border-light dark:border-border-dark">
-                                        <td class="px-3 py-2 text-sm">${row.due_month} months</td>
-                                        <td class="px-3 py-2 text-sm">${row.due_date}</td>
-                                        <td class="px-3 py-2 text-sm"><span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${immunizationBadgeClass(row.status === 'given' ? 'given' : row.status === 'missed' ? 'missed' : 'pending')}">${row.status}</span></td>
-                                        <td class="px-3 py-2 text-sm">${row.given_on || '—'}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div>
-                    <p class="health-section-title">Vitamin A history</p>
-                    <div class="health-records-mobile">
-                        ${vitaminLogs.length
-                            ? vitaminLogs.map((log) => renderVitaminLogCard(log)).join('')
-                            : healthRecordsEmptyHtml('No Vitamin A records yet.')}
-                    </div>
-                    <div class="health-records-desktop overflow-x-auto rounded-lg border border-border-light dark:border-border-dark">
-                        <table class="w-full min-w-[420px]">
-                            <thead><tr class="border-b border-border-light dark:border-border-dark">
                                 <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Date given</th>
-                                <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Age (mo)</th>
-                                <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Notes</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Dose received</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold uppercase">Action</th>
                             </tr></thead>
                             <tbody>
-                                ${vitaminLogs.length ? vitaminLogs.map((log) => `
-                                    <tr class="border-b border-border-light dark:border-border-dark">
-                                        <td class="px-3 py-2 text-sm">${log.given_on}</td>
-                                        <td class="px-3 py-2 text-sm">${log.age_in_months ?? '—'}</td>
-                                        <td class="px-3 py-2 text-sm">${log.notes || '—'}</td>
-                                    </tr>
-                                `).join('') : `<tr><td colspan="3" class="px-3 py-4 text-sm text-center text-text-light/60">No Vitamin A records yet.</td></tr>`}
+                                ${vitaminSchedule.map((row) => {
+                                    const canCatchUp = row.status === 'missed' || row.status === 'due';
+                                    const canEdit = row.status === 'given' && row.log_id;
+                                    let action = '—';
+                                    if (canEdit) {
+                                        action = `<button type="button" class="vita-btn vita-btn-secondary vita-toggle-edit" data-panel="vita-desk-edit-${row.due_month}">Edit</button>`;
+                                    } else if (canCatchUp) {
+                                        action = `<button type="button" class="vita-btn vita-btn-primary vita-toggle-edit" data-panel="vita-desk-add-${row.due_month}">Add date</button>`;
+                                    }
+                                    const defaultDate = row.given_on_raw || (canCatchUp ? (row.due_date_raw && row.due_date_raw <= today ? row.due_date_raw : today) : today);
+                                    let panel = '';
+                                    if (canEdit) {
+                                        panel = `
+                                            <tr class="vita-edit-row border-b border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40" id="vita-desk-edit-${row.due_month}">
+                                                <td colspan="6" class="px-3 py-3">
+                                                    <form class="vitamin-a-edit-form grid grid-cols-1 sm:grid-cols-3 gap-3 items-end" data-log-id="${row.log_id}">
+                                                        <div class="health-form-field vita-date-field">
+                                                            <span class="health-form-label">Date given</span>
+                                                            <input type="date" name="given_on" value="${escapeHtml(defaultDate || '')}" min="${escapeHtml(birthMin)}" max="${today}" required class="${dateInputClass}">
+                                                        </div>
+                                                        <div class="health-form-field">
+                                                            <span class="health-form-label">Dose received</span>
+                                                            ${doseReceivedSelectHtml(row.notes || '', inputClass)}
+                                                        </div>
+                                                        <div class="flex gap-2">
+                                                            <button type="submit" class="vita-btn vita-btn-primary">Save</button>
+                                                            <button type="button" class="vita-btn vita-btn-ghost vita-cancel-edit" data-panel="vita-desk-edit-${row.due_month}">Cancel</button>
+                                                        </div>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    } else if (canCatchUp) {
+                                        panel = `
+                                            <tr class="vita-edit-row border-b border-border-light dark:border-border-dark bg-background-light/60 dark:bg-background-dark/40" id="vita-desk-add-${row.due_month}">
+                                                <td colspan="6" class="px-3 py-3">
+                                                    <form class="vitamin-a-create-form grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                                                        <div class="health-form-field vita-date-field">
+                                                            <span class="health-form-label">Date given</span>
+                                                            <input type="date" name="given_on" value="${escapeHtml(defaultDate || today)}" min="${escapeHtml(birthMin)}" max="${today}" required class="${dateInputClass}">
+                                                        </div>
+                                                        <div class="health-form-field">
+                                                            <span class="health-form-label">Dose received</span>
+                                                            ${doseReceivedSelectHtml('', inputClass)}
+                                                        </div>
+                                                        <div class="flex gap-2">
+                                                            <button type="submit" class="vita-btn vita-btn-primary">Save</button>
+                                                            <button type="button" class="vita-btn vita-btn-ghost vita-cancel-edit" data-panel="vita-desk-add-${row.due_month}">Cancel</button>
+                                                        </div>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }
+                                    return `
+                                        <tr class="border-b border-border-light dark:border-border-dark">
+                                            <td class="px-3 py-2 text-sm font-semibold">${row.due_month} months</td>
+                                            <td class="px-3 py-2 text-sm">${row.due_date}</td>
+                                            <td class="px-3 py-2 text-sm"><span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${immunizationBadgeClass(row.status === 'given' ? 'given' : row.status === 'missed' ? 'missed' : 'pending')}">${vitaminStatusLabel(row.status)}</span></td>
+                                            <td class="px-3 py-2 text-sm">${row.given_on || '—'}</td>
+                                            <td class="px-3 py-2 text-sm">${row.notes || '—'}</td>
+                                            <td class="px-3 py-2 text-sm">${action}</td>
+                                        </tr>
+                                        ${panel}
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
                     </div>
                 </div>
             `;
 
-            if (eligible) {
-                document.getElementById('vitaminAForm')?.addEventListener('submit', async (event) => {
-                    event.preventDefault();
-                    const form = event.target;
-                    try {
-                        activeHealthData = await postHealth(healthRoute(bnsHealthRoutes.vitaminA, activeChildKey), {
-                            given_on: form.given_on.value,
-                            notes: form.notes.value || null,
-                        });
-                        renderHealthTab();
-                    } catch (error) {
-                        alert(error.message);
-                    }
-                });
-            }
+            bindVitaminAForms();
             return;
         }
 
@@ -1970,6 +2753,36 @@
     document.getElementById('healthModal')?.addEventListener('click', (event) => {
         if (event.target === event.currentTarget) closeHealthModal();
     });
+
+    document.getElementById('dewormingDeleteCancel')?.addEventListener('click', closeDewormingDeleteModal);
+    document.getElementById('dewormingDeleteModal')?.addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) closeDewormingDeleteModal();
+    });
+    document.getElementById('dewormingDeleteConfirm')?.addEventListener('click', async () => {
+        if (!pendingDewormingDeleteId || !activeChildKey) return;
+        const confirmBtn = document.getElementById('dewormingDeleteConfirm');
+        if (confirmBtn) {
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Deleting...';
+        }
+        try {
+            activeHealthData = await deleteHealth(healthRoute(bnsHealthRoutes.dewormingDelete, activeChildKey, pendingDewormingDeleteId));
+            closeDewormingDeleteModal();
+            renderHealthTab();
+        } catch (error) {
+            alert(error.message);
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Delete';
+            }
+        }
+    });
+
+    document.getElementById('immunizationNotifyCancel')?.addEventListener('click', closeImmunizationNotifyModal);
+    document.getElementById('immunizationNotifyModal')?.addEventListener('click', (event) => {
+        if (event.target === event.currentTarget) closeImmunizationNotifyModal();
+    });
+    document.getElementById('immunizationNotifyConfirm')?.addEventListener('click', confirmImmunizationNotify);
 
     document.getElementById('monitoringTableBody')?.addEventListener('click', (event) => {
         const button = event.target.closest('.view-profile-btn');

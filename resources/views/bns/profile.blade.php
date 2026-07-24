@@ -43,7 +43,7 @@
 
 <div id="bnsContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
     <main class="flex-1 flex flex-col min-h-0 px-4 sm:px-5 md:px-6 lg:px-8 pt-4 lg:pt-6 pb-24 lg:pb-6 overflow-y-auto">
-        <div class="w-full max-w-2xl mx-auto space-y-6">
+        <div class="w-full max-w-2xl mx-auto md:max-w-none md:mx-0 space-y-6">
             <div class="flex justify-center">
                 <div class="flex flex-col items-center text-center gap-2">
                     <div class="relative mt-2 lg:mt-4 mb-2 h-28 w-28 overflow-visible">

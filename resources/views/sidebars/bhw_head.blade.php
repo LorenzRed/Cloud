@@ -5,7 +5,9 @@
         $isDashboard = request()->routeIs('bhw-head.main');
         $isBhwWorkers = request()->routeIs('bhw-head.bhw-workers');
         $isReports = request()->routeIs('bhw-head.reports');
-        $isMyProfile = request()->routeIs('bhw-head.my-profile');
+        $isAnnouncements = request()->routeIs('bhw-head.announcements');
+        $isPosts = request()->routeIs('bhw-head.posts');
+        $isMyProfile = request()->routeIs('bhw-head.my-profile') || request()->routeIs('bhw-head.all-records');
         $isSettings = request()->routeIs('bhw-head.settings*');
 
         $activeLinkClass = 'flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-primary/20';
@@ -56,6 +58,14 @@
                 <span class="{{ $isReports ? $activeIconClass : $inactiveIconClass }}" @if ($isReports) style="font-variation-settings: 'FILL' 1;" @endif>assessment</span>
                 <p class="{{ $isReports ? $activeTextClass : $inactiveTextClass }}">Reports</p>
             </a>
+            <a class="{{ $isAnnouncements ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw-head.announcements') }}">
+                <span class="{{ $isAnnouncements ? $activeIconClass : $inactiveIconClass }}" @if ($isAnnouncements) style="font-variation-settings: 'FILL' 1;" @endif>campaign</span>
+                <p class="{{ $isAnnouncements ? $activeTextClass : $inactiveTextClass }}">Announcements</p>
+            </a>
+            <a class="{{ $isPosts ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw-head.posts') }}">
+                <span class="{{ $isPosts ? $activeIconClass : $inactiveIconClass }}" @if ($isPosts) style="font-variation-settings: 'FILL' 1;" @endif>sticky_note_2</span>
+                <p class="{{ $isPosts ? $activeTextClass : $inactiveTextClass }}">Posts</p>
+            </a>
         </div>
         <div class="flex flex-col gap-4">
             <a href="{{ route('bhw-head.my-profile') }}"
@@ -63,13 +73,6 @@
                 <span class="{{ ($isMyProfile || $isSettings) ? $activeIconClass : 'material-symbols-outlined' }}" @if ($isMyProfile || $isSettings) style="font-variation-settings: 'FILL' 1;" @endif>person</span>
                 <p class="{{ ($isMyProfile || $isSettings) ? $activeTextClass : 'text-sm font-medium' }}">Profile</p>
             </a>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="w-full nav-item flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors duration-200 cursor-pointer text-left">
-                    <span class="material-symbols-outlined">logout</span>
-                    <p class="text-sm font-medium">Logout</p>
-                </button>
-            </form>
         </div>
     </div>
 </aside>

@@ -105,8 +105,8 @@
                 padding: 0 !important;
             }
             .users-messenger-shell {
-                min-height: 100dvh;
-                min-height: 100svh;
+                min-height: 0;
+                height: 100%;
             }
             .users-messenger-header {
                 padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
@@ -115,7 +115,8 @@
                 padding-bottom: calc(0.625rem + env(safe-area-inset-bottom, 0px)) !important;
             }
             .users-messenger-empty {
-                min-height: calc(100dvh - 3.5rem);
+                min-height: 0;
+                height: 100%;
                 padding-bottom: env(safe-area-inset-bottom, 0px);
             }
         }
@@ -191,15 +192,25 @@
 @php
     $purokLabel = $user->purok?->name ?? $user->residentRequest?->purok?->name ?? 'Your purok';
     $userInitials = collect(explode(' ', $user->full_name ?: $user->name))->filter()->take(2)->map(fn ($p) => strtoupper(substr($p, 0, 1)))->join('') ?: 'Y';
+
+    $previousUrl = url()->previous();
+    $currentUrl = url()->current();
+    $bhwChatBackUrl = route('users.main');
+    if ($previousUrl && $previousUrl !== $currentUrl) {
+        $previousPath = (string) (parse_url($previousUrl, PHP_URL_PATH) ?? '');
+        if (str_starts_with($previousPath, '/users') && ! str_contains($previousPath, '/bhw-chat')) {
+            $bhwChatBackUrl = $previousUrl;
+        }
+    }
 @endphp
 @include('sidebars.users')
 
-<div id="usersContent" class="flex h-[100dvh] h-[100svh] lg:h-screen flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] transition-all duration-200 overflow-hidden">
+<div id="usersContent" data-chat-keyboard-shell class="flex h-[100dvh] h-[100svh] lg:h-screen flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] transition-all duration-200 overflow-hidden">
     <main class="users-bhw-chat-main flex-1 overflow-hidden flex flex-col min-h-0">
         @if (! $bhw)
             <section class="users-messenger-empty relative flex-1 flex flex-col min-h-0">
                 <header class="users-messenger-header shrink-0 flex items-center gap-2.5 px-2 lg:px-4 pb-2.5 lg:pb-3 bg-white dark:bg-gray-900 border-b border-[#e7f3ec] dark:border-gray-800">
-                    <a href="{{ route('users.profile') }}" class="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#0e1b13] dark:text-white hover:bg-[#f0f4f1] dark:hover:bg-gray-800 transition shrink-0" aria-label="Back to profile">
+                    <a href="{{ $bhwChatBackUrl }}" class="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#0e1b13] dark:text-white hover:bg-[#f0f4f1] dark:hover:bg-gray-800 transition shrink-0" aria-label="Go back">
                         <span class="material-symbols-outlined text-[24px]">arrow_back</span>
                     </a>
                     <div class="min-w-0">
@@ -216,7 +227,7 @@
         @else
             <section class="users-messenger-shell flex-1 min-h-0 flex flex-col overflow-hidden">
                 <header class="users-messenger-header shrink-0 flex items-center gap-2.5 px-2 lg:px-5 pb-2.5 lg:py-3 bg-white dark:bg-gray-900 border-b border-[#e7f3ec] dark:border-gray-800">
-                    <a href="{{ route('users.profile') }}" class="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#0e1b13] dark:text-white hover:bg-[#f0f4f1] dark:hover:bg-gray-800 transition shrink-0" aria-label="Back to profile">
+                    <a href="{{ $bhwChatBackUrl }}" class="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#0e1b13] dark:text-white hover:bg-[#f0f4f1] dark:hover:bg-gray-800 transition shrink-0" aria-label="Go back">
                         <span class="material-symbols-outlined text-[24px]">arrow_back</span>
                     </a>
                     <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -310,5 +321,6 @@
         });
     })();
 </script>
+@include('partials.mobile-chat-keyboard')
 </body>
 </html>

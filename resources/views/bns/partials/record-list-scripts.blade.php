@@ -13,6 +13,7 @@
     const recordRows = Array.from(document.querySelectorAll('.record-row'));
 
     const csvFilename = @json($csvFilename ?? 'records.csv');
+    const csvTitle = @json($csvTitle ?? '');
     const csvHeaders = @json($csvHeaders ?? []);
     const csvKeys = @json($csvKeys ?? []);
     const hasDateFilter = @json($hasDateFilter ?? false);
@@ -62,12 +63,19 @@
 
         let matchesDate = true;
         if (hasDateFilter && (dateFrom || dateTo)) {
-            const rowDate = row.dataset.date || '';
-            if (!rowDate) {
+            const rowDates = (row.dataset.dates || row.dataset.date || '')
+                .split(',')
+                .map((value) => value.trim())
+                .filter(Boolean);
+
+            if (!rowDates.length) {
                 matchesDate = false;
             } else {
-                if (dateFrom && rowDate < dateFrom) matchesDate = false;
-                if (dateTo && rowDate > dateTo) matchesDate = false;
+                matchesDate = rowDates.some((rowDate) => {
+                    if (dateFrom && rowDate < dateFrom) return false;
+                    if (dateTo && rowDate > dateTo) return false;
+                    return true;
+                });
             }
         }
 
@@ -79,6 +87,47 @@
             row.classList.remove('is-expanded');
             row.querySelector('.record-mobile-toggle')?.setAttribute('aria-expanded', 'false');
         });
+    }
+
+    function showRecordToast(message, tone = 'info') {
+        let toast = document.getElementById('recordListToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'recordListToast';
+            toast.className = 'fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-[80] max-w-[min(92vw,24rem)] px-4 py-2.5 rounded-lg text-white text-sm font-semibold shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 text-center';
+            document.body.appendChild(toast);
+        }
+
+        toast.textContent = message;
+        toast.style.backgroundColor = tone === 'error' ? '#D0021B' : (tone === 'success' ? '#10B981' : '#4A90E2');
+        toast.classList.remove('opacity-0');
+        window.clearTimeout(showRecordToast._timer);
+        showRecordToast._timer = window.setTimeout(() => toast.classList.add('opacity-0'), 2800);
+    }
+
+    function hasCompleteDateRange() {
+        return Boolean((dateFromFilter?.value || '').trim() && (dateToFilter?.value || '').trim());
+    }
+
+    function updateDownloadFilteredState() {
+        if (!downloadFilteredBtn) return;
+
+        if (hasDateFilter) {
+            const enabled = hasCompleteDateRange();
+            downloadFilteredBtn.disabled = !enabled;
+            downloadFilteredBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+            downloadFilteredBtn.title = enabled
+                ? 'Download records for the selected receive date range'
+                : 'Select From and To receive dates to enable';
+            return;
+        }
+
+        const enabled = countActiveFilters() > 0;
+        downloadFilteredBtn.disabled = !enabled;
+        downloadFilteredBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+        downloadFilteredBtn.title = enabled
+            ? 'Download records for the current filters'
+            : 'Apply at least one filter to enable';
     }
 
     function filterRecords() {
@@ -99,6 +148,7 @@
             statVisible.textContent = String(visibleCount);
         }
         updateFilterBadge();
+        updateDownloadFilteredState();
     }
 
     function clearFilters() {
@@ -117,23 +167,65 @@
         return text;
     }
 
+    function entryMatchesDateFilter(entry) {
+        if (!hasDateFilter) return true;
+
+        const dateFrom = dateFromFilter?.value || '';
+        const dateTo = dateToFilter?.value || '';
+        if (!dateFrom && !dateTo) return true;
+
+        const entryDate = String(entry?.given_on || '').trim();
+        if (!entryDate) return false;
+        if (dateFrom && entryDate < dateFrom) return false;
+        if (dateTo && entryDate > dateTo) return false;
+        return true;
+    }
+
     function downloadFilteredCsv() {
-        const visibleRows = recordRows.filter((row) => !row.classList.contains('hidden'));
-        if (!visibleRows.length) {
-            alert('No records to download for the current filters.');
+        if (hasDateFilter && !hasCompleteDateRange()) {
+            updateDownloadFilteredState();
             return;
         }
 
-        const lines = [csvHeaders.map(escapeCsv).join(',')];
+        if (!hasDateFilter && countActiveFilters() === 0) {
+            updateDownloadFilteredState();
+            return;
+        }
+
+        const visibleRows = recordRows.filter((row) => !row.classList.contains('hidden'));
+        if (!visibleRows.length) {
+            showRecordToast('No records to download for the current filters.', 'error');
+            return;
+        }
+
+        const lines = [];
+        if (csvTitle) {
+            lines.push(escapeCsv(csvTitle));
+            lines.push('');
+        }
+        lines.push(csvHeaders.map(escapeCsv).join(','));
+
+        let exportedCount = 0;
         visibleRows.forEach((row) => {
-            let data = {};
+            let payload = null;
             try {
-                data = JSON.parse(row.dataset.csv || '{}');
+                payload = JSON.parse(row.dataset.csv || 'null');
             } catch (error) {
                 return;
             }
-            lines.push(csvKeys.map((key) => escapeCsv(data[key] ?? '')).join(','));
+
+            const entries = Array.isArray(payload) ? payload : (payload && typeof payload === 'object' ? [payload] : []);
+            entries.forEach((data) => {
+                if (!entryMatchesDateFilter(data)) return;
+                lines.push(csvKeys.map((key) => escapeCsv(data[key] ?? '')).join(','));
+                exportedCount += 1;
+            });
         });
+
+        if (exportedCount === 0) {
+            showRecordToast('No records to download for the current filters.', 'error');
+            return;
+        }
 
         const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -142,6 +234,7 @@
         link.download = csvFilename.replace('.csv', '-filtered.csv');
         link.click();
         URL.revokeObjectURL(url);
+        showRecordToast('Filtered records downloaded.', 'success');
     }
 
     recordSearch?.addEventListener('input', filterRecords);

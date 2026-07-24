@@ -245,14 +245,27 @@
             }
         }
 
-        $consultationCalendarItems = ($upcomingConsultations ?? collect())->map(static function ($consultation) {
-            return [
-                'date' => $consultation->scheduled_at?->format('Y-m-d'),
-                'checkup' => $consultation->medical_checkup ?: 'General Consultation',
-                'time' => $consultation->scheduled_at?->format('h:i A'),
-                'note' => $consultation->note,
-            ];
-        })->values()->all();
+        $consultationCalendarItems = collect($upcomingConsultations ?? [])
+            ->map(static function ($consultation) {
+                return [
+                    'date' => $consultation->scheduled_at?->format('Y-m-d'),
+                    'checkup' => $consultation->medical_checkup ?: 'General Consultation',
+                    'time' => $consultation->scheduled_at?->format('h:i A'),
+                    'note' => $consultation->note,
+                    'type' => 'consultation',
+                ];
+            })
+            ->merge(collect($upcomingImmunizations ?? [])->map(static function ($event) {
+                return [
+                    'date' => $event->event_date?->format('Y-m-d'),
+                    'checkup' => $event->title ?: 'Immunization consultation',
+                    'time' => null,
+                    'note' => $event->description,
+                    'type' => 'immunization',
+                ];
+            }))
+            ->values()
+            ->all();
 
         $registrationBanner = match ($status) {
             'rejected' => [
@@ -329,7 +342,7 @@
                                 </a>
                             </div>
                             <div class="flex items-center gap-2">
-                                <a href="{{ route('users.profile.chat-support') }}" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open messages">
+                                <a href="{{ route('users.profile.bhw-chat') }}" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open BHW chat">
                                     <span class="material-symbols-outlined text-[18px]">message</span>
                                 </a>
                                 <a href="{{ route('users.notifications') }}" class="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#d0e7f0] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Notifications">
@@ -382,6 +395,7 @@
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Weather</p>
                                 <h3 class="font-bold mt-1 text-[#0e1b13] dark:text-white">At your registered location</h3>
+                                <p id="weatherClock" class="mt-1 text-sm font-semibold text-[#1f7f4e] dark:text-[#8cefb5]" aria-live="polite">—</p>
                             </div>
                             <span class="material-symbols-outlined text-[28px] text-[#1f7f4e] dark:text-[#8cefb5]" id="weatherIcon">partly_cloudy_day</span>
                         </div>
@@ -392,7 +406,11 @@
                                 <div class="bk-skeleton bk-skeleton-line w-28"></div>
                             </div>
                             <div class="bk-skeleton bk-skeleton-line mt-3 w-2/3 max-w-xs"></div>
-                            <div class="mt-3 grid grid-cols-2 gap-2">
+                            <div class="mt-3 grid grid-cols-3 gap-2">
+                                <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-3 py-2">
+                                    <div class="bk-skeleton bk-skeleton-line w-12 mb-2"></div>
+                                    <div class="bk-skeleton bk-skeleton-line w-10 h-4"></div>
+                                </div>
                                 <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-3 py-2">
                                     <div class="bk-skeleton bk-skeleton-line w-16 mb-2"></div>
                                     <div class="bk-skeleton bk-skeleton-line w-10 h-4"></div>
@@ -410,7 +428,11 @@
                                 <p id="weatherCondition" class="text-sm font-semibold text-[#1f7f4e] dark:text-[#8cefb5]">—</p>
                             </div>
                             <p id="weatherPlace" class="mt-2 text-sm text-[#376f50] dark:text-gray-300">—</p>
-                            <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-[#4e976b] dark:text-gray-400">
+                            <div class="mt-3 grid grid-cols-3 gap-2 text-xs text-[#4e976b] dark:text-gray-400">
+                                <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-3 py-2">
+                                    <p class="uppercase tracking-wide">Time</p>
+                                    <p id="weatherTime" class="mt-1 font-semibold text-[#0e1b13] dark:text-white tabular-nums">—</p>
+                                </div>
                                 <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-900/40 px-3 py-2">
                                     <p class="uppercase tracking-wide">Humidity</p>
                                     <p id="weatherHumidity" class="mt-1 font-semibold text-[#0e1b13] dark:text-white">—</p>
@@ -480,9 +502,67 @@
                                 contentEl?.classList.add('hidden');
                             }
 
+                            const clockEl = document.getElementById('weatherClock');
+                            const timeEl = document.getElementById('weatherTime');
+                            let weatherTimeZone = 'Asia/Manila';
+
+                            function formatWeatherClock(date = new Date()) {
+                                try {
+                                    return new Intl.DateTimeFormat('en-PH', {
+                                        timeZone: weatherTimeZone,
+                                        weekday: 'short',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true,
+                                    }).format(date);
+                                } catch (error) {
+                                    return date.toLocaleString('en-PH', {
+                                        weekday: 'short',
+                                        month: 'short',
+                                        day: 'numeric',
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true,
+                                    });
+                                }
+                            }
+
+                            function formatWeatherTime(date = new Date()) {
+                                try {
+                                    return new Intl.DateTimeFormat('en-PH', {
+                                        timeZone: weatherTimeZone,
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true,
+                                    }).format(date);
+                                } catch (error) {
+                                    return date.toLocaleTimeString('en-PH', {
+                                        hour: 'numeric',
+                                        minute: '2-digit',
+                                        hour12: true,
+                                    });
+                                }
+                            }
+
+                            function tickWeatherClock() {
+                                const now = new Date();
+                                if (clockEl) {
+                                    clockEl.textContent = formatWeatherClock(now);
+                                }
+                                if (timeEl && !contentEl?.classList.contains('hidden')) {
+                                    timeEl.textContent = formatWeatherTime(now);
+                                }
+                            }
+
                             function renderWeather(payload) {
                                 const code = Number(payload.weatherCode ?? 0);
                                 const meta = weatherCodeMap[code] || { label: 'Weather update', icon: 'partly_cloudy_day' };
+
+                                if (payload.timezone) {
+                                    weatherTimeZone = payload.timezone;
+                                }
 
                                 document.getElementById('weatherTemp').textContent = `${Math.round(payload.temperature)}°C`;
                                 document.getElementById('weatherCondition').textContent = meta.label;
@@ -496,10 +576,11 @@
                                 loadingEl?.classList.add('hidden');
                                 errorEl?.classList.add('hidden');
                                 contentEl?.classList.remove('hidden');
+                                tickWeatherClock();
                             }
 
                             async function fetchWeather(lat, lon) {
-                                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`;
+                                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=Asia%2FManila`;
                                 const response = await fetch(url);
                                 if (!response.ok) {
                                     throw new Error('Weather service unavailable.');
@@ -513,11 +594,14 @@
                                     wind: current.wind_speed_10m ?? 0,
                                     weatherCode: current.weather_code ?? 0,
                                     place: placeLabel,
+                                    timezone: data.timezone || 'Asia/Manila',
+                                    observationTime: current.time || null,
                                 });
                             }
 
                             async function start() {
                                 setLoading();
+                                tickWeatherClock();
 
                                 try {
                                     if (!hasSavedCoords) {
@@ -530,6 +614,8 @@
                                 }
                             }
 
+                            tickWeatherClock();
+                            setInterval(tickWeatherClock, 30000);
                             start();
                         })();
                     </script>
@@ -710,28 +796,44 @@
                                     @endforeach
 
                                     @foreach ($carouselAnnouncements as $announcement)
-                                    <div class="flex-shrink-0 w-full cursor-pointer">
-                                        <div class="overflow-hidden rounded-xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm h-full flex flex-col">
-                                            <div class="flex h-36 md:h-44 w-full items-center justify-center bg-[#f2fbf6] dark:bg-gray-700/40 text-[#4e976b] dark:text-gray-400">
+                                    @php
+                                        $isAnnouncementExpired = $announcement->isExpired();
+                                    @endphp
+                                    <a href="{{ route('users.announcements.show', $announcement) }}" class="flex-shrink-0 w-full block cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-xl">
+                                        <div class="overflow-hidden rounded-xl border {{ $isAnnouncementExpired ? 'border-gray-200 dark:border-gray-700' : 'border-[#d0e7d9] dark:border-gray-700' }} bg-white dark:bg-gray-800 shadow-sm h-full flex flex-col transition hover:border-primary/40 hover:shadow-md active:scale-[0.99]">
+                                            <div class="relative flex h-36 md:h-44 w-full items-center justify-center {{ $isAnnouncementExpired ? 'bg-gray-100 dark:bg-gray-700/40 text-gray-400' : 'bg-[#f2fbf6] dark:bg-gray-700/40 text-[#4e976b] dark:text-gray-400' }}">
                                                 <span class="material-symbols-outlined text-5xl">campaign</span>
+                                                @if ($isAnnouncementExpired)
+                                                    <span class="absolute top-3 left-3 inline-flex items-center rounded-full bg-gray-800/90 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white dark:bg-gray-900/90">
+                                                        Expired
+                                                    </span>
+                                                @endif
                                             </div>
 
                                             <div class="p-4 md:p-5 flex flex-col flex-1">
-                                                <div class="flex items-start justify-between mb-3">
-                                                    <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-primary/15 text-[#1f7f4e] dark:bg-primary/30 dark:text-[#8cefb5]">Announcement</span>
-                                                    <span class="text-2xl">📢</span>
+                                                <div class="flex items-start justify-between mb-3 gap-2">
+                                                    <div class="flex flex-wrap items-center gap-2 min-w-0">
+                                                        <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold {{ $isAnnouncementExpired ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' : 'bg-primary/15 text-[#1f7f4e] dark:bg-primary/30 dark:text-[#8cefb5]' }}">Announcement</span>
+                                                        @if ($isAnnouncementExpired)
+                                                            <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200">Expired</span>
+                                                        @endif
+                                                    </div>
+                                                    <span class="inline-flex items-center gap-0.5 text-xs font-semibold {{ $isAnnouncementExpired ? 'text-gray-500' : 'text-[#1f7f4e]' }} shrink-0">
+                                                        {{ $isAnnouncementExpired ? 'View' : 'Read' }}
+                                                        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                                                    </span>
                                                 </div>
 
                                                 <h4 class="font-bold text-lg mb-2 text-[#0e1b13] dark:text-white">{{ $announcement->title ?: 'Barangay Announcement' }}</h4>
 
                                                 @if ($announcement->description)
-                                                <p class="text-sm text-[#376f50] dark:text-gray-300 mb-3 line-clamp-2 flex-grow">{{ $announcement->description }}</p>
+                                                <p class="text-sm text-black dark:text-gray-200 mb-3 line-clamp-2 flex-grow">{{ $announcement->description }}</p>
                                                 @endif
 
                                                 <div class="space-y-2 text-sm text-[#4e976b] dark:text-gray-400">
                                                     <div class="flex items-center gap-2">
                                                         <span class="material-symbols-outlined text-base">calendar_today</span>
-                                                        <span>{{ $announcement->expiresAt()?->format('M d, Y · h:i A') ?? $announcement->event_date?->format('M d, Y') ?? 'TBA' }}</span>
+                                                        <span>{{ $isAnnouncementExpired ? 'Expired' : 'Expires' }} {{ $announcement->expiresAt()?->format('M d, Y · h:i A') ?? $announcement->event_date?->format('M d, Y') ?? 'TBA' }}</span>
                                                     </div>
                                                     <div class="flex items-center gap-2">
                                                         <span class="material-symbols-outlined text-base">schedule</span>
@@ -740,7 +842,7 @@
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    </a>
                                     @endforeach
                                 </div>
                             </div>
@@ -764,14 +866,14 @@
                             <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/20 text-[#0e1b13] dark:text-white">This Month</span>
                         </div>
                         <div class="space-y-3">
-                            @forelse (($upcomingConsultations ?? collect()) as $consultation)
+                            @forelse (($upcomingSchedule ?? collect()) as $item)
                                 <div class="flex items-start gap-3 p-3 rounded-lg bg-[#f2fbf6] dark:bg-gray-700/50">
-                                    <span class="material-symbols-outlined text-primary">event</span>
+                                    <span class="material-symbols-outlined text-primary">{{ ($item['type'] ?? '') === 'immunization' ? 'vaccines' : 'event' }}</span>
                                     <div class="flex-1">
-                                        <p class="font-semibold">{{ $consultation->medical_checkup ?: 'General Consultation' }}</p>
-                                        <p class="text-sm text-[#4e976b] dark:text-gray-400">{{ $consultation->scheduled_at?->format('M d, Y · h:i A') }}</p>
-                                        @if ($consultation->note)
-                                            <p class="text-xs text-[#4e976b] dark:text-gray-400 mt-1">{{ $consultation->note }}</p>
+                                        <p class="font-semibold">{{ $item['title'] ?? 'Schedule' }}</p>
+                                        <p class="text-sm text-[#4e976b] dark:text-gray-400">{{ $item['when_label'] ?? '—' }}</p>
+                                        @if (! empty($item['note']))
+                                            <p class="text-xs text-[#4e976b] dark:text-gray-400 mt-1">{{ $item['note'] }}</p>
                                         @endif
                                     </div>
                                 </div>
@@ -827,36 +929,108 @@
                     </div>
 
                     <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-5 shadow-sm border border-[#e7f3ec] dark:border-gray-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-bold">Transaction History</h3>
-                            <a href="{{ route('users.transaction-records') }}" class="text-xs font-semibold text-[#1f7f4e] hover:underline dark:text-[#8cefb5]">View all</a>
+                        <div class="flex items-center justify-between mb-4 gap-3">
+                            <div>
+                                <h3 class="text-lg font-bold tracking-tight">Transaction History</h3>
+                                <p class="text-xs text-[#4e976b] dark:text-gray-400 mt-0.5">Recent medicine records</p>
+                            </div>
+                            <a href="{{ route('users.transaction-records') }}" class="inline-flex items-center gap-0.5 text-xs font-semibold text-[#1f7f4e] dark:text-[#8cefb5] shrink-0 group">
+                                <span class="group-hover:underline">View all</span>
+                                <span class="material-symbols-outlined text-[16px] no-underline">chevron_right</span>
+                            </a>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div class="space-y-2.5">
                             @forelse (($transactionHistory ?? collect()) as $transaction)
-                                <div class="p-3 rounded-lg border border-[#d0e7d9] dark:border-gray-700">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div class="min-w-0">
-                                            <p class="text-[#4e976b] dark:text-gray-400">{{ $transaction->transaction_date?->format('M d, Y') ?: 'No date' }}</p>
-                                            <p class="font-semibold mt-1 truncate">{{ $transaction->recipientLabel() }}</p>
+                                @php
+                                    $homeMeds = $transaction->medicationEntries();
+                                @endphp
+                                <a href="{{ route('users.transaction-records') }}" class="flex items-start gap-3 rounded-xl border border-[#e7f3ec] dark:border-gray-700 bg-[#fbfdfc] dark:bg-gray-800/80 p-3 transition active:scale-[0.99] hover:border-primary/40">
+                                    <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
+                                        <span class="material-symbols-outlined text-[20px]">medication</span>
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-bold text-[#0e1b13] dark:text-white leading-snug">{{ $transaction->recipientLabel() }}</p>
+                                                <p class="text-[11px] text-[#4e976b] dark:text-gray-400 mt-0.5">
+                                                    {{ $transaction->transaction_date?->format('M d, Y') ?: 'No date' }}
+                                                    <span class="mx-1 text-[#d0e7d9] dark:text-gray-600">·</span>
+                                                    {{ $transaction->familyRoleLabel() }}
+                                                </p>
+                                            </div>
+                                            @if (filled($transaction->gender))
+                                                <span class="inline-flex items-center rounded-lg bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-[#1f7f4e] shrink-0">{{ $transaction->gender }}</span>
+                                            @endif
                                         </div>
-                                        @if (filled($transaction->gender))
-                                            <span class="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-semibold text-[#1f7f4e] shrink-0">{{ $transaction->gender }}</span>
+                                        @if ($homeMeds !== [])
+                                            <p class="mt-1.5 text-xs text-[#376f50] dark:text-gray-300 line-clamp-2">
+                                                {{ collect($homeMeds)->map(fn ($med) => $med['label'].' · '.$med['pcs'].' pc'.($med['pcs'] === 1 ? '' : 's'))->implode(', ') }}
+                                            </p>
+                                        @else
+                                            <p class="mt-1.5 text-xs text-[#4e976b] dark:text-gray-400">No medicines listed</p>
                                         @endif
                                     </div>
-                                    @if ($transaction->medicationEntries() !== [])
-                                        <p class="mt-2 text-[#376f50] dark:text-gray-300 line-clamp-2">
-                                            {{ collect($transaction->medicationEntries())->map(fn ($med) => $med['label'].' '.$med['pcs'].' pc'.($med['pcs'] === 1 ? '' : 's'))->implode(', ') }}
-                                        </p>
-                                    @else
-                                        <p class="mt-2 text-[#4e976b] dark:text-gray-400">No medicines listed.</p>
-                                    @endif
-                                    @if ($transaction->inferredConditions() !== [])
-                                        <p class="mt-2 text-xs font-semibold text-[#1f7f4e] dark:text-[#8cefb5]">{{ implode(' · ', $transaction->inferredConditions()) }}</p>
-                                    @endif
-                                </div>
+                                </a>
                             @empty
-                                <div class="sm:col-span-2 p-3 rounded-lg border border-[#d0e7d9] dark:border-gray-700 text-[#4e976b] dark:text-gray-400">
-                                    No medicine transactions yet.
+                                <div class="rounded-xl border border-dashed border-[#d0e7d9] dark:border-gray-700 px-4 py-8 text-center">
+                                    <span class="material-symbols-outlined text-3xl text-[#4e976b] dark:text-gray-400">medication</span>
+                                    <p class="mt-2 text-sm text-[#4e976b] dark:text-gray-400">No medicine transactions yet.</p>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-5 shadow-sm border border-[#e7f3ec] dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-4 gap-3">
+                            <div>
+                                <h3 class="text-lg font-bold tracking-tight">Maintenance History</h3>
+                                <p class="text-xs text-[#4e976b] dark:text-gray-400 mt-0.5">Recent monitoring records</p>
+                            </div>
+                            <a href="{{ route('users.maintenance-records') }}" class="inline-flex items-center gap-0.5 text-xs font-semibold text-[#1f7f4e] dark:text-[#8cefb5] shrink-0 group">
+                                <span class="group-hover:underline">View all</span>
+                                <span class="material-symbols-outlined text-[16px] no-underline">chevron_right</span>
+                            </a>
+                        </div>
+                        <div class="space-y-2.5">
+                            @forelse (($maintenanceHistory ?? collect()) as $monitoringCase)
+                                @php
+                                    $latestVisit = $monitoringCase->visits->first();
+                                    $typeIcon = $monitoringCase->isPregnant()
+                                        ? 'pregnant_woman'
+                                        : ($monitoringCase->isSenior() ? 'elderly' : 'health_and_safety');
+                                    $visitCount = (int) ($monitoringCase->visits_count ?? $monitoringCase->visits->count());
+                                @endphp
+                                <a href="{{ route('users.maintenance-records') }}" class="flex items-start gap-3 rounded-xl border border-[#e7f3ec] dark:border-gray-700 bg-[#fbfdfc] dark:bg-gray-800/80 p-3 transition active:scale-[0.99] hover:border-primary/40">
+                                    <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
+                                        <span class="material-symbols-outlined text-[20px]">{{ $typeIcon }}</span>
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-bold text-[#0e1b13] dark:text-white leading-snug">{{ $monitoringCase->member_name ?: 'Household member' }}</p>
+                                                <p class="text-[11px] text-[#4e976b] dark:text-gray-400 mt-0.5">
+                                                    {{ $monitoringCase->typeLabel() }}
+                                                    <span class="mx-1 text-[#d0e7d9] dark:text-gray-600">·</span>
+                                                    {{ $visitCount }} visit{{ $visitCount === 1 ? '' : 's' }}
+                                                </p>
+                                            </div>
+                                            <span class="inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold shrink-0 {{ $monitoringCase->is_active ? 'bg-primary/15 text-[#1f7f4e]' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}">
+                                                {{ $monitoringCase->is_active ? 'Active' : 'Done' }}
+                                            </span>
+                                        </div>
+                                        @if ($latestVisit)
+                                            <p class="mt-1.5 text-xs text-[#376f50] dark:text-gray-300">
+                                                {{ $monitoringCase->is_active ? 'Latest visit' : 'Last visit' }} {{ $latestVisit->visit_date?->format('M d, Y') ?: '—' }}
+                                            </p>
+                                        @else
+                                            <p class="mt-1.5 text-xs text-[#4e976b] dark:text-gray-400">No visits recorded yet</p>
+                                        @endif
+                                    </div>
+                                </a>
+                            @empty
+                                <div class="rounded-xl border border-dashed border-[#d0e7d9] dark:border-gray-700 px-4 py-8 text-center">
+                                    <span class="material-symbols-outlined text-3xl text-[#4e976b] dark:text-gray-400">health_and_safety</span>
+                                    <p class="mt-2 text-sm text-[#4e976b] dark:text-gray-400">No maintenance records yet.</p>
                                 </div>
                             @endforelse
                         </div>
@@ -866,6 +1040,7 @@
         </main>
 
         @include('partials.users-mobile-nav')
+        @include('partials.users-chat-support-fab')
 
         </div>
     </div>
@@ -978,14 +1153,20 @@
                             if (dayConsultations && dayConsultations.length > 0) {
                                 const pin = document.createElement('span');
                                 const isMobile = window.matchMedia('(max-width: 1023px)').matches;
+                                const hasImmunization = dayConsultations.some((c) => c.type === 'immunization');
                                 if (isMobile) {
                                     pin.className = 'absolute right-1 top-1 z-10 w-3 h-3 translate-x-1/2 -translate-y-1/2 rounded-full bg-red-500 border border-red-600 shadow-sm';
                                     pin.setAttribute('aria-hidden', 'true');
                                 } else {
                                     pin.className = 'absolute right-6 top-1 z-10 inline-flex translate-x-1/2 -translate-y-1/2 items-center rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold text-black border border-gray-300 cursor-pointer select-none shadow-sm';
-                                    pin.textContent = 'Checkup';
+                                    pin.textContent = hasImmunization && dayConsultations.every((c) => c.type === 'immunization')
+                                        ? 'Immunization'
+                                        : 'Checkup';
                                 }
-                                pin.title = dayConsultations.map(c => `${c.checkup} at ${c.time}`).join('\n');
+                                pin.title = dayConsultations.map((c) => {
+                                    const when = c.time ? ` at ${c.time}` : '';
+                                    return `${c.checkup}${when}`;
+                                }).join('\n');
                                 
                                 // Tooltip popup on hover/click
                                 const showTooltip = () => {
@@ -999,7 +1180,10 @@
                                         const noteHtml = c.note
                                             ? `<br><span class="opacity-75">${escapeHtml(c.note)}</span>`
                                             : '';
-                                        return `<div>${escapeHtml(c.checkup)}<br><span class="text-[10px]">${escapeHtml(c.time)}</span>${noteHtml}</div>`;
+                                        const timeLabel = c.time
+                                            ? escapeHtml(c.time)
+                                            : 'Date only';
+                                        return `<div>${escapeHtml(c.checkup)}<br><span class="text-[10px]">${timeLabel}</span>${noteHtml}</div>`;
                                     }).join('');
                                     btn.parentNode.style.position = 'relative';
                                     btn.appendChild(tooltip);

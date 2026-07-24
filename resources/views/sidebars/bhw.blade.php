@@ -8,7 +8,7 @@
         $isReports = request()->routeIs('bhw.reports');
         $isAnnouncements = request()->routeIs('bhw.announcements');
         $isPosts = request()->routeIs('bhw.posts');
-        $isMyProfile = request()->routeIs('bhw.my-profile');
+        $isMyProfile = request()->routeIs('bhw.my-profile') || request()->routeIs('bhw.unread-chats') || request()->routeIs('bhw.all-records');
         $isSettings = request()->routeIs('bhw.settings*');
 
         $activeLinkClass = 'flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-primary/20';
@@ -54,23 +54,15 @@
             <a class="{{ $isResidents ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.residents') }}">
                 <span class="{{ $isResidents ? $activeIconClass : $inactiveIconClass }}" @if ($isResidents) style="font-variation-settings: 'FILL' 1;" @endif>groups</span>
                 <p class="{{ $isResidents ? $activeTextClass : $inactiveTextClass }}">Residents</p>
-                @if (($residentMessageUnreadCount ?? 0) > 0)
-                    <span class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">New</span>
-                @endif
             </a>
             <a class="{{ $isRequests ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.requests') }}">
                 <span class="{{ $isRequests ? $activeIconClass : $inactiveIconClass }}" @if ($isRequests) style="font-variation-settings: 'FILL' 1;" @endif>group_add</span>
                 <p class="{{ $isRequests ? $activeTextClass : $inactiveTextClass }}">Requests</p>
-                <div class="ml-auto flex items-center gap-1">
-                    @if (($requestMessageUnreadCount ?? 0) > 0)
-                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200">New</span>
-                    @endif
-                    @if (($pendingRequestCount ?? 0) > 0)
-                        <span class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-red text-white text-[10px] font-bold leading-none">
-                            {{ $pendingRequestCount }}
-                        </span>
-                    @endif
-                </div>
+                @if (($pendingRequestCount ?? 0) > 0)
+                    <span class="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-accent-red text-white text-[10px] font-bold leading-none" aria-label="{{ $pendingRequestCount }} pending request{{ $pendingRequestCount === 1 ? '' : 's' }}">
+                        {{ $pendingRequestCount > 99 ? '99+' : $pendingRequestCount }}
+                    </span>
+                @endif
             </a>
             <a class="{{ $isReports ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bhw.reports') }}">
                 <span class="{{ $isReports ? $activeIconClass : $inactiveIconClass }}" @if ($isReports) style="font-variation-settings: 'FILL' 1;" @endif>assessment</span>
@@ -92,6 +84,14 @@
                 aria-label="Open profile">
                 <span class="{{ ($isMyProfile || $isSettings) ? $activeIconClass : 'material-symbols-outlined' }}" @if ($isMyProfile || $isSettings) style="font-variation-settings: 'FILL' 1;" @endif>person</span>
                 <p class="{{ ($isMyProfile || $isSettings) ? $activeTextClass : 'text-sm font-medium' }}">Profile</p>
+                @php
+                    $profileUnreadTotal = (int) ($profileUnreadChatTotal ?? 0);
+                @endphp
+                @if ($profileUnreadTotal > 0)
+                    <span class="ml-auto inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-accent-red px-1.5 text-[10px] font-bold leading-none text-white" aria-label="{{ $profileUnreadTotal }} unread chat{{ $profileUnreadTotal === 1 ? '' : 's' }}">
+                        {{ $profileUnreadTotal > 99 ? '99+' : $profileUnreadTotal }}
+                    </span>
+                @endif
             </a>
         </div>
     </div>

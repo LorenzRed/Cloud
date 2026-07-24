@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     @include('partials.users-viewport')
-    <title>Bantay Kalusugan - Transaction Records</title>
+    <title>Bantay Kalusugan - Transaction History</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -33,6 +33,23 @@
                 justify-content: center;
             }
         }
+
+        .philhealth-blur {
+            filter: blur(5px);
+            transition: filter 0.2s ease;
+            cursor: default;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .philhealth-blur:hover,
+            .philhealth-blur:focus-visible {
+                filter: blur(0);
+            }
+        }
+
+        .philhealth-blur.is-revealed {
+            filter: blur(0);
+        }
     </style>
     <script>
         tailwind.config = {
@@ -59,15 +76,15 @@
     @include('sidebars.users')
 
     <div id="usersContent" class="flex min-h-screen flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] transition-all duration-200">
-        <main class="flex-1 px-4 sm:px-5 md:px-6 lg:px-7 pt-4 md:pt-6 pb-24 md:pb-6 overflow-y-auto">
-            <div class="w-full max-w-none">
-                <header class="mb-6 flex items-center justify-between gap-3">
+        <main class="flex-1 px-4 sm:px-5 md:px-8 lg:px-7 pt-4 md:pt-7 pb-24 lg:pb-6 overflow-y-auto">
+            <div class="mx-auto w-full max-w-xl md:max-w-none">
+                <header class="mb-6 md:mb-7 flex items-center justify-between gap-3">
                     <div>
-                        <h1 class="text-2xl font-bold">Transaction Records</h1>
-                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Medicine transactions recorded by your Barangay Health Worker.</p>
+                        <h1 class="text-2xl font-bold">Transaction History</h1>
+                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Medicine records from your BHW</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="{{ route('users.profile.chat-support') }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open messages">
+                        <a href="{{ route('users.profile.bhw-chat') }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open BHW chat">
                             <span class="material-symbols-outlined text-[16px]">message</span>
                         </a>
                         <a href="{{ route('users.notifications') }}" class="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Notifications">
@@ -81,67 +98,115 @@
                     </div>
                 </header>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                <div class="space-y-3.5 md:space-y-4 lg:space-y-2">
                     @forelse ($transactions as $transaction)
-                        <article class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-5 border border-[#e7f3ec] dark:border-gray-700 shadow-sm">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Transaction</p>
-                                    <h2 class="mt-1 text-lg font-bold text-[#0e1b13] dark:text-white">{{ $transaction->transaction_date?->format('M d, Y') ?: 'No date' }}</h2>
-                                    <p class="mt-1 text-sm text-[#376f50] dark:text-gray-300">For <span class="font-semibold">{{ $transaction->recipientLabel() }}</span></p>
+                        @php
+                            $medications = $transaction->medicationEntries();
+                            $conditions = $transaction->inferredConditions();
+                            $medCount = count($medications);
+                        @endphp
+                        <article class="rounded-2xl border border-[#e7f3ec] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+                            {{-- Card header --}}
+                            <div class="px-4 md:px-5 pt-4 md:pt-5 pb-3 md:pb-4">
+                                <div class="flex items-center gap-3 md:gap-4">
+                                    <span class="inline-flex size-12 md:size-14 shrink-0 items-center justify-center rounded-2xl bg-[#e8f7ee] text-[#1f7f4e] dark:bg-emerald-900/40 dark:text-emerald-200">
+                                        <span class="material-symbols-outlined text-[26px] md:text-[30px]">medication</span>
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <h2 class="text-[15px] md:text-base font-bold text-[#0e1b13] dark:text-white leading-snug truncate">
+                                                {{ $transaction->recipientLabel() }}
+                                            </h2>
+                                            @if (filled($transaction->gender))
+                                                <span class="shrink-0 rounded-md bg-[#f2fbf6] px-2 py-0.5 text-[11px] font-semibold text-[#1f7f4e] dark:bg-gray-700 dark:text-[#8cefb5]">
+                                                    {{ $transaction->gender }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <p class="mt-0.5 text-sm text-[#4e976b] dark:text-gray-400">
+                                            <span>{{ $transaction->transaction_date?->format('M d, Y') ?: 'No date' }}</span>
+                                            <span class="mx-1.5 text-[#d0e7d9] dark:text-gray-600">·</span>
+                                            <span class="font-semibold text-[#376f50] dark:text-gray-300">{{ $transaction->familyRoleLabel() }}</span>
+                                        </p>
+                                    </div>
                                 </div>
-                                @if (filled($transaction->gender))
-                                    <span class="inline-flex items-center rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-[#1f7f4e] shrink-0">{{ $transaction->gender }}</span>
-                                @endif
+
+                                {{-- Aligned info grid --}}
+                                <div class="mt-3.5 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+                                    <div class="rounded-xl bg-[#f7fbf8] dark:bg-gray-700/40 px-3 md:px-4 py-2.5 md:py-3">
+                                        <p class="text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Age</p>
+                                        <p class="mt-0.5 text-sm md:text-base font-bold text-[#0e1b13] dark:text-white">{{ $transaction->age ?: '—' }}</p>
+                                    </div>
+                                    <div class="rounded-xl bg-[#f7fbf8] dark:bg-gray-700/40 px-3 md:px-4 py-2.5 md:py-3 min-w-0 md:col-span-3">
+                                        <p class="text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">PhilHealth ID</p>
+                                        @php
+                                            $philhealthNumber = trim((string) ($transaction->philhealth_number ?? ''));
+                                        @endphp
+                                        @if ($philhealthNumber !== '')
+                                            <p
+                                                class="philhealth-blur mt-0.5 text-sm font-bold text-[#0e1b13] dark:text-white truncate select-none"
+                                                title="Hover or press and hold to view"
+                                            >{{ $philhealthNumber }}</p>
+                                        @else
+                                            <p class="mt-0.5 text-sm font-bold text-[#0e1b13] dark:text-white truncate">—</p>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                    <p class="text-[#4e976b] dark:text-gray-400">Age</p>
-                                    <p class="font-semibold">{{ $transaction->age ?: '—' }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-[#4e976b] dark:text-gray-400">PhilHealth</p>
-                                    <p class="font-semibold break-words">{{ $transaction->philhealth_number ?: '—' }}</p>
-                                </div>
-                            </div>
+                            {{-- Medicines dropdown --}}
+                            @if ($medCount > 0)
+                                <details class="group border-t border-[#e7f3ec] dark:border-gray-700">
+                                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 md:px-5 py-3.5 md:py-4 select-none [&::-webkit-details-marker]:hidden active:bg-[#f7fbf8] dark:active:bg-gray-700/30">
+                                        <span class="flex items-center gap-2.5 min-w-0">
+                                            <span class="inline-flex size-8 md:size-9 shrink-0 items-center justify-center rounded-lg bg-[#e8f7ee] text-[#1f7f4e] dark:bg-emerald-900/40 dark:text-emerald-200">
+                                                <span class="material-symbols-outlined text-[18px] md:text-[20px]">vaccines</span>
+                                            </span>
+                                            <span class="min-w-0">
+                                                <span class="block text-sm md:text-[15px] font-bold text-[#0e1b13] dark:text-white">Medicines given</span>
+                                                <span class="block text-xs md:text-sm text-[#4e976b] dark:text-gray-400">{{ $medCount }} item{{ $medCount === 1 ? '' : 's' }} · tap to view</span>
+                                            </span>
+                                        </span>
+                                        <span class="material-symbols-outlined shrink-0 text-[22px] text-[#4e976b] transition duration-200 group-open:rotate-180">expand_more</span>
+                                    </summary>
 
-                            @if ($transaction->medicationEntries() !== [])
-                                <div class="mt-3 pt-3 border-t border-[#d0e7d9] dark:border-gray-700">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400 mb-2">Medicines</p>
-                                    <div class="space-y-1.5 text-sm">
-                                        @foreach ($transaction->medicationEntries() as $medication)
-                                            <div class="flex items-start justify-between gap-2">
+                                    <div class="px-4 md:px-5 pb-4 md:pb-5 space-y-2 md:space-y-2.5 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
+                                        @foreach ($medications as $medication)
+                                            <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-[#e7f3ec] dark:border-gray-700 bg-[#fbfdfc] dark:bg-gray-800/80 px-3.5 md:px-4 py-3">
                                                 <div class="min-w-0">
-                                                    <span class="font-medium text-[#0e1b13] dark:text-white">{{ $medication['label'] }}</span>
+                                                    <p class="text-sm md:text-[15px] font-semibold text-[#0e1b13] dark:text-white leading-snug">{{ $medication['label'] }}</p>
                                                     @if (! empty($medication['condition']))
-                                                        <p class="text-xs text-[#4e976b] dark:text-gray-400 mt-0.5">{{ $medication['condition'] }}</p>
+                                                        <p class="mt-0.5 text-xs md:text-sm text-[#4e976b] dark:text-gray-400 leading-snug">{{ $medication['condition'] }}</p>
                                                     @endif
                                                 </div>
-                                                <span class="font-semibold shrink-0">{{ $medication['pcs'] }} pc{{ $medication['pcs'] === 1 ? '' : 's' }}</span>
+                                                <span class="inline-flex min-w-[3.25rem] justify-center rounded-lg bg-[#e8f7ee] px-2.5 py-1.5 text-xs md:text-sm font-bold tabular-nums text-[#1f7f4e] dark:bg-emerald-900/40 dark:text-emerald-200">
+                                                    {{ $medication['pcs'] }} pc{{ $medication['pcs'] === 1 ? '' : 's' }}
+                                                </span>
                                             </div>
                                         @endforeach
+
+                                        @if ($conditions !== [])
+                                            <div class="rounded-xl bg-[#e8f7ee]/80 dark:bg-emerald-900/20 px-3.5 md:px-4 py-3 md:col-span-2">
+                                                <p class="text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-[#1f7f4e]">Health concerns</p>
+                                                <p class="mt-1 text-sm md:text-[15px] font-semibold leading-snug text-[#0e1b13] dark:text-white">{{ implode(' · ', $conditions) }}</p>
+                                            </div>
+                                        @endif
                                     </div>
-                                    @if ($transaction->inferredConditions() !== [])
-                                        <div class="mt-3 rounded-lg bg-primary/10 border border-primary/20 px-3 py-2">
-                                            <p class="text-[10px] font-semibold uppercase tracking-wide text-[#1f7f4e]">Health concerns</p>
-                                            <p class="text-xs font-semibold text-[#0e1b13] dark:text-white mt-1">{{ implode(' · ', $transaction->inferredConditions()) }}</p>
-                                        </div>
-                                    @endif
-                                </div>
+                                </details>
                             @endif
 
-                            <p class="mt-3 text-xs text-[#4e976b] dark:text-gray-400">
-                                Recorded {{ $transaction->created_at?->diffForHumans() }}
-                            </p>
+                            <div class="flex items-center gap-1.5 border-t border-[#e7f3ec] dark:border-gray-700 px-4 md:px-5 py-2.5 md:py-3 text-xs md:text-sm text-[#4e976b] dark:text-gray-400">
+                                <span class="material-symbols-outlined text-[15px]">schedule</span>
+                                <span>Recorded {{ $transaction->created_at?->diffForHumans() ?? '—' }}</span>
+                            </div>
                         </article>
                     @empty
-                        <div class="md:col-span-2 rounded-xl border border-[#d0e7d9] dark:border-gray-700 p-8 md:p-12 text-center bg-white dark:bg-gray-800 shadow-sm">
-                            <div class="flex justify-center mb-4">
-                                <span class="material-symbols-outlined text-5xl text-[#4e976b] dark:text-gray-500">medication</span>
-                            </div>
-                            <h3 class="text-lg font-bold text-[#0e1b13] dark:text-white mb-2">No Transaction Records Yet</h3>
-                            <p class="text-sm text-[#4e976b] dark:text-gray-400">Medicine transactions will appear here once your BHW records them.</p>
+                        <div class="rounded-2xl border border-dashed border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-800/70 px-6 py-14 text-center">
+                            <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-[#e8f7ee] text-[#1f7f4e] dark:bg-emerald-900/40 dark:text-emerald-200">
+                                <span class="material-symbols-outlined text-4xl">medication</span>
+                            </span>
+                            <p class="mt-4 text-base font-semibold text-[#0e1b13] dark:text-white">No transactions yet</p>
+                            <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Medicine records will show up here when your BHW adds them.</p>
                         </div>
                     @endforelse
                 </div>
@@ -149,9 +214,67 @@
         </main>
 
         @include('partials.users-mobile-nav')
+        @include('partials.users-chat-support-fab')
     </div>
 
     <script>
+        (function () {
+            const LONG_PRESS_MS = 420;
+
+            document.querySelectorAll('.philhealth-blur').forEach((el) => {
+                let pressTimer = null;
+                let longPressed = false;
+
+                const clearPress = () => {
+                    if (pressTimer) {
+                        window.clearTimeout(pressTimer);
+                        pressTimer = null;
+                    }
+                };
+
+                const reveal = () => {
+                    el.classList.add('is-revealed');
+                };
+
+                const hide = () => {
+                    el.classList.remove('is-revealed');
+                    longPressed = false;
+                };
+
+                el.addEventListener('touchstart', (event) => {
+                    if (event.touches.length > 1) {
+                        return;
+                    }
+
+                    clearPress();
+                    longPressed = false;
+                    pressTimer = window.setTimeout(() => {
+                        longPressed = true;
+                        reveal();
+                    }, LONG_PRESS_MS);
+                }, { passive: true });
+
+                el.addEventListener('touchend', () => {
+                    clearPress();
+                    if (longPressed) {
+                        // Keep revealed briefly after release so it can be read.
+                        window.setTimeout(hide, 1200);
+                    }
+                });
+
+                el.addEventListener('touchcancel', () => {
+                    clearPress();
+                    hide();
+                });
+
+                el.addEventListener('touchmove', clearPress, { passive: true });
+
+                el.addEventListener('contextmenu', (event) => {
+                    event.preventDefault();
+                });
+            });
+        })();
+
         (function () {
             const sidebar = document.getElementById('usersSidebar');
             const content = document.getElementById('usersContent');

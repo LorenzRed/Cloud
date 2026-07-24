@@ -625,7 +625,15 @@
 
     <div class="max-w-2xl mx-auto py-6 sm:py-10 px-4">
         <div class="bg-white rounded-xl shadow p-4 sm:p-6 md:p-8">
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-900">Resident Verification</h1>
+            @if ($isRejectedResubmit ?? false)
+                <div class="mb-4">
+                    <a href="{{ route('users.main') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                        Back to home
+                    </a>
+                </div>
+            @endif
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-900">{{ ($isRejectedResubmit ?? false) ? 'Resubmit Verification' : 'Resident Verification' }}</h1>
             <p class="text-sm text-gray-600 mt-2">One account represents your whole household. Complete the <span class="font-semibold">Representative</span>, then your <span class="font-semibold">husband or wife</span> (if applicable), children, and any <span class="font-semibold">elderly family members</span> living with you.</p>
 
             @if ($errors->any())
@@ -954,14 +962,20 @@
             </form>
 
             <div id="verificationFooterLinks" class="mt-6 pt-4 border-t border-gray-200 text-center">
-                <div id="backToLoginLink" @class(['hidden' => $requestSent ?? false])>
-                    <form method="POST" action="{{ route('logout') }}" class="inline">
-                        @csrf
-                        <button type="submit" class="text-gray-600 hover:text-gray-900 hover:underline text-sm font-medium">
-                            Back to login
-                        </button>
-                    </form>
-                </div>
+                @if ($isRejectedResubmit ?? false)
+                    <div id="backToHomeLink" @class(['hidden' => $requestSent ?? false])>
+                        <a href="{{ route('users.main') }}" class="text-blue-600 hover:underline text-sm font-medium">Back to home</a>
+                    </div>
+                @else
+                    <div id="backToLoginLink" @class(['hidden' => $requestSent ?? false])>
+                        <form method="POST" action="{{ route('logout') }}" class="inline">
+                            @csrf
+                            <button type="submit" class="text-gray-600 hover:text-gray-900 hover:underline text-sm font-medium">
+                                Back to login
+                            </button>
+                        </form>
+                    </div>
+                @endif
                 <div id="goHomeLink" @class(['hidden' => ! ($requestSent ?? false)])>
                     <a href="{{ route('users.main') }}" class="text-blue-600 hover:underline text-sm font-medium">Go Home</a>
                 </div>
@@ -1376,6 +1390,7 @@
 
         function showVerificationSentFooterLinks() {
             document.getElementById('backToLoginLink')?.classList.add('hidden');
+            document.getElementById('backToHomeLink')?.classList.add('hidden');
             document.getElementById('goHomeLink')?.classList.remove('hidden');
         }
 

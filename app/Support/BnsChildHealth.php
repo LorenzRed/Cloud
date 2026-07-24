@@ -6,6 +6,10 @@ use App\Models\BnsChildDewormingLog;
 use App\Models\BnsChildImmunization;
 use App\Models\BnsChildVitaminALog;
 use App\Models\BnsChildWeightLog;
+use App\Models\Barangay;
+use App\Models\Event;
+use App\Models\InboxMessage;
+use App\Models\ResidentRequest;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -183,6 +187,7 @@ class BnsChildHealth
                     'muac_cm' => $log->muac_cm !== null ? (float) $log->muac_cm : null,
                     'age_in_months' => $ageMonths,
                     'recorded_on' => $log->recorded_on?->format('M d, Y'),
+                    'recorded_on_raw' => $log->recorded_on?->toDateString(),
                     'nutrition' => $nutrition,
                     'muac' => BnsChildNutrition::assessMuac(
                         $log->muac_cm !== null ? (float) $log->muac_cm : null,
@@ -205,6 +210,7 @@ class BnsChildHealth
             ->map(fn (BnsChildDewormingLog $log) => [
                 'id' => $log->id,
                 'given_on' => $log->given_on?->format('M d, Y'),
+                'given_on_raw' => $log->given_on?->toDateString(),
                 'medicine' => $log->medicine,
                 'notes' => $log->notes,
             ]);
@@ -217,6 +223,7 @@ class BnsChildHealth
             ->map(fn (BnsChildVitaminALog $log) => [
                 'id' => $log->id,
                 'given_on' => $log->given_on?->format('M d, Y'),
+                'given_on_raw' => $log->given_on?->toDateString(),
                 'age_in_months' => $log->age_in_months,
                 'notes' => $log->notes,
             ]);
@@ -260,10 +267,26 @@ class BnsChildHealth
 
         $immunizationSummary = self::immunizationSummary($immunizations);
 
-        $vitaminASchedule = collect(BnsImmunizationSchedule::vitaminADueMonths())
-            ->map(function (int $dueMonth) use ($birthdate, $vitaminALogs, $ageInMonths) {
+        $vitaminADueMonths = BnsImmunizationSchedule::vitaminADueMonths();
+        $usedVitaminLogIds = [];
+
+        $vitaminASchedule = collect($vitaminADueMonths)
+            ->map(function (int $dueMonth, int $index) use ($birthdate, $vitaminALogs, $ageInMonths, $vitaminADueMonths, &$usedVitaminLogIds) {
                 $dueDate = BnsImmunizationSchedule::dueDateFor($birthdate, (float) $dueMonth);
-                $given = $vitaminALogs->first(fn ($log) => (int) ($log['age_in_months'] ?? -1) === $dueMonth);
+                $nextDueMonth = $vitaminADueMonths[$index + 1] ?? 60;
+                $given = $vitaminALogs->first(function ($log) use ($dueMonth, $nextDueMonth, $usedVitaminLogIds) {
+                    if (in_array((int) ($log['id'] ?? 0), $usedVitaminLogIds, true)) {
+                        return false;
+                    }
+
+                    $age = (int) ($log['age_in_months'] ?? -1);
+
+                    return $age >= $dueMonth && $age < $nextDueMonth;
+                });
+
+                if ($given) {
+                    $usedVitaminLogIds[] = (int) $given['id'];
+                }
 
                 $status = 'upcoming';
                 if ($given) {
@@ -277,8 +300,12 @@ class BnsChildHealth
                 return [
                     'due_month' => $dueMonth,
                     'due_date' => $dueDate->format('M d, Y'),
+                    'due_date_raw' => $dueDate->toDateString(),
                     'status' => $status,
+                    'log_id' => $given['id'] ?? null,
                     'given_on' => $given['given_on'] ?? null,
+                    'given_on_raw' => $given['given_on_raw'] ?? null,
+                    'notes' => $given['notes'] ?? null,
                 ];
             })
             ->values();
@@ -347,6 +374,56 @@ class BnsChildHealth
         ]);
     }
 
+    public static function updateWeight(User $bns, string $childKey, int $logId, array $data): BnsChildWeightLog
+    {
+        $child = self::findChildForBns($bns, $childKey);
+
+        $log = BnsChildWeightLog::query()
+            ->where('child_key', $childKey)
+            ->whereKey($logId)
+            ->firstOrFail();
+
+        try {
+            $recordedOn = Carbon::parse((string) $data['recorded_on'])->startOfDay();
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'recorded_on' => 'Enter a valid date recorded.',
+            ]);
+        }
+
+        if ($recordedOn->gt(now()->startOfDay())) {
+            throw ValidationException::withMessages([
+                'recorded_on' => 'Date recorded cannot be in the future.',
+            ]);
+        }
+
+        $born = PersonAge::parseBirthdate($child['birthdate'] ?? null);
+        if ($born && $recordedOn->lt($born)) {
+            throw ValidationException::withMessages([
+                'recorded_on' => 'Date recorded cannot be before the child’s birthdate.',
+            ]);
+        }
+
+        $ageInMonths = PersonAge::ageInWholeMonths($child['birthdate'] ?? null, $recordedOn);
+
+        if ($ageInMonths !== null && $ageInMonths > 59) {
+            throw ValidationException::withMessages([
+                'weight_kg' => 'Weight monitoring in this form is for children 0–59 months.',
+            ]);
+        }
+
+        $log->update([
+            'weight_kg' => $data['weight_kg'],
+            'height_cm' => $data['height_cm'] ?? null,
+            'muac_cm' => $data['muac_cm'] ?? null,
+            'age_in_months' => $ageInMonths,
+            'recorded_on' => $recordedOn->toDateString(),
+            'recorded_by_user_id' => $bns->id,
+        ]);
+
+        return $log->fresh();
+    }
+
     public static function storeDeworming(User $bns, string $childKey, array $data): BnsChildDewormingLog
     {
         $child = self::findChildForBns($bns, $childKey);
@@ -358,20 +435,52 @@ class BnsChildHealth
             'child_index' => $childIndex,
             'given_on' => $data['given_on'],
             'medicine' => $data['medicine'] ?? null,
-            'notes' => $data['notes'] ?? null,
+            'notes' => null,
             'recorded_by_user_id' => $bns->id,
         ]);
+    }
+
+    public static function updateDeworming(User $bns, string $childKey, int $logId, array $data): BnsChildDewormingLog
+    {
+        self::findChildForBns($bns, $childKey);
+
+        $log = BnsChildDewormingLog::query()
+            ->where('child_key', $childKey)
+            ->whereKey($logId)
+            ->firstOrFail();
+
+        $log->update([
+            'given_on' => $data['given_on'],
+            'medicine' => $data['medicine'] ?? null,
+            'notes' => null,
+            'recorded_by_user_id' => $bns->id,
+        ]);
+
+        return $log->fresh();
+    }
+
+    public static function deleteDeworming(User $bns, string $childKey, int $logId): void
+    {
+        self::findChildForBns($bns, $childKey);
+
+        $log = BnsChildDewormingLog::query()
+            ->where('child_key', $childKey)
+            ->whereKey($logId)
+            ->firstOrFail();
+
+        $log->delete();
     }
 
     public static function storeVitaminA(User $bns, string $childKey, array $data): BnsChildVitaminALog
     {
         $child = self::findChildForBns($bns, $childKey);
         [$requestId, $childIndex] = self::parseChildKey($childKey);
-        $ageInMonths = BnsChildMonitoring::ageInMonths($child['birthdate'] ?? null) ?? 0;
+        $givenOn = self::validatedVitaminAGivenOn($child['birthdate'] ?? null, (string) $data['given_on']);
+        $ageInMonths = PersonAge::ageInWholeMonths($child['birthdate'] ?? null, $givenOn) ?? 0;
 
         if (! BnsImmunizationSchedule::isEligibleForVitaminA($ageInMonths)) {
             throw ValidationException::withMessages([
-                'given_on' => 'Vitamin A is given to children 6–59 months old.',
+                'given_on' => 'Vitamin A is given to children 6–59 months old. Check the date given.',
             ]);
         }
 
@@ -379,11 +488,67 @@ class BnsChildHealth
             'child_key' => $childKey,
             'resident_request_id' => $requestId,
             'child_index' => $childIndex,
-            'given_on' => $data['given_on'],
+            'given_on' => $givenOn->toDateString(),
             'age_in_months' => $ageInMonths,
-            'notes' => $data['notes'] ?? null,
+            'notes' => $data['medicine'] ?? $data['notes'] ?? null,
             'recorded_by_user_id' => $bns->id,
         ]);
+    }
+
+    public static function updateVitaminA(User $bns, string $childKey, int $logId, array $data): BnsChildVitaminALog
+    {
+        $child = self::findChildForBns($bns, $childKey);
+
+        $log = BnsChildVitaminALog::query()
+            ->where('child_key', $childKey)
+            ->whereKey($logId)
+            ->firstOrFail();
+
+        $givenOn = self::validatedVitaminAGivenOn($child['birthdate'] ?? null, (string) $data['given_on']);
+        $ageInMonths = PersonAge::ageInWholeMonths($child['birthdate'] ?? null, $givenOn) ?? 0;
+
+        if (! BnsImmunizationSchedule::isEligibleForVitaminA($ageInMonths)) {
+            throw ValidationException::withMessages([
+                'given_on' => 'Vitamin A is given to children 6–59 months old. Check the date given.',
+            ]);
+        }
+
+        $log->update([
+            'given_on' => $givenOn->toDateString(),
+            'age_in_months' => $ageInMonths,
+            'notes' => array_key_exists('medicine', $data)
+                ? ($data['medicine'] ?? null)
+                : (array_key_exists('notes', $data) ? ($data['notes'] ?? null) : $log->notes),
+            'recorded_by_user_id' => $bns->id,
+        ]);
+
+        return $log->fresh();
+    }
+
+    private static function validatedVitaminAGivenOn(?string $birthdate, string $givenOnInput): Carbon
+    {
+        try {
+            $givenOn = Carbon::parse($givenOnInput)->startOfDay();
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'given_on' => 'Enter a valid date given.',
+            ]);
+        }
+
+        if ($givenOn->gt(now()->startOfDay())) {
+            throw ValidationException::withMessages([
+                'given_on' => 'Date given cannot be in the future.',
+            ]);
+        }
+
+        $born = PersonAge::parseBirthdate($birthdate);
+        if ($born && $givenOn->lt($born)) {
+            throw ValidationException::withMessages([
+                'given_on' => 'Date given cannot be before the child’s birthdate.',
+            ]);
+        }
+
+        return $givenOn;
     }
 
     public static function updateImmunization(User $bns, string $childKey, int $immunizationId, array $data): BnsChildImmunization
@@ -414,6 +579,126 @@ class BnsChildHealth
         self::refreshImmunizationStatuses($childKey);
 
         return $record->fresh();
+    }
+
+    /**
+     * Create a date-only announcement post and notify users about an immunization consultation.
+     *
+     * @param  array{consultation_date: string}  $data
+     * @return array{post_id: int, message: string}
+     */
+    public static function notifyImmunizationConsultation(User $bns, string $childKey, int $immunizationId, array $data): array
+    {
+        $child = self::findChildForBns($bns, $childKey);
+
+        $record = BnsChildImmunization::query()
+            ->where('child_key', $childKey)
+            ->whereKey($immunizationId)
+            ->firstOrFail();
+
+        if ($record->status === BnsChildImmunization::STATUS_GIVEN) {
+            throw ValidationException::withMessages([
+                'consultation_date' => 'This vaccine is already marked as given.',
+            ]);
+        }
+
+        try {
+            $consultationDate = Carbon::parse((string) $data['consultation_date'])->startOfDay();
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'consultation_date' => 'Enter a valid consultation date.',
+            ]);
+        }
+
+        if ($consultationDate->lt(now()->startOfDay())) {
+            throw ValidationException::withMessages([
+                'consultation_date' => 'Consultation date cannot be in the past.',
+            ]);
+        }
+
+        $barangayName = BnsChildMonitoring::barangayNameFor($bns);
+        $barangay = filled($barangayName)
+            ? Barangay::query()->where('name', $barangayName)->first()
+            : null;
+
+        if ($barangay === null) {
+            throw ValidationException::withMessages([
+                'consultation_date' => 'Your barangay assignment was not found.',
+            ]);
+        }
+
+        $residentRequest = ResidentRequest::query()->find((int) ($child['resident_request_id'] ?? 0));
+        $purokId = $residentRequest?->purok_id ? (int) $residentRequest->purok_id : null;
+        $householdUserId = $residentRequest?->user_id ? (int) $residentRequest->user_id : null;
+
+        $childName = trim((string) ($child['full_name'] ?? 'your child')) ?: 'your child';
+        $vaccineName = trim((string) ($record->vaccine_name ?? 'immunization')) ?: 'immunization';
+        $dateLabel = $consultationDate->format('M d, Y');
+
+        $title = SafeInput::plainText("Immunization consultation: {$vaccineName}");
+        $description = SafeInput::plainText(
+            "Please bring {$childName} for {$vaccineName} immunization consultation on {$dateLabel}.",
+            true
+        );
+
+        $post = Event::query()->create([
+            'barangay_id' => $barangay->id,
+            'target_purok_ids' => $purokId ? [$purokId] : null,
+            'created_by' => $bns->id,
+            'title' => $title !== '' ? $title : 'Immunization consultation',
+            'description' => $description !== '' ? $description : null,
+            'event_date' => $consultationDate->toDateString(),
+            'start_time' => null,
+            'end_time' => '23:59:59',
+            'location' => null,
+            'category' => Event::CATEGORY_IMMUNIZATION_CONSULTATION,
+            'image_url' => null,
+        ]);
+
+        $now = now();
+
+        if ($householdUserId) {
+            InboxMessage::query()->create([
+                'user_id' => $householdUserId,
+                'title' => 'Immunization consultation',
+                'message' => "Consultation for {$childName} ({$vaccineName}) is on {$dateLabel}. Check Upcoming Schedule on Home for details.",
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        $purokQuery = ResidentRequest::query()
+            ->where('barangay', $barangay->name)
+            ->where('status', 'accepted')
+            ->whereNotNull('user_id');
+
+        if ($purokId) {
+            $purokQuery->where('purok_id', $purokId);
+        }
+
+        $residentUserIds = $purokQuery
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->filter(fn (int $id) => $id > 0 && $id !== (int) $householdUserId)
+            ->values();
+
+        foreach ($residentUserIds as $residentUserId) {
+            InboxMessage::query()->create([
+                'user_id' => $residentUserId,
+                'title' => 'Immunization schedule',
+                'message' => "Immunization consultation for {$vaccineName} is on {$dateLabel}. Check Upcoming Schedule on Home.",
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        return [
+            'post_id' => (int) $post->id,
+            'message' => $householdUserId
+                ? 'Consultation notice posted and parent/guardian notified.'
+                : 'Consultation notice posted. No linked user account was found to notify.',
+        ];
     }
 
     /**

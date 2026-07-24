@@ -149,6 +149,69 @@
         border-color: #3D3D3D;
     }
 
+    .family-action-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .family-action-row--two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (min-width: 640px) {
+        .family-action-row {
+            width: auto;
+            min-width: 22rem;
+        }
+
+        .family-action-row--two {
+            min-width: 15rem;
+        }
+    }
+
+    .family-action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+        min-height: 2.5rem;
+        width: 100%;
+        padding: 0.45rem 0.4rem;
+        border-radius: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1.2;
+        text-align: center;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .family-member-card {
+        min-height: 5.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .family-member-card__name {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.35;
+    }
+
+    .family-member-card__meta {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
     .profile-tab-toolbar {
         flex-shrink: 0;
         padding-bottom: 0.75rem;
@@ -217,6 +280,8 @@
         gap: 0.75rem;
         padding: 0.625rem 0;
         border-bottom: 1px solid #EAEAEA;
+        min-width: 0;
+        align-items: flex-start;
     }
 
     .dark .household-member-row {
@@ -226,6 +291,17 @@
     .household-member-row:last-child {
         border-bottom: none;
         padding-bottom: 0;
+    }
+
+    .household-member-row > div {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .household-member-row p {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.35;
     }
 
     .sidebar-info-grid {
@@ -304,6 +380,109 @@
     .dark .transaction-modal-panel {
         border-color: #3D3D3D;
         background: #2C2C2C;
+    }
+
+    @media (max-width: 1023px) {
+        #medicalHistoryFormWrapper {
+            align-items: flex-end;
+            justify-content: flex-end;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #medicalHistoryFormWrapper .transaction-modal-panel {
+            max-width: 100%;
+            max-height: min(94dvh, 100%);
+            width: 100%;
+            border-radius: 1.25rem 1.25rem 0 0;
+            border-left: 0;
+            border-right: 0;
+            border-bottom: 0;
+            box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.2);
+        }
+
+        #medicalHistoryFormWrapper .transaction-modal-header {
+            padding: 0.875rem 1rem 0.75rem;
+            padding-top: max(0.875rem, env(safe-area-inset-top, 0px));
+        }
+
+        #medicalHistoryFormWrapper .transaction-modal-header .tx-modal-eyebrow {
+            display: none;
+        }
+
+        #medicalHistoryFormWrapper .transaction-modal-header h5 {
+            font-size: 1.0625rem;
+            margin-top: 0;
+        }
+
+        #medicalHistoryFormWrapper .transaction-modal-header .tx-modal-subtitle {
+            font-size: 0.75rem;
+            line-height: 1.35;
+            margin-top: 0.25rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        #medicalHistoryFormWrapper .transaction-modal-body {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding: 0.875rem 1rem 0;
+            padding-bottom: 0;
+        }
+
+        #medicalHistoryFormWrapper .tx-form {
+            gap: 0.875rem;
+            padding-bottom: 0;
+        }
+
+        #medicalHistoryFormWrapper .tx-form > section:not(.tx-recipient-section) {
+            gap: 0.625rem;
+        }
+
+        #medicalHistoryFormWrapper .tx-section-heading p {
+            font-size: 0.6875rem;
+        }
+
+        #medicalHistoryFormWrapper .tx-details-row {
+            gap: 0.625rem;
+        }
+
+        #medicalHistoryFormWrapper .tx-med-grid {
+            gap: 0.625rem;
+        }
+
+        #medicalHistoryFormWrapper .tx-med-card {
+            padding: 0.75rem 0.875rem;
+        }
+
+        #medicalHistoryFormWrapper .tx-form-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 5;
+            margin-top: 0.5rem;
+            margin-left: -1rem;
+            margin-right: -1rem;
+            padding: 0.75rem 1rem;
+            padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+            border-top: 1px solid #EAEAEA;
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(8px);
+            gap: 0.5rem;
+        }
+
+        .dark #medicalHistoryFormWrapper .tx-form-actions {
+            border-top-color: #3D3D3D;
+            background: rgba(44, 44, 44, 0.97);
+        }
+
+        #medicalHistoryFormWrapper .tx-form-actions button {
+            height: 2.75rem;
+            width: 100%;
+            border-radius: 0.875rem;
+        }
     }
 
     @media (min-width: 1024px) {
@@ -645,33 +824,509 @@
         margin-bottom: 0.5rem;
     }
 
-    @media (max-width: 1023px) {
-        #monitoringCaseFormWrapper {
+    /* Maintenance case cards — active vs completed */
+    .mnt-case-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+        min-width: 0;
+    }
+    .mnt-section-label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.25rem 0 0;
+        font-size: 0.6875rem;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(74, 74, 74, 0.55);
+    }
+    .dark .mnt-section-label {
+        color: rgba(224, 224, 224, 0.55);
+    }
+    .mnt-section-label .material-symbols-outlined {
+        font-size: 1rem;
+    }
+    .mnt-case-card {
+        width: 100%;
+        min-width: 0;
+        border-radius: 1rem;
+        overflow: hidden;
+        border: 1px solid #EAEAEA;
+        background: #fff;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+    }
+    .dark .mnt-case-card {
+        border-color: #3D3D3D;
+        background: #2C2C2C;
+        box-shadow: none;
+    }
+    .mnt-case-card--active {
+        border-color: rgba(74, 144, 226, 0.35);
+        box-shadow: 0 0 0 1px rgba(74, 144, 226, 0.08), 0 8px 20px rgb(74 144 226 / 0.08);
+    }
+    .dark .mnt-case-card--active {
+        border-color: rgba(74, 144, 226, 0.45);
+        box-shadow: 0 0 0 1px rgba(74, 144, 226, 0.12);
+    }
+    .mnt-case-card--completed {
+        border-color: rgba(34, 197, 94, 0.28);
+        background: linear-gradient(180deg, rgba(34, 197, 94, 0.06) 0%, #fff 42%);
+    }
+    .dark .mnt-case-card--completed {
+        border-color: rgba(34, 197, 94, 0.35);
+        background: linear-gradient(180deg, rgba(34, 197, 94, 0.12) 0%, #2C2C2C 45%);
+    }
+    .mnt-case-banner {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 0.9rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+    }
+    .mnt-case-card--active .mnt-case-banner {
+        background: rgba(74, 144, 226, 0.1);
+        color: #2f6fb8;
+    }
+    .dark .mnt-case-card--active .mnt-case-banner {
+        background: rgba(74, 144, 226, 0.18);
+        color: #93c5fd;
+    }
+    .mnt-case-card--completed .mnt-case-banner {
+        background: rgba(34, 197, 94, 0.14);
+        color: #15803d;
+    }
+    .dark .mnt-case-card--completed .mnt-case-banner {
+        background: rgba(34, 197, 94, 0.2);
+        color: #86efac;
+    }
+    .mnt-case-banner .material-symbols-outlined {
+        font-size: 1.05rem;
+        font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+    }
+    .mnt-case-body {
+        padding: 0.9rem 0.9rem 1rem;
+    }
+    @media (min-width: 640px) {
+        .mnt-case-body {
+            padding: 1rem 1.1rem 1.15rem;
+        }
+    }
+    .mnt-case-head {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    @media (min-width: 640px) {
+        .mnt-case-head {
+            flex-direction: row;
             align-items: flex-start;
-            justify-content: flex-start;
-            padding: 0.5rem;
-            padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
+            justify-content: space-between;
+        }
+    }
+    .mnt-case-title {
+        margin: 0.35rem 0 0;
+        font-size: 1.125rem;
+        font-weight: 800;
+        line-height: 1.25;
+        color: #2f2f2f;
+        word-break: break-word;
+    }
+    .dark .mnt-case-title {
+        color: #f3f4f6;
+    }
+    .mnt-case-meta {
+        margin: 0.35rem 0 0;
+        font-size: 0.8125rem;
+        line-height: 1.4;
+        color: rgba(74, 74, 74, 0.72);
+    }
+    .dark .mnt-case-meta {
+        color: rgba(224, 224, 224, 0.7);
+    }
+    .mnt-case-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        width: 100%;
+    }
+    @media (min-width: 640px) {
+        .mnt-case-actions {
+            display: flex;
+            width: auto;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+    }
+    .mnt-case-actions .mnt-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.3rem;
+        min-height: 2.5rem;
+        padding: 0.45rem 0.75rem;
+        border-radius: 0.75rem;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .mnt-btn--visit {
+        border: 1px solid rgba(74, 144, 226, 0.35);
+        background: rgba(74, 144, 226, 0.08);
+        color: #2f6fb8;
+    }
+    .dark .mnt-btn--visit {
+        border-color: rgba(74, 144, 226, 0.45);
+        background: rgba(74, 144, 226, 0.16);
+        color: #93c5fd;
+    }
+    .mnt-btn--complete {
+        border: 1px solid rgba(34, 197, 94, 0.4);
+        background: rgba(34, 197, 94, 0.1);
+        color: #15803d;
+    }
+    .dark .mnt-btn--complete {
+        border-color: rgba(34, 197, 94, 0.45);
+        background: rgba(34, 197, 94, 0.16);
+        color: #86efac;
+    }
+    .mnt-visit-list {
+        margin-top: 0.9rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+    }
+    .mnt-visit-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-bottom: 0.15rem;
+    }
+    .mnt-visit-heading p {
+        margin: 0;
+        font-size: 0.6875rem;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(74, 74, 74, 0.55);
+    }
+    .dark .mnt-visit-heading p {
+        color: rgba(224, 224, 224, 0.55);
+    }
+    .mnt-visit-card {
+        border-radius: 0.85rem;
+        border: 1px solid #EAEAEA;
+        background: #f7f9fc;
+        padding: 0.8rem 0.85rem;
+        min-width: 0;
+    }
+    .dark .mnt-visit-card {
+        border-color: #3D3D3D;
+        background: #242424;
+    }
+    .mnt-case-card--completed .mnt-visit-card {
+        background: #f3f4f6;
+        border-style: dashed;
+    }
+    .dark .mnt-case-card--completed .mnt-visit-card {
+        background: #1f1f1f;
+    }
+    .mnt-visit-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.65rem;
+    }
+    .mnt-visit-date {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 750;
+        color: #2f2f2f;
+    }
+    .dark .mnt-visit-date {
+        color: #f3f4f6;
+    }
+    .mnt-visit-ago {
+        margin: 0.15rem 0 0;
+        font-size: 0.6875rem;
+        color: rgba(74, 74, 74, 0.55);
+    }
+    .dark .mnt-visit-ago {
+        color: rgba(224, 224, 224, 0.55);
+    }
+    .mnt-visit-chip {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 9999px;
+        padding: 0.2rem 0.55rem;
+        font-size: 0.625rem;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        background: rgba(74, 144, 226, 0.12);
+        color: #2f6fb8;
+        flex-shrink: 0;
+    }
+    .mnt-case-card--completed .mnt-visit-chip {
+        background: rgba(107, 114, 128, 0.14);
+        color: #4b5563;
+    }
+    .dark .mnt-case-card--completed .mnt-visit-chip {
+        background: rgba(156, 163, 175, 0.18);
+        color: #d1d5db;
+    }
+    .mnt-vital-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.45rem;
+        margin-top: 0.7rem;
+    }
+    @media (min-width: 480px) {
+        .mnt-vital-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+    .mnt-vital-pill {
+        min-width: 0;
+        border-radius: 0.7rem;
+        background: #fff;
+        border: 1px solid #EAEAEA;
+        padding: 0.45rem 0.55rem;
+    }
+    .dark .mnt-vital-pill {
+        background: #2C2C2C;
+        border-color: #3D3D3D;
+    }
+    .mnt-vital-pill span {
+        display: block;
+    }
+    .mnt-vital-pill__label {
+        font-size: 0.625rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: rgba(74, 74, 74, 0.55);
+        margin-bottom: 0.1rem;
+    }
+    .dark .mnt-vital-pill__label {
+        color: rgba(224, 224, 224, 0.55);
+    }
+    .mnt-vital-pill__value {
+        font-size: 0.875rem;
+        font-weight: 750;
+        line-height: 1.25;
+        color: #2f2f2f;
+        word-break: break-word;
+    }
+    .dark .mnt-vital-pill__value {
+        color: #f3f4f6;
+    }
+    .mnt-visit-notes {
+        margin: 0.65rem 0 0;
+        padding: 0.55rem 0.65rem;
+        border-radius: 0.65rem;
+        background: rgba(74, 144, 226, 0.06);
+        font-size: 0.8125rem;
+        line-height: 1.4;
+        color: rgba(47, 47, 47, 0.85);
+        word-break: break-word;
+    }
+    .dark .mnt-visit-notes {
+        background: rgba(74, 144, 226, 0.12);
+        color: rgba(243, 244, 246, 0.85);
+    }
+    .mnt-case-card--completed .mnt-visit-notes {
+        background: rgba(107, 114, 128, 0.1);
+    }
+    .mnt-empty-visits {
+        margin-top: 0.85rem;
+        border-radius: 0.75rem;
+        border: 1px dashed #EAEAEA;
+        padding: 0.75rem 0.85rem;
+        font-size: 0.8125rem;
+        color: rgba(74, 74, 74, 0.65);
+    }
+    .dark .mnt-empty-visits {
+        border-color: #3D3D3D;
+        color: rgba(224, 224, 224, 0.65);
+    }
+    .mnt-period-box {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.4rem;
+        margin-bottom: 0.55rem;
+        border-radius: 0.75rem;
+        background: rgba(236, 72, 153, 0.08);
+        border: 1px solid rgba(236, 72, 153, 0.18);
+        padding: 0.65rem 0.75rem;
+        font-size: 0.8125rem;
+        color: #9d174d;
+    }
+    .dark .mnt-period-box {
+        background: rgba(236, 72, 153, 0.14);
+        border-color: rgba(236, 72, 153, 0.28);
+        color: #f9a8d4;
+    }
+    @media (min-width: 480px) {
+        .mnt-period-box {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 1023px) {
+        #monitoringCaseFormWrapper,
+        #addVisitModalWrapper,
+        #familyChildModal,
+        #familySeniorModal,
+        #familySpouseModal,
+        #consultationFormWrapper {
+            align-items: flex-end;
+            justify-content: flex-end;
+            padding: 0;
+            overflow: hidden;
         }
 
-        #monitoringCaseFormWrapper .transaction-modal-panel {
-            max-height: calc(100dvh - 1rem);
+        #monitoringCaseFormWrapper .transaction-modal-panel,
+        #addVisitModalWrapper .transaction-modal-panel,
+        #familyChildModal .transaction-modal-panel,
+        #familySeniorModal .transaction-modal-panel,
+        #familySpouseModal .transaction-modal-panel,
+        #consultationFormWrapper .transaction-modal-panel {
+            max-width: 100%;
+            max-height: min(94dvh, 100%);
             width: 100%;
+            margin-top: 0;
+            border-radius: 1.25rem 1.25rem 0 0;
+            border-left: 0;
+            border-right: 0;
+            border-bottom: 0;
+            box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.2);
+        }
+
+        #monitoringCaseFormWrapper .transaction-modal-header,
+        #addVisitModalWrapper .transaction-modal-header,
+        #familyChildModal .transaction-modal-header,
+        #familySeniorModal .transaction-modal-header,
+        #familySpouseModal .transaction-modal-header,
+        #consultationFormWrapper .transaction-modal-header {
+            padding: 0.875rem 1rem 0.75rem;
+            padding-top: max(0.875rem, env(safe-area-inset-top, 0px));
+        }
+
+        #monitoringCaseFormWrapper .transaction-modal-header .tx-modal-eyebrow,
+        #addVisitModalWrapper .transaction-modal-header .tx-modal-eyebrow,
+        #consultationFormWrapper .transaction-modal-header .text-xs.font-semibold.uppercase {
+            display: none;
+        }
+
+        #monitoringCaseFormWrapper .transaction-modal-header h5,
+        #addVisitModalWrapper .transaction-modal-header h5,
+        #familyChildModal .transaction-modal-header h5,
+        #familySeniorModal .transaction-modal-header h5,
+        #familySpouseModal .transaction-modal-header h5,
+        #consultationFormWrapper .transaction-modal-header h5 {
+            font-size: 1.0625rem;
             margin-top: 0;
         }
 
-        #monitoringCaseFormWrapper .transaction-modal-body {
+        #monitoringCaseFormWrapper .transaction-modal-header .tx-modal-subtitle,
+        #addVisitModalWrapper .transaction-modal-header .tx-modal-subtitle,
+        #familyChildModal .transaction-modal-header .tx-modal-subtitle,
+        #familySeniorModal .transaction-modal-header .tx-modal-subtitle,
+        #familySpouseModal .transaction-modal-header .tx-modal-subtitle,
+        #consultationFormWrapper .transaction-modal-header p.text-sm {
+            font-size: 0.75rem;
+            line-height: 1.35;
+            margin-top: 0.25rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        #monitoringCaseFormWrapper .transaction-modal-body,
+        #addVisitModalWrapper .transaction-modal-body,
+        #familyChildModal .transaction-modal-body,
+        #familySeniorModal .transaction-modal-body,
+        #familySpouseModal .transaction-modal-body,
+        #consultationFormWrapper .transaction-modal-body {
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
-            padding-bottom: 1.75rem;
+            overscroll-behavior: contain;
+            padding: 0.875rem 1rem 0;
+            padding-bottom: 0;
+        }
+
+        #monitoringCaseFormWrapper .tx-form,
+        #addVisitModalWrapper .tx-form,
+        #familyChildModal .tx-form,
+        #familySeniorModal .tx-form,
+        #familySpouseModal .tx-form,
+        #consultationFormWrapper .tx-form {
+            gap: 0.875rem;
+            padding-bottom: 0;
         }
 
         #monitoringCaseFormWrapper .mnt-vitals-scroll {
             max-height: none;
             overflow: visible;
             padding-right: 0;
+        }
+
+        #monitoringCaseFormWrapper .mnt-metric-card,
+        #addVisitModalWrapper .mnt-metric-card,
+        #consultationFormWrapper .mnt-metric-card {
+            padding: 0.75rem 0.875rem;
+        }
+
+        #monitoringCaseFormWrapper .tx-form-actions,
+        #addVisitModalWrapper .tx-form-actions,
+        #familyChildModal .tx-form-actions,
+        #familySeniorModal .tx-form-actions,
+        #familySpouseModal .tx-form-actions,
+        #consultationFormWrapper .tx-form-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 5;
+            margin-top: 0.5rem;
+            margin-left: -1rem;
+            margin-right: -1rem;
+            padding: 0.75rem 1rem;
+            padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+            border-top: 1px solid #EAEAEA;
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(8px);
+            gap: 0.5rem;
+        }
+
+        .dark #monitoringCaseFormWrapper .tx-form-actions,
+        .dark #addVisitModalWrapper .tx-form-actions,
+        .dark #familyChildModal .tx-form-actions,
+        .dark #familySeniorModal .tx-form-actions,
+        .dark #familySpouseModal .tx-form-actions,
+        .dark #consultationFormWrapper .tx-form-actions {
+            border-top-color: #3D3D3D;
+            background: rgba(44, 44, 44, 0.97);
+        }
+
+        #consultationFormWrapper .tx-form-actions button {
+            width: 100%;
+            min-height: 2.75rem;
+        }
+
+        #monitoringCaseFormWrapper .tx-form-actions button,
+        #addVisitModalWrapper .tx-form-actions button,
+        #familyChildModal .tx-form-actions button,
+        #familySeniorModal .tx-form-actions button,
+        #familySpouseModal .tx-form-actions button {
+            height: 2.75rem;
+            width: 100%;
+            border-radius: 0.875rem;
         }
     }
 
@@ -680,16 +1335,23 @@
             max-height: 14rem;
         }
 
-        #monitoringCaseFormWrapper .transaction-modal-panel {
+        #monitoringCaseFormWrapper .transaction-modal-panel,
+        #addVisitModalWrapper .transaction-modal-panel {
             max-height: min(92vh, 820px);
         }
 
         #monitoringCaseFormWrapper .transaction-modal-body {
-        overflow: hidden;
+            overflow: hidden;
             min-height: 0;
         }
 
-        #monitoringCaseFormWrapper .tx-form {
+        #addVisitModalWrapper .transaction-modal-body {
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        #monitoringCaseFormWrapper .tx-form,
+        #addVisitModalWrapper .tx-form {
             min-height: 0;
         }
 
@@ -864,6 +1526,230 @@
         .consult-schedule-row {
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 0.625rem;
+        }
+    }
+
+    .consult-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .consult-card {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.875rem;
+        align-items: start;
+        border-radius: 1rem;
+        border: 1px solid #EAEAEA;
+        background: #fff;
+        padding: 0.875rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        min-width: 0;
+    }
+    .dark .consult-card {
+        border-color: #3D3D3D;
+        background: #2C2C2C;
+        box-shadow: none;
+    }
+
+    .consult-date-badge {
+        width: 3.35rem;
+        border-radius: 0.85rem;
+        background: linear-gradient(180deg, rgba(74, 144, 226, 0.16), rgba(74, 144, 226, 0.06));
+        border: 1px solid rgba(74, 144, 226, 0.22);
+        text-align: center;
+        padding: 0.45rem 0.25rem 0.5rem;
+        flex-shrink: 0;
+    }
+    .dark .consult-date-badge {
+        background: linear-gradient(180deg, rgba(74, 144, 226, 0.22), rgba(74, 144, 226, 0.08));
+        border-color: rgba(74, 144, 226, 0.3);
+    }
+    .consult-date-badge__month {
+        display: block;
+        font-size: 0.625rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #4A90E2;
+        line-height: 1;
+    }
+    .consult-date-badge__day {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: 1.25rem;
+        font-weight: 800;
+        line-height: 1;
+        color: #2f2f2f;
+    }
+    .dark .consult-date-badge__day {
+        color: #E0E0E0;
+    }
+    .consult-date-badge__year {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: 0.625rem;
+        font-weight: 650;
+        color: rgba(74, 74, 74, 0.55);
+        line-height: 1;
+    }
+    .dark .consult-date-badge__year {
+        color: rgba(224, 224, 224, 0.5);
+    }
+
+    .consult-card__body {
+        min-width: 0;
+    }
+    .consult-card__top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+    .consult-card__title {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 750;
+        line-height: 1.3;
+        color: #2f2f2f;
+        word-break: break-word;
+    }
+    .dark .consult-card__title {
+        color: #E0E0E0;
+    }
+    .consult-time-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        flex-shrink: 0;
+        border-radius: 9999px;
+        background: rgba(74, 144, 226, 0.1);
+        color: #4A90E2;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        padding: 0.28rem 0.55rem;
+        white-space: nowrap;
+    }
+    .dark .consult-time-chip {
+        background: rgba(74, 144, 226, 0.18);
+    }
+    .consult-time-chip .material-symbols-outlined {
+        font-size: 0.875rem;
+    }
+    .consult-card__note {
+        margin: 0.55rem 0 0;
+        font-size: 0.8125rem;
+        line-height: 1.45;
+        color: rgba(74, 74, 74, 0.72);
+        word-break: break-word;
+    }
+    .dark .consult-card__note {
+        color: rgba(224, 224, 224, 0.68);
+    }
+    .consult-card__meta {
+        margin-top: 0.55rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    .consult-meta-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.2rem;
+        border-radius: 0.5rem;
+        background: #f4f6f9;
+        border: 1px solid #EAEAEA;
+        color: rgba(74, 74, 74, 0.75);
+        font-size: 0.6875rem;
+        font-weight: 650;
+        padding: 0.22rem 0.45rem;
+    }
+    .dark .consult-meta-chip {
+        background: #242424;
+        border-color: #3D3D3D;
+        color: rgba(224, 224, 224, 0.7);
+    }
+    .consult-meta-chip .material-symbols-outlined {
+        font-size: 0.875rem;
+    }
+
+    .consult-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.5rem;
+        border-radius: 1rem;
+        border: 1px dashed #d5dbe3;
+        background: #f8fafc;
+        padding: 1.75rem 1.25rem;
+    }
+    .dark .consult-empty {
+        border-color: #3D3D3D;
+        background: #242424;
+    }
+    .consult-empty .material-symbols-outlined {
+        font-size: 2.25rem;
+        color: #9aa7b8;
+    }
+    .dark .consult-empty .material-symbols-outlined {
+        color: #6b7280;
+    }
+    .consult-empty__title {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 750;
+        color: #2f2f2f;
+    }
+    .dark .consult-empty__title {
+        color: #E0E0E0;
+    }
+    .consult-empty__text {
+        margin: 0;
+        max-width: 16rem;
+        font-size: 0.8125rem;
+        line-height: 1.45;
+        color: rgba(74, 74, 74, 0.65);
+    }
+    .dark .consult-empty__text {
+        color: rgba(224, 224, 224, 0.6);
+    }
+
+    @media (max-width: 1023px) {
+        #consultations .profile-tab-toolbar {
+            padding-bottom: 0.75rem;
+        }
+        #consultations .profile-tab-toolbar h4 {
+            font-size: 1rem;
+        }
+        #toggleConsultationForm {
+            width: 100%;
+            height: 2.75rem;
+            border-radius: 0.85rem;
+        }
+        .consult-card {
+            gap: 0.75rem;
+            padding: 0.8rem;
+            border-radius: 0.95rem;
+        }
+        .consult-date-badge {
+            width: 3.1rem;
+            border-radius: 0.75rem;
+        }
+        .consult-card__title {
+            font-size: 0.875rem;
+        }
+    }
+
+    @media (min-width: 768px) {
+        .consult-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.875rem;
+        }
+        .consult-empty {
+            grid-column: 1 / -1;
         }
     }
 
@@ -1113,6 +1999,31 @@
 
     $monitoringMemberOptions = $monitoringMemberOptions->values();
 
+    $normalizeMemberGenderCode = static function (?string $gender): string {
+        $value = strtolower(trim((string) $gender));
+        if ($value === '' || $value === 'n/a') {
+            return '';
+        }
+        if (str_starts_with($value, 'm')) {
+            return 'M';
+        }
+        if (str_starts_with($value, 'f')) {
+            return 'F';
+        }
+
+        return '';
+    };
+
+    $ageFromBirthdate = static function (?string $birthdate): ?int {
+        return \App\Support\PersonAge::ageInYears($birthdate);
+    };
+
+    $residentBirthdate = $residentUser?->date_of_birth
+        ? $residentUser->date_of_birth->toDateString()
+        : null;
+    $residentAgeValue = $ageFromBirthdate($residentBirthdate) ?? ($residentAge !== null ? (int) $residentAge : null);
+    $residentGenderCode = $normalizeMemberGenderCode((string) $residentGender);
+
     $householdMemberOptions = collect([
         [
             'name' => $residentName,
@@ -1120,16 +2031,30 @@
             'index' => null,
             'label' => $residentName.' (Resident)',
             'role' => 'Resident',
+            'age' => $residentAgeValue,
+            'gender' => $residentGenderCode,
         ],
     ]);
 
     if ($spouseName !== '') {
+        $spouseBirthdate = trim((string) ($spouseDetails['birthdate'] ?? ''));
+        $spouseGenderCode = $normalizeMemberGenderCode((string) ($spouseDetails['gender'] ?? ''));
+        if ($spouseGenderCode === '') {
+            $spouseGenderCode = match (trim((string) ($spouseDetails['parent_role'] ?? ''))) {
+                'Father' => 'M',
+                'Mother' => 'F',
+                default => '',
+            };
+        }
+
         $householdMemberOptions->push([
             'name' => $spouseName,
             'source' => 'spouse',
             'index' => null,
             'label' => $spouseName.' (Spouse)',
             'role' => 'Spouse',
+            'age' => $ageFromBirthdate($spouseBirthdate !== '' ? $spouseBirthdate : null),
+            'gender' => $spouseGenderCode,
         ]);
     }
 
@@ -1143,12 +2068,16 @@
             continue;
         }
 
+        $childBirthdate = trim((string) ($childRow['birthdate'] ?? ''));
+
         $householdMemberOptions->push([
             'name' => $childOptionName,
             'source' => 'household_child',
             'index' => $childIndex,
             'label' => $childOptionName.' (Child)',
             'role' => 'Child',
+            'age' => $ageFromBirthdate($childBirthdate !== '' ? $childBirthdate : null),
+            'gender' => $normalizeMemberGenderCode((string) ($childRow['gender'] ?? '')),
         ]);
     }
 
@@ -1162,12 +2091,20 @@
             continue;
         }
 
+        $seniorBirthdate = trim((string) ($seniorRow['birthdate'] ?? ''));
+        $seniorAge = $ageFromBirthdate($seniorBirthdate !== '' ? $seniorBirthdate : null);
+        if ($seniorAge === null && isset($seniorRow['age_in_years']) && is_numeric($seniorRow['age_in_years'])) {
+            $seniorAge = (int) $seniorRow['age_in_years'];
+        }
+
         $householdMemberOptions->push([
             'name' => $seniorOptionName,
             'source' => 'household_senior',
             'index' => $seniorIndex,
             'label' => $seniorOptionName.' (Senior)',
             'role' => 'Senior',
+            'age' => $seniorAge,
+            'gender' => $normalizeMemberGenderCode((string) ($seniorRow['gender'] ?? '')),
         ]);
     }
 
@@ -1206,15 +2143,37 @@
     }
 
     $failedProfileFormTab = null;
+    $failedVisitCaseId = null;
+    $failedHouseholdAction = null;
     if ($errors->any()) {
         if (old('consultation_date') !== null) {
             $failedProfileFormTab = 'consultations';
+        } elseif (old('household_action') !== null) {
+            $failedProfileFormTab = 'family';
+            $failedHouseholdAction = old('household_action');
+        } elseif (old('form_intent') === 'monitoring_visit') {
+            $failedProfileFormTab = 'maintenance';
+            $failedVisitCaseId = old('monitoring_case_id');
         } elseif (old('visit_date') !== null && old('transaction_date') === null) {
             $failedProfileFormTab = 'maintenance';
         } elseif (old('transaction_date') !== null || old('philhealth_number') !== null) {
             $failedProfileFormTab = 'medical-history';
         }
     }
+
+    $editableChildren = collect($resident->household_children ?? [])
+        ->values()
+        ->filter(fn ($row) => is_array($row) && trim((string) ($row['full_name'] ?? $row['name'] ?? '')) !== '')
+        ->values();
+    $editableSeniors = collect($resident->household_seniors ?? [])
+        ->values()
+        ->filter(fn ($row) => is_array($row) && trim((string) ($row['full_name'] ?? $row['name'] ?? '')) !== '')
+        ->values();
+    $familyPeopleCount = 1
+        + ($spouseName !== '' ? 1 : 0)
+        + $editableChildren->count()
+        + $editableSeniors->count();
+    $educationOptions = \App\Models\ResidentRequest::EDUCATIONAL_ATTAINMENTS;
 @endphp
 
     @include('sidebars.bhw')
@@ -1259,9 +2218,6 @@
                                     <a href="{{ route('bhw.residents.chat', $resident) }}" class="profile-chat-compact profile-chat-glow inline-flex items-center justify-center gap-1.5 mt-2 px-3.5 py-1.5 rounded-full bg-primary text-white text-sm font-semibold hover:opacity-95 transition">
                                         <span class="material-symbols-outlined text-base">forum</span>
                                         <span>Chat</span>
-                                        @if (($residentChatUnreadCount ?? 0) > 0)
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-white text-red-600 leading-none">{{ $residentChatUnreadCount }}</span>
-                                        @endif
                                     </a>
                                 </div>
                             </div>
@@ -1286,6 +2242,7 @@
                         <div class="profile-main-panel bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark profile-tab-shell">
                             <nav aria-label="Tabs" class="profile-tab-nav">
                                 <a aria-current="page" class="profile-tab-link tab-link active" data-tab="overview" href="#">Overview</a>
+                                <a class="profile-tab-link tab-link" data-tab="family" href="#">Family</a>
                                 <a class="profile-tab-link tab-link" data-tab="medical-history" href="#">Transaction</a>
                                 <a class="profile-tab-link tab-link" data-tab="maintenance" href="#">Maintenance</a>
                                 <a class="profile-tab-link tab-link" data-tab="consultations" href="#">Consultations</a>
@@ -1367,6 +2324,443 @@
                                     </div>
                                 </div>
 
+                                <div id="family" class="tab-content min-w-0">
+                                    <div class="profile-tab-toolbar">
+                                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Family Members</h4>
+                                                <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Add or update household members so family counting stays accurate (new members, removals, and corrections).</p>
+                                            </div>
+                                            <div class="family-action-row {{ $spouseName === '' ? '' : 'family-action-row--two' }} shrink-0">
+                                                @if ($spouseName === '')
+                                                    <button type="button" id="openAddSpouseBtn" class="family-action-btn border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                                                        <span class="material-symbols-outlined text-base shrink-0">favorite</span>
+                                                        <span>Add Spouse</span>
+                                                    </button>
+                                                @endif
+                                                <button type="button" id="openAddChildBtn" class="family-action-btn border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark">
+                                                    <span class="material-symbols-outlined text-base shrink-0">child_care</span>
+                                                    <span>Add Child</span>
+                                                </button>
+                                                <button type="button" id="openAddSeniorBtn" class="family-action-btn bg-primary text-white font-bold hover:opacity-90">
+                                                    <span class="material-symbols-outlined text-base shrink-0">elderly</span>
+                                                    <span>Add Elderly</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        @if (session('status') && (request('tab') === 'family' || old('household_action')))
+                                            <div class="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
+                                                {{ session('status') }}
+                                            </div>
+                                        @endif
+
+                                        @if ($errors->any() && old('household_action'))
+                                            <div class="mt-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200">
+                                                <ul class="list-disc pl-5 space-y-1">
+                                                    @foreach ($errors->all() as $error)
+                                                        <li>{{ $error }}</li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <div class="profile-tab-scroll space-y-4">
+                                        <div class="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+                                            <p class="font-semibold text-text-light dark:text-text-dark">Household count: <span class="text-primary">{{ $familyPeopleCount }}</span> {{ $familyPeopleCount === 1 ? 'person' : 'people' }}</p>
+                                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Includes the resident, spouse, children, and elderly members listed below.</p>
+                                        </div>
+
+                                        <div class="family-member-card rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
+                                            <div class="flex items-start justify-between gap-3 w-full">
+                                                <div class="min-w-0 flex-1">
+                                                    <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Resident</p>
+                                                    <p class="family-member-card__name font-semibold mt-1 text-text-light dark:text-text-dark">{{ $residentName }}</p>
+                                                    <p class="family-member-card__meta text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Primary account holder — edit personal details from verification/profile, not here.</p>
+                                                </div>
+                                                <span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary shrink-0">Resident</span>
+                                            </div>
+                                        </div>
+
+                                        @if ($spouseName !== '')
+                                            <div class="family-member-card rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
+                                                <div class="flex items-start justify-between gap-3 w-full">
+                                                    <div class="min-w-0 flex-1 pr-1">
+                                                        <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">{{ $spouseRoleLabel }}</p>
+                                                        <p class="family-member-card__name font-semibold mt-1 text-text-light dark:text-text-dark">{{ $spouseName }}</p>
+                                                        @if (! empty($spouseMetaParts))
+                                                            <p class="family-member-card__meta text-xs text-text-light/60 dark:text-text-dark/60 mt-1">{{ implode(' · ', $spouseMetaParts) }}</p>
+                                                        @endif
+                                                    </div>
+                                                    <div class="flex items-center gap-2 shrink-0">
+                                                        <button type="button" class="open-edit-spouse-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-border-light dark:border-border-dark hover:bg-card-light dark:hover:bg-card-dark" title="Edit spouse" aria-label="Edit spouse"
+                                                            @php
+                                                                $spouseEditFirst = trim((string) ($spouseDetails['first_name'] ?? ''));
+                                                                $spouseEditLast = trim((string) ($spouseDetails['last_name'] ?? ''));
+                                                                if ($spouseEditFirst === '' && $spouseEditLast === '' && $spouseName !== '') {
+                                                                    $nameParts = preg_split('/\s+/', $spouseName) ?: [];
+                                                                    $spouseEditFirst = $nameParts[0] ?? '';
+                                                                    $spouseEditLast = count($nameParts) > 1 ? (string) end($nameParts) : '';
+                                                                }
+                                                            @endphp
+                                                            data-first-name="{{ $spouseEditFirst }}"
+                                                            data-last-name="{{ $spouseEditLast }}"
+                                                            data-middle-initial="{{ $spouseDetails['middle_initial'] ?? '' }}"
+                                                            data-birthdate="{{ $spouseDetails['birthdate'] ?? '' }}"
+                                                            data-parent-role="{{ $spouseDetails['parent_role'] ?? '' }}"
+                                                            data-place-of-birth="{{ $spouseDetails['place_of_birth'] ?? '' }}"
+                                                            data-educational-attainment="{{ $spouseDetails['educational_attainment'] ?? '' }}"
+                                                        >
+                                                            <span class="material-symbols-outlined text-base">edit</span>
+                                                        </button>
+                                                        <button type="button" class="open-remove-member-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300" title="Remove spouse" aria-label="Remove spouse"
+                                                            data-action="remove_spouse"
+                                                            data-member-name="{{ $spouseName }}"
+                                                            data-member-label="spouse"
+                                                        >
+                                                            <span class="material-symbols-outlined text-base">person_remove</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @forelse ($editableChildren as $childIndex => $childRow)
+                                            @php
+                                                $childName = trim((string) ($childRow['full_name'] ?? $childRow['name'] ?? ''));
+                                                $childMeta = collect([
+                                                    $childRow['relationship'] ?? null,
+                                                    $childRow['gender'] ?? null,
+                                                    ! empty($childRow['birthdate']) ? \App\Support\PersonAge::labelFromBirthdate((string) $childRow['birthdate']) : null,
+                                                ])->filter()->implode(' · ');
+                                            @endphp
+                                            <div class="family-member-card rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
+                                                <div class="flex items-start justify-between gap-3 w-full">
+                                                    <div class="min-w-0 flex-1 pr-1">
+                                                        <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Child</p>
+                                                        <p class="family-member-card__name font-semibold mt-1 text-text-light dark:text-text-dark">{{ $childName }}</p>
+                                                        @if ($childMeta !== '')
+                                                            <p class="family-member-card__meta text-xs text-text-light/60 dark:text-text-dark/60 mt-1">{{ $childMeta }}</p>
+                                                        @endif
+                                                    </div>
+                                                    <div class="flex items-center gap-2 shrink-0">
+                                                        <button type="button" class="open-edit-child-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-border-light dark:border-border-dark hover:bg-card-light dark:hover:bg-card-dark" title="Edit child" aria-label="Edit child"
+                                                            data-index="{{ $childIndex }}"
+                                                            data-full-name="{{ $childName }}"
+                                                            data-birthdate="{{ $childRow['birthdate'] ?? '' }}"
+                                                            data-gender="{{ $childRow['gender'] ?? '' }}"
+                                                            data-relationship="{{ $childRow['relationship'] ?? '' }}"
+                                                            data-currently-studying="{{ $childRow['currently_studying'] ?? 'no' }}"
+                                                            data-school="{{ $childRow['school'] ?? '' }}"
+                                                            data-educational-attainment="{{ $childRow['educational_attainment'] ?? '' }}"
+                                                            data-occupation="{{ $childRow['occupation'] ?? '' }}"
+                                                        >
+                                                            <span class="material-symbols-outlined text-base">edit</span>
+                                                        </button>
+                                                        <button type="button" class="open-remove-member-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300" title="Remove child" aria-label="Remove child"
+                                                            data-action="remove_child"
+                                                            data-index="{{ $childIndex }}"
+                                                            data-member-name="{{ $childName }}"
+                                                            data-member-label="child"
+                                                        >
+                                                            <span class="material-symbols-outlined text-base">person_remove</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="rounded-xl border border-dashed border-border-light dark:border-border-dark px-4 py-6 text-center text-sm text-text-light/60 dark:text-text-dark/60">
+                                                No children listed yet. Use <span class="font-semibold">Add Child</span> when a new family member is born or joins the household.
+                                            </div>
+                                        @endforelse
+
+                                        @forelse ($editableSeniors as $seniorIndex => $seniorRow)
+                                            @php
+                                                $seniorName = trim((string) ($seniorRow['full_name'] ?? $seniorRow['name'] ?? ''));
+                                                $seniorMeta = collect([
+                                                    $seniorRow['relationship'] ?? null,
+                                                    $seniorRow['gender'] ?? null,
+                                                    isset($seniorRow['age_in_years']) ? $seniorRow['age_in_years'].' yrs' : (! empty($seniorRow['birthdate']) ? \App\Support\PersonAge::labelFromBirthdate((string) $seniorRow['birthdate']) : null),
+                                                ])->filter()->implode(' · ');
+                                            @endphp
+                                            <div class="family-member-card rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
+                                                <div class="flex items-start justify-between gap-3 w-full">
+                                                    <div class="min-w-0 flex-1 pr-1">
+                                                        <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Elderly</p>
+                                                        <p class="family-member-card__name font-semibold mt-1 text-text-light dark:text-text-dark">{{ $seniorName }}</p>
+                                                        @if ($seniorMeta !== '')
+                                                            <p class="family-member-card__meta text-xs text-text-light/60 dark:text-text-dark/60 mt-1">{{ $seniorMeta }}</p>
+                                                        @endif
+                                                    </div>
+                                                    <div class="flex items-center gap-2 shrink-0">
+                                                        <button type="button" class="open-edit-senior-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-border-light dark:border-border-dark hover:bg-card-light dark:hover:bg-card-dark" title="Edit elderly member" aria-label="Edit elderly member"
+                                                            data-index="{{ $seniorIndex }}"
+                                                            data-full-name="{{ $seniorName }}"
+                                                            data-birthdate="{{ $seniorRow['birthdate'] ?? '' }}"
+                                                            data-gender="{{ $seniorRow['gender'] ?? '' }}"
+                                                            data-relationship="{{ $seniorRow['relationship'] ?? '' }}"
+                                                            data-place-of-birth="{{ $seniorRow['place_of_birth'] ?? '' }}"
+                                                            data-educational-attainment="{{ $seniorRow['educational_attainment'] ?? '' }}"
+                                                            data-occupation="{{ $seniorRow['occupation'] ?? '' }}"
+                                                        >
+                                                            <span class="material-symbols-outlined text-base">edit</span>
+                                                        </button>
+                                                        <button type="button" class="open-remove-member-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300" title="Remove elderly member" aria-label="Remove elderly member"
+                                                            data-action="remove_senior"
+                                                            data-index="{{ $seniorIndex }}"
+                                                            data-member-name="{{ $seniorName }}"
+                                                            data-member-label="elderly member"
+                                                        >
+                                                            <span class="material-symbols-outlined text-base">person_remove</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @empty
+                                            <div class="rounded-xl border border-dashed border-border-light dark:border-border-dark px-4 py-6 text-center text-sm text-text-light/60 dark:text-text-dark/60">
+                                                No elderly members listed. Use <span class="font-semibold">Add Elderly</span> when a senior joins the household, or remove them here if they pass away.
+                                            </div>
+                                        @endforelse
+                                    </div>
+
+                                    {{-- Child modal --}}
+                                    <div id="familyChildModal" class="hidden fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/50 px-0 py-0 lg:px-5 lg:py-4">
+                                        <div class="transaction-modal-panel max-w-lg w-full">
+                                            <div class="transaction-modal-header flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-5 py-4 shrink-0">
+                                                <div class="min-w-0">
+                                                    <h5 id="familyChildModalTitle" class="text-lg font-bold">Add Child</h5>
+                                                    <p class="tx-modal-subtitle text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Updates the household list used for family counting.</p>
+                                                </div>
+                                                <button type="button" class="close-family-child-modal inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border-light dark:border-border-dark" aria-label="Close"><span class="material-symbols-outlined text-base">close</span></button>
+                                            </div>
+                                            <div class="transaction-modal-body">
+                                                <form method="POST" action="{{ route('bhw.residents.household.update', $resident) }}" class="tx-form" id="familyChildForm">
+                                                    @csrf
+                                                    <input type="hidden" name="household_action" id="family_child_action" value="add_child" />
+                                                    <input type="hidden" name="member_index" id="family_child_index" value="" />
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_child_full_name">Full Name</label>
+                                                        <input id="family_child_full_name" name="full_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                    </div>
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_child_birthdate">Birthdate</label>
+                                                            <input id="family_child_birthdate" name="birthdate" type="date" required max="{{ now()->toDateString() }}" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_child_gender">Gender</label>
+                                                            <select id="family_child_gender" name="gender" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                                <option value="">Select</option>
+                                                                <option value="Male">Male</option>
+                                                                <option value="Female">Female</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_child_relationship">Relationship</label>
+                                                            <select id="family_child_relationship" name="relationship" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                                <option value="">Select</option>
+                                                                @foreach (\App\Models\ResidentRequest::CHILD_RELATIONSHIPS as $rel)
+                                                                    <option value="{{ $rel }}">{{ $rel }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_child_studying">Status</label>
+                                                            <select id="family_child_studying" name="currently_studying" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                                <option value="infant">Infant</option>
+                                                                <option value="yes">Studying</option>
+                                                                <option value="no">Working / Not studying</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div id="familyChildSchoolFields" class="hidden">
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_child_school">School</label>
+                                                        <input id="family_child_school" name="school" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                    </div>
+                                                    <div id="familyChildWorkFields" class="hidden space-y-3">
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_child_edu">Educational Attainment</label>
+                                                            <select id="family_child_edu" name="educational_attainment" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                                <option value="">Select</option>
+                                                                @foreach ($educationOptions as $edu)
+                                                                    <option value="{{ $edu }}">{{ $edu }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_child_occupation">Occupation</label>
+                                                            <input id="family_child_occupation" name="occupation" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
+                                                        <button type="button" class="close-family-child-modal h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                                                        <button type="submit" class="h-11 px-5 rounded-xl bg-primary text-white text-sm font-bold">Save Child</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Senior modal --}}
+                                    <div id="familySeniorModal" class="hidden fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/50 px-0 py-0 lg:px-5 lg:py-4">
+                                        <div class="transaction-modal-panel max-w-lg w-full">
+                                            <div class="transaction-modal-header flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-5 py-4 shrink-0">
+                                                <div class="min-w-0">
+                                                    <h5 id="familySeniorModalTitle" class="text-lg font-bold">Add Elderly</h5>
+                                                    <p class="tx-modal-subtitle text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Must be at least 60 years old. Remove here if the member passes away.</p>
+                                                </div>
+                                                <button type="button" class="close-family-senior-modal inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border-light dark:border-border-dark" aria-label="Close"><span class="material-symbols-outlined text-base">close</span></button>
+                                            </div>
+                                            <div class="transaction-modal-body">
+                                                <form method="POST" action="{{ route('bhw.residents.household.update', $resident) }}" class="tx-form" id="familySeniorForm">
+                                                    @csrf
+                                                    <input type="hidden" name="household_action" id="family_senior_action" value="add_senior" />
+                                                    <input type="hidden" name="member_index" id="family_senior_index" value="" />
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_senior_full_name">Full Name</label>
+                                                        <input id="family_senior_full_name" name="full_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                    </div>
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_senior_birthdate">Birthdate</label>
+                                                            <input id="family_senior_birthdate" name="birthdate" type="date" required max="{{ now()->toDateString() }}" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_senior_gender">Gender</label>
+                                                            <select id="family_senior_gender" name="gender" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                                <option value="">Select</option>
+                                                                <option value="Male">Male</option>
+                                                                <option value="Female">Female</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_senior_relationship">Relationship</label>
+                                                        <select id="family_senior_relationship" name="relationship" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                            <option value="">Select</option>
+                                                            @foreach (\App\Models\ResidentRequest::HOUSEHOLD_SENIOR_RELATIONSHIPS as $rel)
+                                                                <option value="{{ $rel }}">{{ $rel }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_senior_pob">Place of Birth</label>
+                                                        <input id="family_senior_pob" name="place_of_birth" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_senior_edu">Educational Attainment</label>
+                                                        <select id="family_senior_edu" name="educational_attainment" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                            <option value="">Select</option>
+                                                            @foreach ($educationOptions as $edu)
+                                                                <option value="{{ $edu }}">{{ $edu }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_senior_occupation">Occupation <span class="font-normal text-text-light/50">(optional)</span></label>
+                                                        <input id="family_senior_occupation" name="occupation" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                    </div>
+                                                    <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
+                                                        <button type="button" class="close-family-senior-modal h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                                                        <button type="submit" class="h-11 px-5 rounded-xl bg-primary text-white text-sm font-bold">Save Elderly</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Spouse modal --}}
+                                    <div id="familySpouseModal" class="hidden fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/50 px-0 py-0 lg:px-5 lg:py-4">
+                                        <div class="transaction-modal-panel max-w-lg w-full">
+                                            <div class="transaction-modal-header flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-5 py-4 shrink-0">
+                                                <div class="min-w-0">
+                                                    <h5 id="familySpouseModalTitle" class="text-lg font-bold">Add Spouse</h5>
+                                                    <p class="tx-modal-subtitle text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Spouse is included in household counting and member pickers.</p>
+                                                </div>
+                                                <button type="button" class="close-family-spouse-modal inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border-light dark:border-border-dark" aria-label="Close"><span class="material-symbols-outlined text-base">close</span></button>
+                                            </div>
+                                            <div class="transaction-modal-body">
+                                                <form method="POST" action="{{ route('bhw.residents.household.update', $resident) }}" class="tx-form" id="familySpouseForm">
+                                                    @csrf
+                                                    <input type="hidden" name="household_action" value="set_spouse" />
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_spouse_first">First Name</label>
+                                                            <input id="family_spouse_first" name="spouse_first_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_spouse_last">Last Name</label>
+                                                            <input id="family_spouse_last" name="spouse_last_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_spouse_mi">M.I. <span class="font-normal text-text-light/50">(optional)</span></label>
+                                                            <input id="family_spouse_mi" name="spouse_middle_initial" maxlength="5" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_spouse_birthdate">Birthdate</label>
+                                                            <input id="family_spouse_birthdate" name="spouse_birthdate" type="date" required max="{{ now()->toDateString() }}" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_spouse_role">Parent Role</label>
+                                                        <select id="family_spouse_role" name="spouse_parent_role" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                            <option value="">Select</option>
+                                                            @foreach (\App\Models\ResidentRequest::PARENT_ROLES as $role)
+                                                                <option value="{{ $role }}">{{ $role }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_spouse_pob">Place of Birth</label>
+                                                        <input id="family_spouse_pob" name="spouse_place_of_birth" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_spouse_edu">Educational Attainment</label>
+                                                        <select id="family_spouse_edu" name="spouse_educational_attainment" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                            <option value="">Select</option>
+                                                            @foreach ($educationOptions as $edu)
+                                                                <option value="{{ $edu }}">{{ $edu }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
+                                                        <button type="button" class="close-family-spouse-modal h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                                                        <button type="submit" class="h-11 px-5 rounded-xl bg-primary text-white text-sm font-bold">Save Spouse</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Remove confirm --}}
+                                    <div id="familyRemoveModal" class="hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+                                        <div class="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl">
+                                            <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-4 py-4">
+                                                <div class="min-w-0">
+                                                    <h5 class="text-lg font-bold text-red-600 dark:text-red-300">Remove Member</h5>
+                                                    <p id="familyRemoveMessage" class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1"></p>
+                                                </div>
+                                                <button type="button" id="closeFamilyRemoveModal" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark" aria-label="Close"><span class="material-symbols-outlined">close</span></button>
+                                            </div>
+                                            <form method="POST" action="{{ route('bhw.residents.household.update', $resident) }}" class="px-4 py-4 space-y-4">
+                                                @csrf
+                                                <input type="hidden" name="household_action" id="family_remove_action" value="" />
+                                                <input type="hidden" name="member_index" id="family_remove_index" value="" />
+                                                <p class="text-xs text-text-light/60 dark:text-text-dark/60">This updates family counting. Active monitoring for this person will be marked completed.</p>
+                                                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                                    <button type="button" id="cancelFamilyRemoveModal" class="h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                                                    <button type="submit" class="h-11 px-4 rounded-xl bg-red-600 text-white text-sm font-bold">Remove</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div id="medical-history" class="tab-content min-w-0">
                                     <div class="profile-tab-toolbar">
                                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -1394,15 +2788,15 @@
                                     @endif
                                     </div>
 
-                                    <div id="medicalHistoryFormWrapper" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6 lg:px-5 lg:py-4">
+                                    <div id="medicalHistoryFormWrapper" class="hidden fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/50 px-0 py-0 lg:px-5 lg:py-4">
                                         <div class="transaction-modal-panel" role="dialog" aria-modal="true" aria-labelledby="transactionModalTitle">
                                             <div class="transaction-modal-header flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-5 py-4 shrink-0">
                                                 <div class="min-w-0">
-                                                    <p class="text-xs font-semibold uppercase tracking-wide text-primary/80 dark:text-primary/90">Medicine dispensing</p>
+                                                    <p class="tx-modal-eyebrow text-xs font-semibold uppercase tracking-wide text-primary/80 dark:text-primary/90">Medicine dispensing</p>
                                                     <h5 id="transactionModalTitle" class="text-lg font-bold text-text-light dark:text-text-dark mt-1">Add Transaction</h5>
-                                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Select who in the household received medicine, then record pcs for each item. Health concerns update based on your selection.</p>
+                                                    <p class="tx-modal-subtitle text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Select who received medicine, then enter pcs for each item. Age updates from the selected member.</p>
                                                 </div>
-                                                <button type="button" id="closeMedicalHistoryForm" class="inline-flex items-center justify-center w-8 h-8 lg:w-8 lg:h-8 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark shrink-0" aria-label="Close transaction form">
+                                                <button type="button" id="closeMedicalHistoryForm" class="inline-flex items-center justify-center w-9 h-9 lg:w-8 lg:h-8 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark shrink-0" aria-label="Close transaction form">
                                                     <span class="material-symbols-outlined text-base">close</span>
                                                 </button>
                                             </div>
@@ -1410,6 +2804,11 @@
                                             <div class="transaction-modal-body">
                                             @php
                                                 $defaultTransactionGender = old('gender');
+                                                if (! $defaultTransactionGender) {
+                                                    $defaultTransactionGender = $householdMemberOptions
+                                                        ->firstWhere('name', $defaultTransactionMemberSelectValue)['gender']
+                                                        ?? '';
+                                                }
                                                 if (! $defaultTransactionGender && filled($residentGender)) {
                                                     $genderLower = strtolower((string) $residentGender);
                                                     $defaultTransactionGender = str_starts_with($genderLower, 'm') ? 'M' : (str_starts_with($genderLower, 'f') ? 'F' : '');
@@ -1434,6 +2833,8 @@
                                                                 value="{{ $option['name'] }}"
                                                                 data-source="{{ $option['source'] }}"
                                                                 data-index="{{ $option['index'] ?? '' }}"
+                                                                data-age="{{ $option['age'] ?? '' }}"
+                                                                data-gender="{{ $option['gender'] ?? '' }}"
                                                                 {{ $defaultTransactionMemberSelectValue === $option['name'] ? 'selected' : '' }}
                                                             >{{ $option['label'] }}</option>
                                                     @endforeach
@@ -1449,7 +2850,12 @@
                                                 <div class="tx-details-row">
                                             <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="age">Age</label>
-                                                        <input id="age" name="age" value="{{ old('age', $residentAge) }}" class="w-full h-11 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" placeholder="e.g., 58" type="number" min="0" max="150" required />
+                                                        @php
+                                                            $defaultSelectedMemberAge = $householdMemberOptions
+                                                                ->firstWhere('name', $defaultTransactionMemberSelectValue)['age']
+                                                                ?? $residentAge;
+                                                        @endphp
+                                                        <input id="age" name="age" value="{{ old('age', $defaultSelectedMemberAge) }}" class="w-full h-11 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" placeholder="e.g., 58" type="number" min="0" max="150" required />
                                             </div>
                                                 <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="transaction_date">Date</label>
@@ -1623,15 +3029,15 @@
                                         @endif
                                     </div>
 
-                                    <div id="monitoringCaseFormWrapper" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6 lg:px-5 lg:py-4">
+                                    <div id="monitoringCaseFormWrapper" class="hidden fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/50 px-0 py-0 lg:px-5 lg:py-4">
                                         <div class="transaction-modal-panel" role="dialog" aria-modal="true" aria-labelledby="monitoringModalTitle">
                                             <div class="transaction-modal-header flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-5 py-4 shrink-0">
                                                 <div class="min-w-0">
-                                                    <p class="text-xs font-semibold uppercase tracking-wide text-primary/80 dark:text-primary/90">Household monitoring</p>
+                                                    <p class="tx-modal-eyebrow text-xs font-semibold uppercase tracking-wide text-primary/80 dark:text-primary/90">Household monitoring</p>
                                                     <h5 id="monitoringModalTitle" class="text-lg font-bold text-text-light dark:text-text-dark mt-1">Add Monitoring</h5>
-                                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Select a household member, monitoring type, and initial vitals for follow-up.</p>
+                                                    <p class="tx-modal-subtitle text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Select a household member, monitoring type, and initial vitals for follow-up.</p>
                                                 </div>
-                                                <button type="button" id="closeMonitoringCaseForm" class="inline-flex items-center justify-center w-8 h-8 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark shrink-0" aria-label="Close monitoring form">
+                                                <button type="button" id="closeMonitoringCaseForm" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark shrink-0" aria-label="Close monitoring form">
                                                     <span class="material-symbols-outlined text-base">close</span>
                                                 </button>
                                             </div>
@@ -1639,6 +3045,7 @@
                                             <div class="transaction-modal-body">
                                             <form method="POST" action="{{ route('bhw.residents.monitoring-cases.store', $resident) }}" class="tx-form" id="monitoringCaseForm">
                                                     @csrf
+                                                <input type="hidden" name="form_intent" value="monitoring_case" />
 
                                                 <input type="hidden" name="member_source" id="member_source" value="{{ $defaultMonitoringMemberSource }}" />
                                                 <input type="hidden" name="member_index" id="member_index" value="{{ $defaultMonitoringMemberIndex }}" />
@@ -1709,15 +3116,15 @@
                                                             </div>
                                                             <div class="mnt-metric-fields">
                                                                 <div>
-                                                                    <label class="block text-sm font-semibold mb-1.5" for="monitoring_height_cm">Height (cm)</label>
+                                                                    <label class="block text-sm font-semibold mb-1.5" for="monitoring_height_cm">Height (cm) <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
                                                                     <input id="monitoring_height_cm" name="height_cm" value="{{ old('height_cm') }}" data-visit-height="new" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="30" max="300" step="0.1" placeholder="e.g., 165" />
                                                                 </div>
                                                                 <div>
-                                                                    <label class="block text-sm font-semibold mb-1.5" for="monitoring_weight_kg">Weight (kg)</label>
+                                                                    <label class="block text-sm font-semibold mb-1.5" for="monitoring_weight_kg">Weight (kg) <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
                                                                     <input id="monitoring_weight_kg" name="weight_kg" value="{{ old('weight_kg') }}" data-visit-weight="new" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="1" max="500" step="0.1" placeholder="e.g., 60" />
                                                                 </div>
                                                                 <div>
-                                                                    <label class="block text-sm font-semibold mb-1.5">BMI (auto)</label>
+                                                                    <label class="block text-sm font-semibold mb-1.5">BMI (auto) <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
                                                                     <input data-visit-bmi="new" type="text" readonly class="w-full rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm px-3 font-semibold" placeholder="Auto" />
                                                                 </div>
                                                             </div>
@@ -1761,7 +3168,7 @@
                                                             </div>
                                                             <div class="mnt-metric-fields mnt-metric-fields--duo">
                                                                 <div>
-                                                                    <label class="block text-sm font-semibold mb-1.5" for="monitoring_muac_cm">MUAC (cm)</label>
+                                                                    <label class="block text-sm font-semibold mb-1.5" for="monitoring_muac_cm">MUAC (cm) <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
                                                                     <input id="monitoring_muac_cm" name="muac_cm" value="{{ old('muac_cm') }}" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="0" step="0.1" placeholder="e.g., 24.5" />
                                                                 </div>
                                                                 <div>
@@ -1796,213 +3203,192 @@
                                         </div>
                                     </div>
 
-                                    <div class="profile-tab-scroll space-y-4">
-                                        @forelse ($resident->monitoringCases as $monitoringCase)
-                                            <article class="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
-                                                <div class="flex flex-wrap items-start justify-between gap-3">
-                                                    <div class="min-w-0">
-                                                        <div class="flex flex-wrap items-center gap-2">
-                                                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ $monitoringCase->isPregnant() ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200' }}">
-                                                                {{ $monitoringCase->typeLabel() }}
-                                                            </span>
-                                                            @if ($monitoringCase->is_active)
-                                                                <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800 dark:bg-green-900/30 dark:text-green-200">Active</span>
-                                                            @else
-                                                                <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">Completed</span>
-                                                            @endif
-                                                        </div>
-                                                        <h5 class="text-lg font-bold mt-2 text-text-light dark:text-text-dark">{{ $monitoringCase->member_name }}</h5>
-                                                        @if (! $monitoringCase->is_active && $monitoringCase->completed_at)
-                                                            <p class="mt-1 text-xs text-text-light/60 dark:text-text-dark/60">
-                                                                Completed {{ $monitoringCase->completed_at->format('M d, Y') }}
-                                                            </p>
-                                                        @endif
-                                                        @if ($monitoringCase->isPregnant() && ($monitoringCase->first_period_date || $monitoringCase->last_period_date))
-                                                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">
-                                                                Period:
-                                                                {{ $monitoringCase->first_period_date?->format('M d, Y') ?? 'N/A' }}
-                                                                to
-                                                                {{ $monitoringCase->last_period_date?->format('M d, Y') ?? 'Present' }}
-                                                            </p>
-                                                        @endif
-                                                        @if ($monitoringCase->issue_notes)
-                                                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-2">{{ $monitoringCase->issue_notes }}</p>
-                                                        @endif
-                                                    </div>
-                                                    @if ($monitoringCase->is_active)
-                                                        <div class="flex flex-wrap items-center gap-2">
-                                                            <button type="button" class="toggle-visit-form inline-flex items-center gap-1 rounded-lg h-9 px-3 border border-border-light dark:border-border-dark text-sm font-semibold hover:bg-card-light dark:hover:bg-card-dark" data-case-id="{{ $monitoringCase->id }}">
-                                                                <span class="material-symbols-outlined text-base">add</span>
-                                                                Add Visit
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                class="open-complete-monitoring-modal inline-flex items-center gap-1 rounded-lg h-9 px-3 border border-green-300 text-sm font-semibold text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-300 dark:hover:bg-green-900/20"
-                                                                data-complete-url="{{ route('bhw.monitoring-cases.complete', $monitoringCase) }}"
-                                                                data-member-name="{{ $monitoringCase->member_name }}"
-                                                                data-type-label="{{ $monitoringCase->typeLabel() }}"
-                                                            >
-                                                                <span class="material-symbols-outlined text-base">check_circle</span>
-                                                                Mark Completed
-                                                            </button>
-                                                        </div>
-                                                    @endif
-                                                </div>
+                                    <div class="profile-tab-scroll">
+                                        @php
+                                            $monitoringCases = $resident->monitoringCases ?? collect();
+                                            $activeMonitoringCases = $monitoringCases->where('is_active', true)->values();
+                                            $completedMonitoringCases = $monitoringCases->where('is_active', false)->values();
+                                        @endphp
 
-                                                @if ($monitoringCase->is_active)
-                                                <div id="visitForm-{{ $monitoringCase->id }}" class="hidden mt-4 rounded-lg border border-border-light dark:border-border-dark p-3 bg-card-light dark:bg-card-dark">
-                                                    <form method="POST" action="{{ route('bhw.monitoring-cases.visits.store', $monitoringCase) }}" class="space-y-4 monitoring-visit-form" data-case-id="{{ $monitoringCase->id }}">
-                                                        @csrf
-                                                        <div>
-                                                            <label class="block text-sm font-semibold mb-1">Visit Date</label>
-                                                            <input name="visit_date" value="{{ now()->toDateString() }}" class="w-full sm:max-w-xs h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm" type="date" required />
-                                                        </div>
-
-                                                        <div class="rounded-lg border border-border-light dark:border-border-dark p-3 bg-background-light dark:bg-background-dark">
-                                                            <p class="text-sm font-bold text-text-light dark:text-text-dark mb-3">Height, Weight &amp; BMI</p>
-                                                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                                <div>
-                                                                    <label class="block text-sm font-semibold mb-1">Height (cm)</label>
-                                                                    <input name="height_cm" data-visit-height="{{ $monitoringCase->id }}" class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm" type="number" min="30" max="300" step="0.1" placeholder="e.g., 165" />
-                                                                </div>
-                                                                <div>
-                                                                    <label class="block text-sm font-semibold mb-1">Weight (kg)</label>
-                                                                    <input name="weight_kg" data-visit-weight="{{ $monitoringCase->id }}" class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm" type="number" min="1" max="500" step="0.1" placeholder="e.g., 60" />
-                                                                </div>
-                                                                <div>
-                                                                    <label class="block text-sm font-semibold mb-1">BMI (auto)</label>
-                                                                    <input data-visit-bmi="{{ $monitoringCase->id }}" type="text" readonly class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm" placeholder="Auto-calculated" />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        @if ($monitoringCase->isSenior())
-                                                            <div class="rounded-lg border border-border-light dark:border-border-dark p-3 bg-background-light dark:bg-background-dark">
-                                                                <p class="text-sm font-bold text-text-light dark:text-text-dark mb-3">Blood Pressure (BP)</p>
-                                                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                                                                    <div>
-                                                                        <label class="block text-sm font-semibold mb-1">Systolic</label>
-                                                                        <input name="bp_systolic" data-visit-bp-sys="{{ $monitoringCase->id }}" class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm" type="number" min="50" max="300" placeholder="e.g., 120" />
-                                                                    </div>
-                                                                    <div>
-                                                                        <label class="block text-sm font-semibold mb-1">Diastolic</label>
-                                                                        <input name="bp_diastolic" data-visit-bp-dia="{{ $monitoringCase->id }}" class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm" type="number" min="30" max="200" placeholder="e.g., 80" />
-                                                                    </div>
-                                                                    <div>
-                                                                        <label class="block text-sm font-semibold mb-1">BP Reading</label>
-                                                                        <input data-visit-bp-preview="{{ $monitoringCase->id }}" type="text" readonly class="w-full h-10 rounded-lg bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm font-semibold" placeholder="Auto: 120/80" />
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        @endif
-
-                                                        <div>
-                                                            <label class="block text-sm font-semibold mb-1">MUAC (cm)</label>
-                                                            <input name="muac_cm" class="w-full sm:max-w-xs h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm" type="number" min="0" max="100" step="0.1" placeholder="Mid-upper arm circumference" />
-                                                        </div>
-
-                                                        @if ($monitoringCase->isPregnant())
-                                                            <div>
-                                                                <label class="block text-sm font-semibold mb-1">Last Period Date <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
-                                                                <input
-                                                                    name="last_period_date"
-                                                                    value="{{ $monitoringCase->last_period_date?->toDateString() }}"
-                                                                    class="w-full sm:max-w-xs h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm"
-                                                                    type="date"
-                                                                    @if ($monitoringCase->first_period_date)
-                                                                        min="{{ $monitoringCase->first_period_date->toDateString() }}"
-                                                                    @endif
-                                                                />
-                                                            </div>
-                                                            <div>
-                                                                <label class="block text-sm font-semibold mb-1">Anti-Tetanus</label>
-                                                                <select name="anti_tetanus" class="w-full sm:max-w-xs h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm">
-                                                                    <option value="">Not given</option>
-                                                                    <option value="TT1">TT1</option>
-                                                                    <option value="TT2">TT2</option>
-                                                                    <option value="TT3">TT3</option>
-                                                                    <option value="TT4">TT4</option>
-                                                                    <option value="TT5">TT5</option>
-                                                                    <option value="Booster">Booster</option>
-                                                                </select>
-                                                            </div>
-                                                        @endif
-
-                                                        @if ($monitoringCase->isSenior())
-                                                            <div>
-                                                                <label class="block text-sm font-semibold mb-1">Maintenance Medicines (if needed)</label>
-                                                                <textarea name="maintenance_medicines" rows="2" maxlength="1000" class="w-full rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm" placeholder="List maintenance medicines and dosage"></textarea>
-                                                            </div>
-                                                        @endif
-                                                        <div>
-                                                            <label class="block text-sm font-semibold mb-1">Notes (optional)</label>
-                                                            <textarea name="notes" rows="2" maxlength="500" class="w-full rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm" placeholder="Additional visit notes"></textarea>
-                                                        </div>
-                                                    <div class="flex justify-end">
-                                                            <button type="submit" class="inline-flex items-center gap-2 rounded-lg h-9 px-3 bg-primary text-white text-sm font-semibold">
-                                                            <span class="material-symbols-outlined text-base">save</span>
-                                                                Save Visit
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                                @endif
-
-                                                @if ($monitoringCase->visits->isNotEmpty())
-                                                    <div class="mt-4 space-y-2">
-                                                        <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Visit History</p>
-                                                        @if ($monitoringCase->isPregnant())
-                                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg bg-pink-50 px-3 py-2 text-sm text-pink-900 dark:bg-pink-900/20 dark:text-pink-100">
-                                                                <p>First Period: <span class="font-semibold">{{ $monitoringCase->first_period_date?->format('M d, Y') ?? 'Not recorded' }}</span></p>
-                                                                <p>Last Period: <span class="font-semibold">{{ $monitoringCase->last_period_date?->format('M d, Y') ?? 'Not recorded' }}</span></p>
-                                                            </div>
-                                                        @endif
-                                                        @foreach ($monitoringCase->visits as $visit)
-                                                            <div class="rounded-lg border border-border-light dark:border-border-dark p-3 text-sm">
-                                                                <div class="flex items-center justify-between gap-2">
-                                                                    <p class="font-semibold">{{ $visit->visit_date?->format('M d, Y') }}</p>
-                                                                    <p class="text-xs text-text-light/50 dark:text-text-dark/50">{{ $visit->created_at?->diffForHumans() }}</p>
-                                                                </div>
-                                                                <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-text-light/80 dark:text-text-dark/80">
-                                                                    @if ($visit->height_cm !== null)
-                                                                        <span>Height: {{ $visit->height_cm }} cm</span>
-                                                                    @endif
-                                                                    @if ($visit->weight_kg !== null)
-                                                                        <span>Weight: {{ $visit->weight_kg }} kg</span>
-                                                                    @endif
-                                                                    @if ($visit->bmi_value !== null)
-                                                                        <span>BMI: {{ $visit->bmi_value }}</span>
-                                                                    @endif
-                                                                    @if ($visit->muac_cm !== null)
-                                                                        <span>MUAC: {{ $visit->muac_cm }} cm</span>
-                                                                    @endif
-                                                                    @if ($visit->anti_tetanus)
-                                                                        <span>Anti-tetanus: {{ $visit->anti_tetanus }}</span>
-                                                                    @endif
-                                                                    @if ($visit->blood_pressure)
-                                                                        <span>BP: {{ $visit->blood_pressure }}</span>
-                                                                    @endif
-                                                                </div>
-                                                                @if ($visit->maintenance_medicines)
-                                                                    <p class="mt-2 text-text-light/70 dark:text-text-dark/70">Maintenance: {{ $visit->maintenance_medicines }}</p>
-                                                                @endif
-                                                                @if ($visit->notes)
-                                                                    <p class="mt-2 text-text-light/70 dark:text-text-dark/70">{{ $visit->notes }}</p>
-                                                                @endif
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                @else
-                                                    <p class="mt-4 text-sm text-text-light/60 dark:text-text-dark/60">No visits recorded yet.</p>
-                                                @endif
-                                            </article>
-                                        @empty
-                                            <div class="rounded-lg border border-dashed border-border-light dark:border-border-dark p-8 text-center text-sm text-text-light/70 dark:text-text-dark/70">
+                                        @if ($monitoringCases->isEmpty())
+                                            <div class="rounded-xl border border-dashed border-border-light dark:border-border-dark p-8 text-center text-sm text-text-light/70 dark:text-text-dark/70">
                                                 <span class="material-symbols-outlined text-4xl text-primary/70">health_and_safety</span>
                                                 <p class="mt-3 font-semibold">No household monitoring yet.</p>
                                                 <p class="mt-1">Add monitoring for a pregnant family member or a senior with health concerns.</p>
                                             </div>
-                                        @endforelse
+                                        @else
+                                            <div class="mnt-case-list">
+                                                @if ($activeMonitoringCases->isNotEmpty())
+                                                    <p class="mnt-section-label">
+                                                        <span class="material-symbols-outlined">monitor_heart</span>
+                                                        Active monitoring · {{ $activeMonitoringCases->count() }}
+                                                    </p>
+                                                    @foreach ($activeMonitoringCases as $monitoringCase)
+                                                        @include('partials.bhw-monitoring-case-card', ['monitoringCase' => $monitoringCase])
+                                                    @endforeach
+                                                @endif
+
+                                                @if ($completedMonitoringCases->isNotEmpty())
+                                                    <p class="mnt-section-label {{ $activeMonitoringCases->isNotEmpty() ? 'mt-2' : '' }}">
+                                                        <span class="material-symbols-outlined">task_alt</span>
+                                                        Completed · {{ $completedMonitoringCases->count() }}
+                                                    </p>
+                                                    @foreach ($completedMonitoringCases as $monitoringCase)
+                                                        @include('partials.bhw-monitoring-case-card', ['monitoringCase' => $monitoringCase])
+                                                    @endforeach
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <div id="addVisitModalWrapper" class="hidden fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/50 px-0 py-0 lg:px-5 lg:py-4">
+                                        <div class="transaction-modal-panel" role="dialog" aria-modal="true" aria-labelledby="addVisitModalTitle">
+                                            <div class="transaction-modal-header flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-5 py-4 shrink-0">
+                                                <div class="min-w-0">
+                                                    <p class="tx-modal-eyebrow text-xs font-semibold uppercase tracking-wide text-primary/80 dark:text-primary/90">Follow-up visit</p>
+                                                    <h5 id="addVisitModalTitle" class="text-lg font-bold text-text-light dark:text-text-dark mt-1">Add Visit</h5>
+                                                    <p class="tx-modal-subtitle text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Recording visit for <span id="addVisitMemberName" class="font-semibold text-text-light dark:text-text-dark"></span>. Leave weight, height, BMI, BP, or MUAC blank to keep the previous visit values.</p>
+                                                </div>
+                                                <button type="button" id="closeAddVisitModalBtn" class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark shrink-0" aria-label="Close add visit form">
+                                                    <span class="material-symbols-outlined text-base">close</span>
+                                                </button>
+                                            </div>
+
+                                            <div class="transaction-modal-body">
+                                                <form id="addVisitForm" method="POST" action="#" class="tx-form">
+                                                    @csrf
+                                                    <input type="hidden" name="form_intent" value="monitoring_visit" />
+                                                    <input type="hidden" name="monitoring_case_id" id="addVisitCaseId" value="" />
+
+                                                    <section class="tx-recipient-section">
+                                                        <div class="tx-recipient-row">
+                                                            <label class="tx-recipient-row__label text-text-light dark:text-text-dark" for="add_visit_date">Visit Date</label>
+                                                            <input
+                                                                id="add_visit_date"
+                                                                name="visit_date"
+                                                                value="{{ old('form_intent') === 'monitoring_visit' ? old('visit_date', now()->toDateString()) : now()->toDateString() }}"
+                                                                class="tx-recipient-row__select w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3"
+                                                                type="date"
+                                                                required
+                                                            />
+                                                        </div>
+                                                    </section>
+
+                                                    <section class="mnt-vitals-section">
+                                                        <div class="tx-section-heading">
+                                                            <h6 class="text-sm font-bold text-text-light dark:text-text-dark">Vitals <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></h6>
+                                                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Leave blank to keep values from the previous visit. Enter new numbers only when they change. BMI recalculates when height and weight are available.</p>
+                                                        </div>
+                                                        <div class="mnt-vitals-grid">
+                                                            <div class="mnt-metric-card">
+                                                                <div class="mnt-metric-card__head">
+                                                                    <span class="mnt-metric-card__icon">
+                                                                        <span class="material-symbols-outlined text-[20px]">monitor_weight</span>
+                                                                    </span>
+                                                                    <div class="min-w-0">
+                                                                        <p class="mnt-metric-card__title text-text-light dark:text-text-dark">Height, Weight &amp; BMI</p>
+                                                                        <p class="mnt-metric-card__subtitle">Optional · blank keeps previous visit</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="mnt-metric-fields">
+                                                                    <div>
+                                                                        <label class="block text-sm font-semibold mb-1.5" for="add_visit_height_cm">Height (cm) <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
+                                                                        <input id="add_visit_height_cm" name="height_cm" value="{{ old('form_intent') === 'monitoring_visit' ? old('height_cm') : '' }}" data-visit-height="visit" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="30" max="300" step="0.1" placeholder="e.g., 165" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label class="block text-sm font-semibold mb-1.5" for="add_visit_weight_kg">Weight (kg) <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
+                                                                        <input id="add_visit_weight_kg" name="weight_kg" value="{{ old('form_intent') === 'monitoring_visit' ? old('weight_kg') : '' }}" data-visit-weight="visit" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="1" max="500" step="0.1" placeholder="e.g., 60" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label class="block text-sm font-semibold mb-1.5">BMI (auto) <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
+                                                                        <input data-visit-bmi="visit" type="text" readonly class="w-full rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm px-3 font-semibold" placeholder="Auto" />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div id="addVisitBpSection" class="hidden mnt-metric-card">
+                                                                <div class="mnt-metric-card__head">
+                                                                    <span class="mnt-metric-card__icon">
+                                                                        <span class="material-symbols-outlined text-[20px]">cardiology</span>
+                                                                    </span>
+                                                                    <div class="min-w-0">
+                                                                        <p class="mnt-metric-card__title text-text-light dark:text-text-dark">Blood Pressure</p>
+                                                                        <p class="mnt-metric-card__subtitle">Optional · blank keeps previous visit</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="mnt-metric-fields">
+                                                                    <div>
+                                                                        <label class="block text-sm font-semibold mb-1.5" for="add_visit_bp_systolic">Systolic</label>
+                                                                        <input id="add_visit_bp_systolic" name="bp_systolic" value="{{ old('form_intent') === 'monitoring_visit' ? old('bp_systolic') : '' }}" data-visit-bp-sys="visit" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="50" max="300" placeholder="120" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label class="block text-sm font-semibold mb-1.5" for="add_visit_bp_diastolic">Diastolic</label>
+                                                                        <input id="add_visit_bp_diastolic" name="bp_diastolic" value="{{ old('form_intent') === 'monitoring_visit' ? old('bp_diastolic') : '' }}" data-visit-bp-dia="visit" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="30" max="200" placeholder="80" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label class="block text-sm font-semibold mb-1.5">BP Reading</label>
+                                                                        <input data-visit-bp-preview="visit" type="text" readonly class="w-full rounded-xl bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark text-sm px-3 font-semibold" placeholder="Auto" />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div class="mnt-metric-card">
+                                                                <div class="mnt-metric-card__head">
+                                                                    <span class="mnt-metric-card__icon">
+                                                                        <span class="material-symbols-outlined text-[20px]">straighten</span>
+                                                                    </span>
+                                                                    <div class="min-w-0">
+                                                                        <p class="mnt-metric-card__title text-text-light dark:text-text-dark">MUAC</p>
+                                                                        <p class="mnt-metric-card__subtitle">Optional · blank keeps previous visit</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <label class="block text-sm font-semibold mb-1.5" for="add_visit_muac_cm">MUAC (cm) <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
+                                                                    <input id="add_visit_muac_cm" name="muac_cm" value="{{ old('form_intent') === 'monitoring_visit' ? old('muac_cm') : '' }}" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="number" min="0" max="100" step="0.1" placeholder="e.g., 24.5" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </section>
+
+                                                    <section id="addVisitPregnantSection" class="hidden space-y-3">
+                                                        <div class="tx-section-heading">
+                                                            <h6 class="text-sm font-bold text-text-light dark:text-text-dark">Pregnant follow-up</h6>
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="add_visit_last_period_date">Last Period Date <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
+                                                            <input id="add_visit_last_period_date" name="last_period_date" value="{{ old('form_intent') === 'monitoring_visit' ? old('last_period_date') : '' }}" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="date" />
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="add_visit_anti_tetanus">Anti-Tetanus <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
+                                                            <select id="add_visit_anti_tetanus" name="anti_tetanus" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3">
+                                                                <option value="" {{ old('form_intent') === 'monitoring_visit' && old('anti_tetanus') ? '' : 'selected' }}>Not given</option>
+                                                                <option value="TT1" {{ old('form_intent') === 'monitoring_visit' && old('anti_tetanus') === 'TT1' ? 'selected' : '' }}>TT1</option>
+                                                                <option value="TT2" {{ old('form_intent') === 'monitoring_visit' && old('anti_tetanus') === 'TT2' ? 'selected' : '' }}>TT2</option>
+                                                                <option value="TT3" {{ old('form_intent') === 'monitoring_visit' && old('anti_tetanus') === 'TT3' ? 'selected' : '' }}>TT3</option>
+                                                                <option value="TT4" {{ old('form_intent') === 'monitoring_visit' && old('anti_tetanus') === 'TT4' ? 'selected' : '' }}>TT4</option>
+                                                                <option value="TT5" {{ old('form_intent') === 'monitoring_visit' && old('anti_tetanus') === 'TT5' ? 'selected' : '' }}>TT5</option>
+                                                                <option value="Booster" {{ old('form_intent') === 'monitoring_visit' && old('anti_tetanus') === 'Booster' ? 'selected' : '' }}>Booster</option>
+                                                            </select>
+                                                        </div>
+                                                    </section>
+
+                                                    <section>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="add_visit_notes">Notes <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
+                                                        <textarea id="add_visit_notes" name="notes" rows="2" maxlength="500" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3 py-2" placeholder="Additional visit notes">{{ old('form_intent') === 'monitoring_visit' ? old('notes') : '' }}</textarea>
+                                                    </section>
+
+                                                    <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
+                                                        <button type="button" id="cancelAddVisitModalBtn" class="inline-flex items-center justify-center h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
+                                                            Cancel
+                                                        </button>
+                                                        <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl h-11 px-5 bg-primary text-white text-sm font-bold leading-normal tracking-wide whitespace-nowrap">
+                                                            <span class="material-symbols-outlined text-base">save</span>
+                                                            <span>Save Visit</span>
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div id="completeMonitoringModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 py-6">
@@ -2041,13 +3427,16 @@
 
                                 <div id="consultations" class="tab-content min-w-0">
                                     <div class="profile-tab-toolbar">
-                                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                                            <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Consultations</h4>
+                                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div class="min-w-0">
+                                                <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Consultations</h4>
+                                                <p class="mt-0.5 text-xs sm:text-sm text-text-light/60 dark:text-text-dark/60">Appointments scheduled for this resident</p>
+                                            </div>
                                             <button type="button" id="toggleConsultationForm" class="inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-wide whitespace-nowrap shrink-0">
-                                            <span class="material-symbols-outlined text-base">event</span>
-                                            <span>Add Appointment</span>
-                                        </button>
-                                    </div>
+                                                <span class="material-symbols-outlined text-base">event</span>
+                                                <span>Add Appointment</span>
+                                            </button>
+                                        </div>
 
                                         @if (session('status') && request('tab') === 'consultations')
                                             <div class="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
@@ -2156,22 +3545,47 @@
                                     </div>
 
                                     <div class="profile-tab-scroll">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div class="consult-list">
                                         @forelse ($resident->consultations as $consultation)
-                                            <div class="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
-                                                <p class="text-sm text-text-light/70 dark:text-text-dark/70">Date</p>
-                                                <p class="font-semibold mt-1">{{ $consultation->scheduled_at?->format('M d, Y') }}</p>
-                                                <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-2">Time</p>
-                                                <p class="font-semibold mt-1">{{ $consultation->scheduled_at?->format('h:i A') }}</p>
-                                                <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-2">Medical Checkup</p>
-                                                <p class="font-semibold mt-1">{{ $consultation->medical_checkup ?: 'General consultation' }}</p>
-                                                @if ($consultation->note)
-                                                    <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-2">{{ $consultation->note }}</p>
-                                                @endif
-                                            </div>
+                                            @php
+                                                $consultAt = $consultation->scheduled_at;
+                                                $checkupLabel = $consultation->medical_checkup ?: 'General consultation';
+                                                $isPast = $consultAt ? $consultAt->isPast() : false;
+                                            @endphp
+                                            <article class="consult-card">
+                                                <div class="consult-date-badge" aria-hidden="true">
+                                                    <span class="consult-date-badge__month">{{ $consultAt?->format('M') ?: '—' }}</span>
+                                                    <span class="consult-date-badge__day">{{ $consultAt?->format('d') ?: '—' }}</span>
+                                                    <span class="consult-date-badge__year">{{ $consultAt?->format('Y') ?: '' }}</span>
+                                                </div>
+                                                <div class="consult-card__body">
+                                                    <div class="consult-card__top">
+                                                        <h5 class="consult-card__title">{{ $checkupLabel }}</h5>
+                                                        <span class="consult-time-chip">
+                                                            <span class="material-symbols-outlined">schedule</span>
+                                                            {{ $consultAt?->format('g:i A') ?: '—' }}
+                                                        </span>
+                                                    </div>
+                                                    @if ($consultation->note)
+                                                        <p class="consult-card__note">{{ $consultation->note }}</p>
+                                                    @endif
+                                                    <div class="consult-card__meta">
+                                                        <span class="consult-meta-chip">
+                                                            <span class="material-symbols-outlined">calendar_month</span>
+                                                            {{ $consultAt?->format('D, M j') ?: 'No date' }}
+                                                        </span>
+                                                        <span class="consult-meta-chip">
+                                                            <span class="material-symbols-outlined">{{ $isPast ? 'event_available' : 'upcoming' }}</span>
+                                                            {{ $isPast ? 'Past' : 'Upcoming' }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </article>
                                         @empty
-                                            <div class="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4 text-sm text-text-light/70 dark:text-text-dark/70 md:col-span-2">
-                                                No consultations set yet.
+                                            <div class="consult-empty">
+                                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">event_busy</span>
+                                                <p class="consult-empty__title">No consultations yet</p>
+                                                <p class="consult-empty__text">Schedule an appointment to notify this resident about their checkup.</p>
                                             </div>
                                         @endforelse
                                     </div>
@@ -2226,6 +3640,7 @@
     const transactionMemberSourceInput = document.getElementById('transaction_member_source');
     const transactionMemberIndexInput = document.getElementById('transaction_member_index');
     const ageInput = document.getElementById('age');
+    const genderSelect = document.getElementById('gender');
     const toggleConsultationFormBtn = document.getElementById('toggleConsultationForm');
     const closeConsultationFormBtn = document.getElementById('closeConsultationForm');
     const cancelConsultationFormBtn = document.getElementById('cancelConsultationForm');
@@ -2243,6 +3658,7 @@
     const memberNameInput = document.getElementById('member_name');
     const memberSourceInput = document.getElementById('member_source');
     const memberIndexInput = document.getElementById('member_index');
+    const preserveTransactionDemographics = @json(old('age') !== null || old('gender') !== null);
 
     function getTransactionRecipientName() {
         const selectedName = transactionMemberNameInput?.value?.trim() || '';
@@ -2258,21 +3674,123 @@
         });
     }
 
-    function applyTransactionMemberSelection() {
+    function applyTransactionMemberDemographics(selectedOption) {
+        if (! selectedOption) {
+            return;
+        }
+
+        const memberAge = selectedOption.dataset.age;
+        if (ageInput && memberAge !== undefined && memberAge !== '') {
+            ageInput.value = memberAge;
+        }
+
+        const memberGender = selectedOption.dataset.gender || '';
+        if (genderSelect && (memberGender === 'M' || memberGender === 'F')) {
+            genderSelect.value = memberGender;
+        }
+    }
+
+    function applyTransactionMemberSelection({ fillDemographics = true } = {}) {
         const selectedOption = transactionMemberSelect?.selectedOptions?.[0];
 
-        transactionMemberNameInput.value = transactionMemberSelect?.value || '';
-        transactionMemberSourceInput.value = selectedOption?.dataset.source || '';
-        transactionMemberIndexInput.value = selectedOption?.dataset.index || '';
+        if (transactionMemberNameInput) {
+            transactionMemberNameInput.value = transactionMemberSelect?.value || '';
+        }
+        if (transactionMemberSourceInput) {
+            transactionMemberSourceInput.value = selectedOption?.dataset.source || '';
+        }
+        if (transactionMemberIndexInput) {
+            transactionMemberIndexInput.value = selectedOption?.dataset.index || '';
+        }
+
+        if (fillDemographics) {
+            applyTransactionMemberDemographics(selectedOption);
+        }
 
         syncTransactionRecipientHints();
         syncTransactionMedicationCards();
     }
 
-    transactionMemberSelect?.addEventListener('change', applyTransactionMemberSelection);
+    transactionMemberSelect?.addEventListener('change', () => {
+        applyTransactionMemberSelection({ fillDemographics: true });
+    });
+
+    function resetTransactionModalViewport() {
+        if (! medicalHistoryFormWrapper) {
+            return;
+        }
+
+        medicalHistoryFormWrapper.style.top = '';
+        medicalHistoryFormWrapper.style.height = '';
+        medicalHistoryFormWrapper.style.bottom = '';
+
+        const panel = medicalHistoryFormWrapper.querySelector('.transaction-modal-panel');
+        if (panel) {
+            panel.style.maxHeight = '';
+        }
+    }
+
+    function syncTransactionModalToViewport() {
+        if (! medicalHistoryFormWrapper || medicalHistoryFormWrapper.classList.contains('hidden')) {
+            return;
+        }
+
+        if (window.matchMedia('(min-width: 1024px)').matches || ! window.visualViewport) {
+            resetTransactionModalViewport();
+            return;
+        }
+
+        const vv = window.visualViewport;
+        const availableHeight = Math.max(280, Math.floor(vv.height));
+
+        medicalHistoryFormWrapper.style.top = `${Math.max(0, Math.floor(vv.offsetTop))}px`;
+        medicalHistoryFormWrapper.style.height = `${Math.floor(vv.height)}px`;
+        medicalHistoryFormWrapper.style.bottom = 'auto';
+
+        const panel = medicalHistoryFormWrapper.querySelector('.transaction-modal-panel');
+        if (panel) {
+            panel.style.maxHeight = `${availableHeight}px`;
+        }
+    }
+
+    function scrollTransactionFieldIntoView(target) {
+        if (! target || ! medicalHistoryFormWrapper || medicalHistoryFormWrapper.classList.contains('hidden')) {
+            return;
+        }
+
+        if (! medicalHistoryFormWrapper.contains(target)) {
+            return;
+        }
+
+        const body = medicalHistoryFormWrapper.querySelector('.transaction-modal-body');
+        if (! body) {
+            return;
+        }
+
+        const scrollTarget = () => {
+            const bodyRect = body.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const padding = 24;
+            const visibleBottom = bodyRect.bottom - padding;
+            const visibleTop = bodyRect.top + padding;
+
+            if (targetRect.bottom > visibleBottom) {
+                body.scrollTop += targetRect.bottom - visibleBottom;
+            } else if (targetRect.top < visibleTop) {
+                body.scrollTop -= visibleTop - targetRect.top;
+            }
+        };
+
+        requestAnimationFrame(() => {
+            scrollTarget();
+            window.setTimeout(scrollTarget, 280);
+        });
+    }
 
     function closeMedicalHistoryModal() {
         medicalHistoryFormWrapper?.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+        resetTransactionModalViewport();
     }
 
     function syncTransactionMedicationCards() {
@@ -2338,18 +3856,39 @@
         input.addEventListener('change', syncTransactionMedicationCards);
     });
 
-    applyTransactionMemberSelection();
+    applyTransactionMemberSelection({ fillDemographics: ! preserveTransactionDemographics });
 
     toggleMedicalHistoryFormBtn?.addEventListener('click', () => {
         medicalHistoryFormWrapper?.classList.remove('hidden');
-        applyTransactionMemberSelection();
+        document.body.classList.add('overflow-hidden');
+        applyTransactionMemberSelection({ fillDemographics: true });
         syncTransactionRecipientHints();
         syncTransactionMedicationCards();
+        syncTransactionModalToViewport();
         transactionMemberSelect?.focus();
     });
 
     closeMedicalHistoryFormBtn?.addEventListener('click', closeMedicalHistoryModal);
     cancelMedicalHistoryFormBtn?.addEventListener('click', closeMedicalHistoryModal);
+
+    medicalHistoryFormWrapper?.addEventListener('click', (event) => {
+        if (event.target === medicalHistoryFormWrapper) {
+            closeMedicalHistoryModal();
+        }
+    });
+
+    medicalHistoryFormWrapper?.addEventListener('focusin', (event) => {
+        const target = event.target;
+        if (target instanceof HTMLElement && target.matches('input, select, textarea')) {
+            syncTransactionModalToViewport();
+            scrollTransactionFieldIntoView(target);
+        }
+    });
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', syncTransactionModalToViewport);
+        window.visualViewport.addEventListener('scroll', syncTransactionModalToViewport);
+    }
 
     function closeConsultationModal() {
         consultationFormWrapper?.classList.add('hidden');
@@ -2386,6 +3925,7 @@
 
     function closeMonitoringCaseModal() {
         monitoringCaseFormWrapper?.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
         resetMonitoringModalViewport();
     }
 
@@ -2465,6 +4005,7 @@
 
     toggleMonitoringCaseFormBtn?.addEventListener('click', () => {
         monitoringCaseFormWrapper?.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
         applyMonitoringMemberSelection();
         syncPregnantPeriodFields();
         calculateVisitBmi('new');
@@ -2475,6 +4016,12 @@
 
     closeMonitoringCaseFormBtn?.addEventListener('click', closeMonitoringCaseModal);
     cancelMonitoringCaseFormBtn?.addEventListener('click', closeMonitoringCaseModal);
+
+    monitoringCaseFormWrapper?.addEventListener('click', (event) => {
+        if (event.target === monitoringCaseFormWrapper) {
+            closeMonitoringCaseModal();
+        }
+    });
 
     monitoringCaseFormWrapper?.addEventListener('focusin', (event) => {
         const target = event.target;
@@ -2493,13 +4040,181 @@
         window.setTimeout(syncMonitoringModalToViewport, 150);
     });
 
-    document.querySelectorAll('.toggle-visit-form').forEach((button) => {
-        button.addEventListener('click', () => {
-            const caseId = button.getAttribute('data-case-id');
-            const form = document.getElementById(`visitForm-${caseId}`);
-            form?.classList.toggle('hidden');
+    const addVisitModalWrapper = document.getElementById('addVisitModalWrapper');
+    const addVisitForm = document.getElementById('addVisitForm');
+    const addVisitCaseIdInput = document.getElementById('addVisitCaseId');
+    const addVisitMemberName = document.getElementById('addVisitMemberName');
+    const addVisitBpSection = document.getElementById('addVisitBpSection');
+    const addVisitPregnantSection = document.getElementById('addVisitPregnantSection');
+    const addVisitLastPeriodDate = document.getElementById('add_visit_last_period_date');
+    const closeAddVisitModalBtn = document.getElementById('closeAddVisitModalBtn');
+    const cancelAddVisitModalBtn = document.getElementById('cancelAddVisitModalBtn');
+    const failedVisitCaseId = @json($failedVisitCaseId);
+
+    function resetAddVisitModalViewport() {
+        if (! addVisitModalWrapper) {
+            return;
+        }
+
+        addVisitModalWrapper.style.top = '';
+        addVisitModalWrapper.style.height = '';
+        addVisitModalWrapper.style.bottom = '';
+
+        const panel = addVisitModalWrapper.querySelector('.transaction-modal-panel');
+        if (panel) {
+            panel.style.maxHeight = '';
+        }
+    }
+
+    function syncAddVisitModalToViewport() {
+        if (! addVisitModalWrapper || addVisitModalWrapper.classList.contains('hidden')) {
+            return;
+        }
+
+        if (window.matchMedia('(min-width: 1024px)').matches || ! window.visualViewport) {
+            resetAddVisitModalViewport();
+            return;
+        }
+
+        const vv = window.visualViewport;
+        const availableHeight = Math.max(280, Math.floor(vv.height));
+
+        addVisitModalWrapper.style.top = `${Math.max(0, Math.floor(vv.offsetTop))}px`;
+        addVisitModalWrapper.style.height = `${Math.floor(vv.height)}px`;
+        addVisitModalWrapper.style.bottom = 'auto';
+
+        const panel = addVisitModalWrapper.querySelector('.transaction-modal-panel');
+        if (panel) {
+            panel.style.maxHeight = `${availableHeight}px`;
+        }
+    }
+
+    function scrollAddVisitFieldIntoView(target) {
+        if (! target || ! addVisitModalWrapper || addVisitModalWrapper.classList.contains('hidden')) {
+            return;
+        }
+
+        if (! addVisitModalWrapper.contains(target)) {
+            return;
+        }
+
+        const body = addVisitModalWrapper.querySelector('.transaction-modal-body');
+        if (! body) {
+            return;
+        }
+
+        const scrollTarget = () => {
+            const bodyRect = body.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+            const padding = 24;
+            const visibleBottom = bodyRect.bottom - padding;
+            const visibleTop = bodyRect.top + padding;
+
+            if (targetRect.bottom > visibleBottom) {
+                body.scrollTop += targetRect.bottom - visibleBottom;
+            } else if (targetRect.top < visibleTop) {
+                body.scrollTop -= visibleTop - targetRect.top;
+            }
+        };
+
+        requestAnimationFrame(() => {
+            scrollTarget();
+            window.setTimeout(scrollTarget, 280);
         });
+    }
+
+    function configureAddVisitModal(button) {
+        if (! addVisitForm || ! button) {
+            return;
+        }
+
+        const caseId = button.getAttribute('data-case-id') || '';
+        const action = button.getAttribute('data-action') || '#';
+        const memberName = button.getAttribute('data-member-name') || 'this member';
+        const isPregnant = button.getAttribute('data-is-pregnant') === '1';
+        const isSenior = button.getAttribute('data-is-senior') === '1';
+        const firstPeriodDate = button.getAttribute('data-first-period-date') || '';
+        const lastPeriodDate = button.getAttribute('data-last-period-date') || '';
+
+        addVisitForm.setAttribute('action', action);
+        if (addVisitCaseIdInput) {
+            addVisitCaseIdInput.value = caseId;
+        }
+        if (addVisitMemberName) {
+            addVisitMemberName.textContent = memberName;
+        }
+
+        addVisitBpSection?.classList.toggle('hidden', ! isSenior);
+        addVisitPregnantSection?.classList.toggle('hidden', ! isPregnant);
+
+        if (addVisitLastPeriodDate) {
+            if (firstPeriodDate) {
+                addVisitLastPeriodDate.min = firstPeriodDate;
+            } else {
+                addVisitLastPeriodDate.removeAttribute('min');
+            }
+            if (! addVisitLastPeriodDate.value && lastPeriodDate) {
+                addVisitLastPeriodDate.value = lastPeriodDate;
+            }
+        }
+
+        addVisitForm.querySelectorAll('#addVisitBpSection input').forEach((el) => {
+            el.disabled = ! isSenior;
+        });
+        addVisitForm.querySelectorAll('#addVisitPregnantSection input, #addVisitPregnantSection select').forEach((el) => {
+            el.disabled = ! isPregnant;
+        });
+    }
+
+    function openAddVisitModal(button, { preserveValues = false } = {}) {
+        if (! preserveValues && addVisitForm) {
+            addVisitForm.reset();
+            const dateInput = document.getElementById('add_visit_date');
+            if (dateInput) {
+                dateInput.value = new Date().toISOString().slice(0, 10);
+            }
+        }
+
+        configureAddVisitModal(button);
+        addVisitModalWrapper?.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+        calculateVisitBmi('visit');
+        updateVisitBpPreview('visit');
+        syncAddVisitModalToViewport();
+        document.getElementById('add_visit_date')?.focus();
+    }
+
+    function closeAddVisitModal() {
+        addVisitModalWrapper?.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+        resetAddVisitModalViewport();
+    }
+
+    document.querySelectorAll('.open-add-visit-modal').forEach((button) => {
+        button.addEventListener('click', () => openAddVisitModal(button));
     });
+
+    closeAddVisitModalBtn?.addEventListener('click', closeAddVisitModal);
+    cancelAddVisitModalBtn?.addEventListener('click', closeAddVisitModal);
+
+    addVisitModalWrapper?.addEventListener('click', (event) => {
+        if (event.target === addVisitModalWrapper) {
+            closeAddVisitModal();
+        }
+    });
+
+    addVisitModalWrapper?.addEventListener('focusin', (event) => {
+        const target = event.target;
+        if (target instanceof HTMLElement && target.matches('input, select, textarea')) {
+            syncAddVisitModalToViewport();
+            scrollAddVisitFieldIntoView(target);
+        }
+    });
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', syncAddVisitModalToViewport);
+        window.visualViewport.addEventListener('scroll', syncAddVisitModalToViewport);
+    }
 
     const calculateVisitBmi = (caseId) => {
         const heightInput = document.querySelector(`[data-visit-height="${caseId}"]`);
@@ -2556,7 +4271,161 @@
 
     const pageTab = new URLSearchParams(window.location.search).get('tab');
     const failedProfileFormTab = @json($failedProfileFormTab);
+    const failedHouseholdAction = @json($failedHouseholdAction);
     const activeTab = pageTab || failedProfileFormTab;
+
+    // ---------- Family tab member editors ----------
+    const familyChildModal = document.getElementById('familyChildModal');
+    const familySeniorModal = document.getElementById('familySeniorModal');
+    const familySpouseModal = document.getElementById('familySpouseModal');
+    const familyRemoveModal = document.getElementById('familyRemoveModal');
+    const familyChildStudying = document.getElementById('family_child_studying');
+
+    function openFamilyModal(modal) {
+        modal?.classList.remove('hidden');
+        modal?.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function closeFamilyModal(modal) {
+        modal?.classList.add('hidden');
+        modal?.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    function syncFamilyChildStatusFields() {
+        const status = familyChildStudying?.value || 'infant';
+        const schoolFields = document.getElementById('familyChildSchoolFields');
+        const workFields = document.getElementById('familyChildWorkFields');
+        const schoolInput = document.getElementById('family_child_school');
+        const eduInput = document.getElementById('family_child_edu');
+        const occupationInput = document.getElementById('family_child_occupation');
+
+        schoolFields?.classList.toggle('hidden', status !== 'yes');
+        workFields?.classList.toggle('hidden', status !== 'no');
+        if (schoolInput) schoolInput.required = status === 'yes';
+        if (eduInput) eduInput.required = status === 'no';
+        if (occupationInput) occupationInput.required = status === 'no';
+    }
+
+    familyChildStudying?.addEventListener('change', syncFamilyChildStatusFields);
+
+    function resetFamilyChildForm() {
+        document.getElementById('familyChildForm')?.reset();
+        document.getElementById('family_child_action').value = 'add_child';
+        document.getElementById('family_child_index').value = '';
+        document.getElementById('familyChildModalTitle').textContent = 'Add Child';
+        if (familyChildStudying) familyChildStudying.value = 'infant';
+        syncFamilyChildStatusFields();
+    }
+
+    function resetFamilySeniorForm() {
+        document.getElementById('familySeniorForm')?.reset();
+        document.getElementById('family_senior_action').value = 'add_senior';
+        document.getElementById('family_senior_index').value = '';
+        document.getElementById('familySeniorModalTitle').textContent = 'Add Elderly';
+    }
+
+    function resetFamilySpouseForm() {
+        document.getElementById('familySpouseForm')?.reset();
+        document.getElementById('familySpouseModalTitle').textContent = 'Add Spouse';
+    }
+
+    document.getElementById('openAddChildBtn')?.addEventListener('click', () => {
+        resetFamilyChildForm();
+        openFamilyModal(familyChildModal);
+    });
+    document.getElementById('openAddSeniorBtn')?.addEventListener('click', () => {
+        resetFamilySeniorForm();
+        openFamilyModal(familySeniorModal);
+    });
+    document.getElementById('openAddSpouseBtn')?.addEventListener('click', () => {
+        resetFamilySpouseForm();
+        openFamilyModal(familySpouseModal);
+    });
+
+    document.querySelectorAll('.close-family-child-modal').forEach((btn) => {
+        btn.addEventListener('click', () => closeFamilyModal(familyChildModal));
+    });
+    document.querySelectorAll('.close-family-senior-modal').forEach((btn) => {
+        btn.addEventListener('click', () => closeFamilyModal(familySeniorModal));
+    });
+    document.querySelectorAll('.close-family-spouse-modal').forEach((btn) => {
+        btn.addEventListener('click', () => closeFamilyModal(familySpouseModal));
+    });
+
+    familyChildModal?.addEventListener('click', (e) => { if (e.target === familyChildModal) closeFamilyModal(familyChildModal); });
+    familySeniorModal?.addEventListener('click', (e) => { if (e.target === familySeniorModal) closeFamilyModal(familySeniorModal); });
+    familySpouseModal?.addEventListener('click', (e) => { if (e.target === familySpouseModal) closeFamilyModal(familySpouseModal); });
+
+    document.querySelectorAll('.open-edit-child-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            resetFamilyChildForm();
+            document.getElementById('family_child_action').value = 'update_child';
+            document.getElementById('family_child_index').value = button.dataset.index || '';
+            document.getElementById('familyChildModalTitle').textContent = 'Edit Child';
+            document.getElementById('family_child_full_name').value = button.dataset.fullName || '';
+            document.getElementById('family_child_birthdate').value = button.dataset.birthdate || '';
+            document.getElementById('family_child_gender').value = button.dataset.gender || '';
+            document.getElementById('family_child_relationship').value = button.dataset.relationship || '';
+            document.getElementById('family_child_studying').value = button.dataset.currentlyStudying || 'infant';
+            document.getElementById('family_child_school').value = button.dataset.school || '';
+            document.getElementById('family_child_edu').value = button.dataset.educationalAttainment || '';
+            document.getElementById('family_child_occupation').value = button.dataset.occupation || '';
+            syncFamilyChildStatusFields();
+            openFamilyModal(familyChildModal);
+        });
+    });
+
+    document.querySelectorAll('.open-edit-senior-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            resetFamilySeniorForm();
+            document.getElementById('family_senior_action').value = 'update_senior';
+            document.getElementById('family_senior_index').value = button.dataset.index || '';
+            document.getElementById('familySeniorModalTitle').textContent = 'Edit Elderly';
+            document.getElementById('family_senior_full_name').value = button.dataset.fullName || '';
+            document.getElementById('family_senior_birthdate').value = button.dataset.birthdate || '';
+            document.getElementById('family_senior_gender').value = button.dataset.gender || '';
+            document.getElementById('family_senior_relationship').value = button.dataset.relationship || '';
+            document.getElementById('family_senior_pob').value = button.dataset.placeOfBirth || '';
+            document.getElementById('family_senior_edu').value = button.dataset.educationalAttainment || '';
+            document.getElementById('family_senior_occupation').value = button.dataset.occupation || '';
+            openFamilyModal(familySeniorModal);
+        });
+    });
+
+    document.querySelectorAll('.open-edit-spouse-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            resetFamilySpouseForm();
+            document.getElementById('familySpouseModalTitle').textContent = 'Edit Spouse';
+            document.getElementById('family_spouse_first').value = button.dataset.firstName || '';
+            document.getElementById('family_spouse_last').value = button.dataset.lastName || '';
+            document.getElementById('family_spouse_mi').value = button.dataset.middleInitial || '';
+            document.getElementById('family_spouse_birthdate').value = button.dataset.birthdate || '';
+            document.getElementById('family_spouse_role').value = button.dataset.parentRole || '';
+            document.getElementById('family_spouse_pob').value = button.dataset.placeOfBirth || '';
+            document.getElementById('family_spouse_edu').value = button.dataset.educationalAttainment || '';
+            openFamilyModal(familySpouseModal);
+        });
+    });
+
+    document.querySelectorAll('.open-remove-member-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            const name = button.dataset.memberName || 'this member';
+            const label = button.dataset.memberLabel || 'member';
+            document.getElementById('family_remove_action').value = button.dataset.action || '';
+            document.getElementById('family_remove_index').value = button.dataset.index || '';
+            document.getElementById('familyRemoveMessage').textContent =
+                `Remove ${name} (${label}) from this household? Family counting will update.`;
+            openFamilyModal(familyRemoveModal);
+        });
+    });
+
+    document.getElementById('closeFamilyRemoveModal')?.addEventListener('click', () => closeFamilyModal(familyRemoveModal));
+    document.getElementById('cancelFamilyRemoveModal')?.addEventListener('click', () => closeFamilyModal(familyRemoveModal));
+    familyRemoveModal?.addEventListener('click', (e) => { if (e.target === familyRemoveModal) closeFamilyModal(familyRemoveModal); });
+
+    syncFamilyChildStatusFields();
 
     if (activeTab) {
         const tabLink = document.querySelector(`.tab-link[data-tab="${activeTab}"]`);
@@ -2571,20 +4440,42 @@
         medicalHistoryTabLink?.click();
     }
 
+    if (hasValidationErrors && activeTab === 'family' && failedHouseholdAction) {
+        if (['add_child', 'update_child'].includes(failedHouseholdAction)) {
+            openFamilyModal(familyChildModal);
+        } else if (['add_senior', 'update_senior'].includes(failedHouseholdAction)) {
+            openFamilyModal(familySeniorModal);
+        } else if (failedHouseholdAction === 'set_spouse') {
+            openFamilyModal(familySpouseModal);
+        } else if (String(failedHouseholdAction).startsWith('remove_')) {
+            openFamilyModal(familyRemoveModal);
+        }
+    }
+
     if (hasValidationErrors && activeTab === 'maintenance') {
-        monitoringCaseFormWrapper?.classList.remove('hidden');
-        applyMonitoringMemberSelection();
-        syncPregnantPeriodFields();
-        calculateVisitBmi('new');
-        updateVisitBpPreview('new');
-        syncMonitoringModalToViewport();
+        if (failedVisitCaseId) {
+            const visitBtn = document.querySelector(`.open-add-visit-modal[data-case-id="${failedVisitCaseId}"]`);
+            if (visitBtn) {
+                openAddVisitModal(visitBtn, { preserveValues: true });
+            }
+        } else {
+            monitoringCaseFormWrapper?.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+            applyMonitoringMemberSelection();
+            syncPregnantPeriodFields();
+            calculateVisitBmi('new');
+            updateVisitBpPreview('new');
+            syncMonitoringModalToViewport();
+        }
     }
 
     if (hasValidationErrors && activeTab === 'medical-history') {
         medicalHistoryFormWrapper?.classList.remove('hidden');
-        applyTransactionMemberSelection();
+        document.body.classList.add('overflow-hidden');
+        applyTransactionMemberSelection({ fillDemographics: ! preserveTransactionDemographics });
         syncTransactionRecipientHints();
         syncTransactionMedicationCards();
+        syncTransactionModalToViewport();
     }
 
     if (hasValidationErrors && activeTab === 'consultations') {

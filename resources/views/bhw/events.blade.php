@@ -51,7 +51,8 @@
     <main class="flex-1 flex flex-col min-h-0 overflow-hidden pb-24 lg:pb-0 w-full min-w-0">
         <div class="page-content">
             <div class="page-panel w-full bg-card-light dark:bg-card-dark border-y border-border-light dark:border-border-dark p-5 sm:p-6 lg:p-8">
-                    <h1 class="text-2xl sm:text-3xl font-bold mb-6 pb-4 border-b border-border-light dark:border-border-dark">Announcements</h1>
+                    <h1 class="text-2xl sm:text-3xl font-bold mb-2">Announcements</h1>
+                    <p class="mb-6 pb-4 border-b border-border-light dark:border-border-dark text-sm text-black/70 dark:text-text-dark/70">Posts go only to residents in your assigned purok(s).</p>
                     <form id="announcementForm" method="POST" action="{{ route('bhw.posts.store') }}" class="space-y-5">
                         @csrf
                         <input type="hidden" name="type" value="announcement">
@@ -60,25 +61,25 @@
 
                         <div>
                             <label for="announcementTitle" class="mb-2 block text-sm font-semibold">Title</label>
-                            <input id="announcementTitle" name="title" type="text" required maxlength="255" placeholder="Short title for residents" class="w-full h-12 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-base focus:border-primary focus:ring-primary/20">
+                            <input id="announcementTitle" name="title" type="text" required maxlength="255" placeholder="Short title for your purok residents" class="w-full h-12 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-base focus:border-primary focus:ring-primary/20">
                         </div>
 
                         <div>
                             <label for="announcementMessage" class="mb-2 block text-sm font-semibold">What to announce</label>
-                            <textarea id="announcementMessage" name="description" required rows="7" maxlength="2000" placeholder="Write the message you want residents to read..." class="w-full min-h-[190px] lg:min-h-[270px] rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 py-3 text-base leading-relaxed resize-y focus:border-primary focus:ring-primary/20"></textarea>
+                            <textarea id="announcementMessage" name="description" required rows="7" maxlength="2000" placeholder="Write the message you want your purok residents to read..." class="w-full min-h-[190px] lg:min-h-[270px] rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 py-3 text-base leading-relaxed resize-y focus:border-primary focus:ring-primary/20"></textarea>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="announcementDate" class="mb-2 block text-sm font-semibold">Remove on date</label>
+                                <label for="announcementDate" class="mb-2 block text-sm font-semibold">Expire on date</label>
                                 <input id="announcementDate" name="event_date" type="date" required value="{{ now()->toDateString() }}" min="{{ now()->toDateString() }}" class="w-full h-12 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-base focus:border-primary focus:ring-primary/20">
                             </div>
                             <div>
-                                <label for="announcementEndTime" class="mb-2 block text-sm font-semibold">Remove at time</label>
+                                <label for="announcementEndTime" class="mb-2 block text-sm font-semibold">Expire at time</label>
                                 <input id="announcementEndTime" name="end_time" type="time" required value="{{ now()->addHour()->format('H:i') }}" class="w-full h-12 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-4 text-base focus:border-primary focus:ring-primary/20">
                             </div>
                         </div>
-                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 -mt-2">This announcement is removed automatically after this date and time.</p>
+                        <p class="text-xs text-black/60 dark:text-text-dark/60 -mt-2">After this date and time, the post is marked expired. Residents can still see it for 1 week, then it is hidden from them.</p>
                         <div class="flex justify-end">
                             <button id="announcementSubmitBtn" type="submit" class="inline-flex h-12 w-full sm:w-auto sm:min-w-[160px] items-center justify-center gap-2 rounded-xl bg-primary px-8 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60 transition-opacity">
                                 <span class="material-symbols-outlined text-base">send</span>
@@ -132,7 +133,7 @@
         const dateInput = document.getElementById('announcementDate');
         const timeInput = document.getElementById('announcementEndTime');
         if (!dateInput?.value || !timeInput?.value) {
-            showToast('Please set the remove date and time.', 'error');
+            showToast('Please set the expire date and time.', 'error');
             return;
         }
 

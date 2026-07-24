@@ -3,7 +3,7 @@
     $isBhw = request()->routeIs('barangay-captain.bhw-workers*') || request()->routeIs('barangay-captain.puroks*');
     $isBns = request()->routeIs('barangay-captain.bns-workers*');
     $isReports = request()->routeIs('barangay-captain.reports*');
-    $isProfile = request()->routeIs('barangay-captain.my-profile') || request()->routeIs('barangay-captain.settings*');
+    $isProfile = request()->routeIs('barangay-captain.my-profile') || request()->routeIs('barangay-captain.settings*') || request()->routeIs('barangay-captain.all-records');
 @endphp
 
 <nav id="captainMobileNav" class="captain-mobile-nav lg:hidden fixed inset-x-0 bottom-0 z-40 border-t border-border-light dark:border-border-dark bg-card-light/95 dark:bg-card-dark/95 backdrop-blur supports-[backdrop-filter]:bg-card-light/90 dark:supports-[backdrop-filter]:bg-card-dark/90" aria-label="Mobile navigation" style="padding-bottom: env(safe-area-inset-bottom, 0px);">

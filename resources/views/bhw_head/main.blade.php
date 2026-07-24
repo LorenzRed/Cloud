@@ -228,6 +228,13 @@
                     $monitoringMix = $monitoringMix ?? ['labels' => [], 'values' => [], 'colors' => []];
                     $illnessByPurok = $illnessByPurok ?? [];
                     $purokAlertLevels = $purokAlertLevels ?? [];
+                    $populationDistribution = $populationDistribution ?? [
+                        'age_labels' => ['0–17', '18–35', '36–59', '60+'],
+                        'age_by_gender' => ['all' => [0, 0, 0, 0], 'male' => [0, 0, 0, 0], 'female' => [0, 0, 0, 0]],
+                        'gender' => ['labels' => ['Male', 'Female'], 'values' => [0, 0], 'colors' => ['#4A90E2', '#EC4899']],
+                    ];
+                    $bnsNutritionStats = $bnsNutritionStats ?? [];
+                    $bnsImmunizationOverview = $bnsImmunizationOverview ?? [];
                     $purokLevelStyles = [
                         'high' => [
                             'card' => 'border-accent-red/40 bg-accent-red/10 dark:bg-accent-red/15',
@@ -274,17 +281,17 @@
                 @endphp
 
                 <header class="dash-hero rounded-2xl border border-border-light dark:border-border-dark p-5 md:p-6">
-                    <div class="flex flex-wrap justify-between items-start gap-4">
-                        <div class="min-w-0">
+                    <div class="flex flex-nowrap justify-between items-start gap-3">
+                        <div class="min-w-0 flex-1">
                             <p class="text-xs font-semibold uppercase tracking-widest text-primary mb-1">BHW Head</p>
                             <h1 class="text-2xl sm:text-3xl font-bold leading-tight text-text-light dark:text-text-dark">Barangay Dashboard</h1>
-                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1.5 max-w-xl">
+                            <p class="hidden sm:block text-sm text-text-light/70 dark:text-text-dark/70 mt-1.5 max-w-xl">
                                 Combined overview from all assigned BHWs — residents, medicine transactions, monitoring, and illness across every covered purok.
                             </p>
                         </div>
-                        <div class="flex flex-col items-end gap-2 shrink-0">
+                        <div class="flex flex-col items-end gap-2 shrink-0 max-w-[46%] sm:max-w-none">
                             @if (filled($assignedPurokLabel ?? null))
-                                <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-white/80 dark:bg-card-dark/80 border border-border-light dark:border-border-dark text-primary shadow-sm max-w-[16rem] sm:max-w-xs">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold bg-white/80 dark:bg-card-dark/80 border border-border-light dark:border-border-dark text-primary shadow-sm max-w-full">
                                     <span class="material-symbols-outlined text-base shrink-0">location_city</span>
                                     <span class="truncate" title="{{ $assignedPurokLabel }}">{{ $assignedPurokLabel }}</span>
                                 </span>
@@ -295,7 +302,7 @@
                                     <span class="truncate">{{ $purokCoverageLabel }}</span>
                                 </span>
                             @endif
-                            <p class="text-xs text-text-light/50 dark:text-text-dark/50">{{ now()->format('l, M d, Y') }}</p>
+                            <p class="text-[11px] sm:text-xs text-text-light/50 dark:text-text-dark/50 text-right">{{ now()->format('l, M d, Y') }}</p>
                         </div>
                     </div>
                 </header>
@@ -311,6 +318,11 @@
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-orange/10 text-accent-orange font-semibold"><span class="size-2 rounded-full bg-accent-orange"></span>Watch</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary font-semibold"><span class="size-2 rounded-full bg-primary"></span>Low</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold"><span class="size-2 rounded-full bg-emerald-500"></span>Clear</span>
+                        </div>
+                        <div class="flex flex-col sm:flex-row sm:flex-wrap gap-1 sm:gap-x-4 sm:gap-y-1 text-xs text-text-light/70 dark:text-text-dark/70">
+                            <p><span class="font-bold text-text-light dark:text-text-dark">HTN</span> — Hypertension (high blood pressure)</p>
+                            <p><span class="font-bold text-text-light dark:text-text-dark">DM</span> — Diabetes Mellitus</p>
+                            <p><span class="font-bold text-text-light dark:text-text-dark">Lipid</span> — Hyperlipidemia (high cholesterol/fats)</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -335,8 +347,8 @@
                                         <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">concern cases</p>
                                     </div>
                                     <div>
-                                        <p class="text-2xl font-bold tabular-nums">{{ number_format((int) ($alert['households'] ?? 0)) }}</p>
-                                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">households</p>
+                                        <p class="text-2xl font-bold tabular-nums">{{ number_format((int) ($alert['residents'] ?? $alert['households'] ?? 0)) }}</p>
+                                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">individual residents</p>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-black/5 dark:border-white/10 text-center">
@@ -396,6 +408,29 @@
                                         <option value="people">Total residents</option>
                                     </select>
                                 @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+
+                <section>
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-3">Nutrition breakdown (child)</h2>
+                    @php
+                        $bnsSecondaryKpis = [
+                            ['label' => 'Fully immunized', 'value' => (int) ($bnsImmunizationOverview['fully_immunized'] ?? 0)],
+                            ['label' => 'Missed vaccine doses', 'value' => (int) ($bnsImmunizationOverview['with_missed_doses'] ?? 0)],
+                            ['label' => 'Severely malnourished', 'value' => (int) ($bnsNutritionStats['severely_underweight_cases'] ?? 0)],
+                            ['label' => 'No weight record', 'value' => (int) ($bnsNutritionStats['no_weight_record'] ?? 0)],
+                            ['label' => 'Overweight / obese', 'value' => (int) ($bnsNutritionStats['overweight_cases'] ?? 0)],
+                            ['label' => 'Puroks covered', 'value' => (int) ($bnsNutritionStats['puroks_covered'] ?? 0)],
+                        ];
+                    @endphp
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 dash-kpi-grid-mobile-span">
+                        @foreach ($bnsSecondaryKpis as $card)
+                            <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-3">
+                                <p class="text-xl font-bold tabular-nums">{{ number_format((int) $card['value']) }}</p>
+                                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 leading-snug">{{ $card['label'] }}</p>
                             </div>
                         @endforeach
                     </div>
@@ -479,7 +514,7 @@
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm xl:col-span-2">
                         <div class="mb-4">
                             <h2 class="text-base font-bold">Household monitoring mix</h2>
-                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Active pregnant, senior, and general monitoring cases</p>
+                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Pregnant cases, household seniors, and seniors receiving BHW maintenance</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                             <div class="h-56 sm:h-64 max-w-xs mx-auto w-full">
@@ -489,7 +524,7 @@
                                 @foreach ([
                                     ['label' => 'Pregnant', 'key' => 'Pregnant', 'tone' => 'bg-pink-500', 'clickable' => true],
                                     ['label' => 'Senior', 'key' => 'Senior', 'tone' => 'bg-violet-500', 'clickable' => true],
-                                    ['label' => 'General', 'key' => 'General', 'tone' => 'bg-primary', 'clickable' => false],
+                                    ['label' => 'Need maintenance', 'key' => 'Need maintenance', 'tone' => 'bg-primary', 'clickable' => true],
                                 ] as $index => $item)
                                     @php
                                         $value = (int) (($monitoringMix['values'] ?? [])[$index] ?? 0);
@@ -497,7 +532,7 @@
                                     @if ($item['clickable'])
                                         <button
                                             type="button"
-                                            class="mnt-mix-legend__item {{ $item['key'] === 'General' ? 'mnt-mix-legend__item--wide' : '' }} text-left"
+                                            class="mnt-mix-legend__item {{ $item['key'] === 'Need maintenance' ? 'mnt-mix-legend__item--wide' : '' }} text-left"
                                             data-monitoring-type="{{ $item['key'] }}"
                                             aria-label="View {{ strtolower($item['label']) }} members"
                                         >
@@ -538,7 +573,7 @@
                                     <thead>
                                         <tr class="border-b border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60">
                                             <th class="font-semibold text-left">Purok</th>
-                                            <th class="font-semibold text-center">HH</th>
+                                            <th class="font-semibold text-center">Res.</th>
                                             <th class="font-semibold text-center">Cases</th>
                                             <th class="font-semibold text-center">HTN</th>
                                             <th class="font-semibold text-center">DM</th>
@@ -563,7 +598,7 @@
                                                         {{ $row['purok'] }}
                                                     </span>
                                                 </td>
-                                                <td class="text-center tabular-nums font-semibold">{{ number_format((int) ($row['households'] ?? 0)) }}</td>
+                                                <td class="text-center tabular-nums font-semibold">{{ number_format((int) ($row['residents'] ?? $row['households'] ?? 0)) }}</td>
                                                 <td class="text-center tabular-nums font-bold">{{ number_format((int) ($row['cases'] ?? 0)) }}</td>
                                                 <td class="text-center tabular-nums">{{ number_format((int) ($row['Hypertension'] ?? 0)) }}</td>
                                                 <td class="text-center tabular-nums">{{ number_format((int) ($row['Diabetes'] ?? 0)) }}</td>
@@ -580,6 +615,8 @@
                         </div>
                     </div>
                 </section>
+
+                @include('partials.population-distribution-charts')
             </div>
         </div>
     </main>
@@ -943,7 +980,7 @@
                     onClick: (_event, elements) => {
                         if (!elements.length) return;
                         const label = monitoringMix.labels?.[elements[0].index];
-                        if (label === 'Pregnant' || label === 'Senior') {
+                        if (label === 'Pregnant' || label === 'Senior' || label === 'Need maintenance') {
                             openMonitoringMembersModal(label);
                         }
                     },
@@ -1054,6 +1091,7 @@
                 monitoringMembersList.innerHTML = members.map((member) => `
                     <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 px-3 py-3">
                         <p class="text-sm font-semibold break-words">${escapeHtml(member.name || '—')}</p>
+                        ${member.reason ? `<p class="text-xs font-medium text-primary mt-1">${escapeHtml(member.reason)}</p>` : ''}
                         <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Family no. <span class="font-semibold text-text-light dark:text-text-dark">${escapeHtml(member.family_number || 'Not assigned')}</span></p>
                         ${member.purok && member.purok !== '—' ? `<p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-0.5 truncate">Purok: ${escapeHtml(member.purok)}</p>` : ''}
                         ${member.household && member.household !== '—' ? `<p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-0.5 truncate">Household: ${escapeHtml(member.household)}</p>` : ''}
@@ -1087,5 +1125,6 @@
         }
     });
 </script>
+@include('partials.population-distribution-charts-script')
 </body>
 </html>

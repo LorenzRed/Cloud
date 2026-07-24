@@ -53,13 +53,13 @@
                 <div class="flex flex-1 items-stretch">
                     <!-- Left Panel -->
                     <div
-                        class="hidden lg:flex w-1/2 flex-col items-center justify-center bg-secondary/20 p-8 relative overflow-hidden">
+                        class="auth-hero-panel hidden lg:flex w-1/2 flex-col items-center justify-center bg-secondary/20 p-8 relative overflow-hidden">
                         <div class="w-full h-full bg-center bg-no-repeat bg-cover rounded-xl"
                             style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuADWYfo162QTnYPm14ZX9dWydT4rHSuW--OMUOy6FJD3__9c8b48flGgJTP_N_Eh4wpI5_uOxbKThL41w0MXBce15vK5JYImPGjfaKWBGM4N1Du_U26q79arqavemumO74qZqH02m6bnXytUTguC2ukGM6VQVvA10fPZZ_dKeqd5O01td08lUjBbnfBIv38RBm7v3fE3hDG8UCzu05QA8rRQaFlT9WBhydiuPPQos7ueABG0GcvjB8qkd8S2xKO-J7Zjw88BWB_5hAs"); opacity: 0.9;'>
                         </div>
                         <div class="absolute inset-0 bg-gradient-to-t from-primary/50 to-secondary/30"></div>
                         <div
-                            class="absolute bottom-10 left-10 right-10 z-10 text-white p-6 rounded-lg bg-black/20 backdrop-blur-sm">
+                            class="auth-hero-copy absolute bottom-10 left-10 right-10 z-10 text-white p-6 rounded-lg bg-black/20 backdrop-blur-sm">
                             <div class="flex items-center gap-4 mb-4">
                                 <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" class="w-12 h-12 rounded" />
                                 <h1 class="text-4xl font-black font-heading tracking-tight">Bantay Kalusugan</h1>
@@ -70,8 +70,8 @@
                     </div>
                     <!-- Right Panel -->
                     <div
-                        class="auth-screen flex w-full lg:w-1/2 flex-col items-center justify-center bg-background-light dark:bg-background-dark sm:p-8">
-                        <div class="auth-screen__inner space-y-4 sm:space-y-6">
+                        class="auth-screen flex w-full lg:w-1/2 flex-col items-center justify-center bg-background-light dark:bg-background-dark lg:p-8">
+                        <div class="auth-screen__inner space-y-4 lg:space-y-6">
                             <header class="auth-screen__brand lg:hidden">
                                 <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" />
                                 <h1 class="font-heading text-text-light dark:text-text-dark">Bantay Kalusugan</h1>
@@ -91,7 +91,7 @@
                                             health records.</p>
                                     </div>
                                 </header>
-                                <div class="hidden sm:flex mb-6">
+                                <div class="hidden lg:flex mb-6">
                                     <div
                                         class="flex h-12 flex-1 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
                                         <a class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-md px-2 bg-primary text-white shadow-md text-sm font-bold leading-normal transition-all duration-300"

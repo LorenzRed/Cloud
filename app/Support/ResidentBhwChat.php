@@ -401,7 +401,16 @@ class ResidentBhwChat
             $query->where('resident_user_id', $resident->id);
         }
 
-        return $query->count();
+        return (int) $query->count();
+    }
+
+    /**
+     * Total unread resident→BHW messages that appear in the Unread Chats inbox
+     * (same source as per-row badges, not "number of chats").
+     */
+    public static function unreadInboxMessageTotalForBhw(User $bhw): int
+    {
+        return (int) self::unreadInboxForBhw($bhw)->sum('unread_count');
     }
 
     public static function unreadCountForBhwByRequestStatus(User $bhw, string $status): int
@@ -449,5 +458,151 @@ class ResidentBhwChat
             ->pluck('unread_count', 'resident_user_id')
             ->map(fn ($count) => (int) $count)
             ->all();
+    }
+
+    /**
+     * Messenger-style inbox rows for unread resident → BHW chats.
+     *
+     * @return Collection<int, array{
+     *     resident_user_id: int,
+     *     name: string,
+     *     initials: string,
+     *     avatar_url: ?string,
+     *     preview: string,
+     *     unread_count: int,
+     *     time_label: string,
+     *     chat_url: string,
+     *     context_label: string,
+     *     sort_at: \Illuminate\Support\Carbon
+     * }>
+     */
+    public static function unreadInboxForBhw(User $bhw): Collection
+    {
+        $unreadMessages = ResidentBhwMessage::query()
+            ->where('bhw_user_id', $bhw->id)
+            ->whereColumn('sender_id', 'resident_user_id')
+            ->whereNull('read_at')
+            ->whereNull('unsent_at')
+            ->with(['resident'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        if ($unreadMessages->isEmpty()) {
+            return collect();
+        }
+
+        $residentUserIds = $unreadMessages
+            ->pluck('resident_user_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $requestsByUserId = ResidentRequest::query()
+            ->forBhw($bhw)
+            ->whereIn('user_id', $residentUserIds)
+            ->whereIn('status', ['accepted', 'pending'])
+            ->with('purok')
+            ->orderByRaw("CASE WHEN status = 'accepted' THEN 0 ELSE 1 END")
+            ->get()
+            ->keyBy(fn (ResidentRequest $request) => (int) $request->user_id);
+
+        return $unreadMessages
+            ->groupBy(fn (ResidentBhwMessage $message) => (int) $message->resident_user_id)
+            ->map(function (Collection $threadMessages) use ($requestsByUserId) {
+                /** @var ResidentBhwMessage $latest */
+                $latest = $threadMessages->sortByDesc('created_at')->first();
+                $resident = $latest->resident;
+                $residentUserId = (int) $latest->resident_user_id;
+                $request = $requestsByUserId->get($residentUserId);
+
+                if (! $request || ! $resident) {
+                    return null;
+                }
+
+                $name = trim((string) ($resident->full_name ?: $resident->name ?: 'Resident'));
+                $nameParts = preg_split('/\s+/', $name) ?: [];
+                $initials = strtoupper(
+                    substr($nameParts[0] ?? 'R', 0, 1)
+                    .substr($nameParts[count($nameParts) - 1] ?? 'R', 0, 1)
+                );
+
+                $preview = trim((string) ($latest->message ?? ''));
+                if ($preview === '' && filled($latest->attachment_path)) {
+                    $preview = 'Sent a photo';
+                }
+                if ($preview === '') {
+                    $preview = 'New message';
+                }
+                if (mb_strlen($preview) > 72) {
+                    $preview = mb_substr($preview, 0, 69).'…';
+                }
+
+                $chatUrl = $request->status === 'pending'
+                    ? route('bhw.requests.chat', ['residentRequest' => $request, 'from' => 'unread'])
+                    : route('bhw.residents.chat', ['residentRequest' => $request, 'from' => 'unread']);
+
+                $purokName = trim((string) ($request->purok?->name ?? $resident->purok?->name ?? ''));
+                $contextLabel = $request->status === 'pending'
+                    ? 'Verification request'.($purokName !== '' ? ' · '.$purokName : '')
+                    : ($purokName !== '' ? $purokName : 'Resident');
+
+                return [
+                    'resident_user_id' => $residentUserId,
+                    'name' => $name,
+                    'initials' => $initials,
+                    'avatar_url' => $resident->profile_picture_path
+                        ? route('profile.picture', [
+                            'user' => $resident->id,
+                            'v' => optional($resident->updated_at)->timestamp,
+                        ])
+                        : null,
+                    'preview' => $preview,
+                    'unread_count' => $threadMessages->count(),
+                    'time_label' => self::messengerTimeLabel($latest->created_at),
+                    'chat_url' => $chatUrl,
+                    'context_label' => $contextLabel,
+                    'sort_at' => $latest->created_at ?? now(),
+                ];
+            })
+            ->filter()
+            ->sortByDesc('sort_at')
+            ->values();
+    }
+
+    public static function messengerTimeLabel($date): string
+    {
+        if (! $date) {
+            return '';
+        }
+
+        $moment = \Illuminate\Support\Carbon::parse($date);
+        $now = now();
+
+        if ($moment->isToday()) {
+            $minutes = (int) $moment->diffInMinutes($now);
+            if ($minutes < 1) {
+                return 'now';
+            }
+            if ($minutes < 60) {
+                return $minutes.'m';
+            }
+
+            return $moment->format('g:i A');
+        }
+
+        if ($moment->isYesterday()) {
+            return 'Yesterday';
+        }
+
+        if ($moment->greaterThan($now->copy()->subDays(6)->startOfDay())) {
+            return $moment->format('D');
+        }
+
+        if ($moment->year === $now->year) {
+            return $moment->format('M j');
+        }
+
+        return $moment->format('M j, Y');
     }
 }

@@ -62,7 +62,7 @@
 <div id="bnsContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
     <main class="flex-1 flex flex-col min-h-0 px-4 sm:px-5 md:px-6 lg:px-8 pt-4 lg:pt-6 pb-24 lg:pb-6 overflow-hidden">
         <div class="page-content">
-            <div class="w-full max-w-2xl mx-auto space-y-6 pb-4">
+            <div class="w-full max-w-none space-y-6 pb-4">
                 <div class="flex items-center justify-between gap-3">
                     <div class="min-w-0">
                         <h1 class="text-xl sm:text-2xl font-bold leading-tight">Profile Details</h1>
@@ -84,7 +84,7 @@
                         </div>
                     @endif
 
-                    <form id="profileSettingsForm" method="POST" action="{{ route('bns.settings.update') }}" class="grid grid-cols-1 gap-4">
+                    <form id="profileSettingsForm" method="POST" action="{{ route('bns.settings.update') }}" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         @csrf
 
                         <div>
@@ -108,7 +108,7 @@
                             <input id="barangay" type="text" value="{{ $user->barangay ?: '—' }}" disabled class="w-full h-10 rounded-lg bg-background-light/70 dark:bg-background-dark/70 border border-border-light dark:border-border-dark px-3 text-sm text-text-light/80 dark:text-text-dark/80 cursor-not-allowed">
                         </div>
 
-                        <div class="pt-2">
+                        <div class="pt-2 md:col-span-2">
                             <button type="submit" class="inline-flex h-10 items-center gap-2 px-4 rounded-lg bg-primary text-sm font-semibold text-white">
                                 <span class="material-symbols-outlined text-[18px]">save</span>
                                 <span>Save</span>

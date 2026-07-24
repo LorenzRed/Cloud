@@ -370,7 +370,7 @@
         box-shadow: none;
     }
 
-    @media (min-width: 640px) {
+    @media (min-width: 1024px) {
         .auth-field-control {
             --auth-field-height: 3.625rem;
             --auth-label-rest-size: 1.125rem;
@@ -389,9 +389,19 @@
             transform: none;
         }
 
+        .auth-screen {
+            padding: 2rem;
+        }
+
         .auth-screen__inner {
             flex: none;
             display: block;
+            max-width: 28rem;
+            width: 100%;
+        }
+
+        .auth-panel {
+            padding: 2rem;
         }
 
         .auth-footer {
@@ -402,7 +412,8 @@
         }
     }
 
-    @media (max-width: 639px) {
+    /* Phone + tablet: same mobile layout (laptop split starts at 1024px) */
+    @media (max-width: 1023px) {
         .auth-screen {
             padding: 1.25rem 1.25rem 1.5rem;
             align-items: stretch !important;
@@ -679,6 +690,133 @@
             padding-left: 0.125rem;
             font-size: 0.75rem;
             line-height: 1.4;
+        }
+    }
+
+    /* Tablet: bigger version of the mobile layout */
+    @media (min-width: 768px) and (max-width: 1023px) {
+        .auth-screen {
+            padding: 2rem 2.5rem 2.25rem;
+        }
+
+        .auth-screen__inner {
+            max-width: 28rem;
+            padding-top: 1rem;
+        }
+
+        .auth-screen__brand {
+            gap: 0.85rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .auth-screen__brand img {
+            width: 3.25rem;
+            height: 3.25rem;
+            border-radius: 0.85rem;
+        }
+
+        .auth-screen__brand h1 {
+            font-size: 1.625rem;
+        }
+
+        .auth-tabs {
+            margin-bottom: 0.25rem;
+        }
+
+        .auth-tabs__item {
+            min-height: 2.875rem;
+            font-size: 0.9375rem;
+        }
+
+        .auth-panel__header {
+            margin-top: 3rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .auth-panel__title {
+            font-size: 2rem;
+        }
+
+        .auth-panel__subtitle {
+            margin-top: 0.4rem;
+            font-size: 1rem;
+        }
+
+        .auth-form {
+            gap: 1rem;
+        }
+
+        .auth-field-control {
+            --auth-field-height: 3.875rem;
+            --auth-label-rest-size: 1.125rem;
+            --auth-label-float-size: 0.875rem;
+            --auth-input-size: 1.125rem;
+            border-radius: 0.9rem !important;
+        }
+
+        .auth-field-label {
+            left: 16px;
+        }
+
+        .auth-field-control.label-floating .auth-field-label {
+            left: 16px;
+        }
+
+        .auth-field-input {
+            padding: 0 16px !important;
+        }
+
+        .auth-field-control.label-floating .auth-field-input {
+            padding: 1.4rem 16px 0.5rem !important;
+        }
+
+        .auth-field-control--affix:not(.label-floating) .auth-field-input {
+            padding: 0 0.35rem 0 16px !important;
+        }
+
+        .auth-field-control--affix.label-floating .auth-field-input {
+            padding: 1.4rem 0.35rem 0.5rem 16px !important;
+        }
+
+        .auth-field-affix svg {
+            width: 1.15rem;
+            height: 1.15rem;
+        }
+
+        .auth-btn-primary {
+            min-height: 3rem;
+            font-size: 1rem;
+            border-radius: 0.9rem;
+            box-shadow: 0 10px 24px rgba(74, 144, 226, 0.22);
+        }
+
+        .auth-field-bubble {
+            font-size: 0.75rem;
+            padding: 0.45rem 0.7rem;
+        }
+
+        .auth-footer {
+            padding-top: 2rem;
+            font-size: 0.9375rem;
+        }
+
+        .auth-terms label {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .auth-terms input[type="checkbox"] {
+            width: 1.15rem;
+            height: 1.15rem;
+        }
+
+        .auth-hint {
+            font-size: 0.8125rem;
+        }
+
+        .auth-forgot-password {
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
         }
     }
 </style>

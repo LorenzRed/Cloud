@@ -49,7 +49,7 @@
         border-top-color: #3D3D3D !important;
     }
     .bhw-messenger-chat-body form {
-        align-items: center;
+        align-items: flex-end;
         gap: 0.375rem;
         background: #f0f4f8;
         border-radius: 1.5rem;
@@ -75,6 +75,17 @@
         padding-bottom: 0.5rem !important;
         padding-left: 0.25rem !important;
         padding-right: 0.25rem !important;
+        overflow-y: hidden;
+        overflow-x: hidden;
+        white-space: pre-wrap !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        /* No height transition — collapse must be instant when keyboard closes / after send. */
+        transition: none;
+        scrollbar-width: none;
+    }
+    .bhw-messenger-chat-body textarea::-webkit-scrollbar {
+        display: none;
     }
     .bhw-messenger-chat-body textarea:focus {
         outline: none !important;
@@ -92,8 +103,8 @@
             width: 100% !important;
         }
         .bhw-messenger-shell {
-            min-height: 100dvh;
-            min-height: 100svh;
+            min-height: 0;
+            height: 100%;
         }
         .bhw-messenger-header {
             padding-top: max(0.5rem, env(safe-area-inset-top, 0px));

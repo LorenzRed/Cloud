@@ -182,6 +182,13 @@
         font-weight: 600;
     }
 
+    .record-export-btn:disabled,
+    .record-export-btn[aria-disabled="true"] {
+        opacity: 0.45;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
     @media (max-width: 767px) {
         .record-export-btn {
             font-size: 0.75rem;
@@ -324,7 +331,7 @@
 
         .record-mobile-status {
             flex-shrink: 0;
-            max-width: 6.5rem;
+            max-width: 9.5rem;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -450,5 +457,38 @@
         .record-mobile-extra,
         .record-row-details { display: none !important; }
         .record-desktop-cell { display: table-cell !important; }
+    }
+
+    .record-giving-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 0;
+    }
+
+    .record-giving-item {
+        padding: 0.5rem 0.625rem;
+        border-radius: 0.5rem;
+        border: 1px solid #EAEAEA;
+        background: rgba(244, 244, 244, 0.7);
+    }
+
+    .dark .record-giving-item {
+        border-color: #3D3D3D;
+        background: rgba(26, 26, 26, 0.45);
+    }
+
+    .record-detail-item--full {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .record-detail-item--full .record-detail-label {
+        margin-bottom: 0;
+    }
+
+    .record-detail-item--full .record-giving-list {
+        width: 100%;
     }
 </style>

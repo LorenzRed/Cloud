@@ -170,7 +170,7 @@ class BhwDashboardBuilder
             : HouseholdMonitoringCase::query()
                 ->whereIn('resident_request_id', $residentIds)
                 ->where('is_active', true)
-                ->with('residentRequest')
+                ->with(['residentRequest.purok'])
                 ->get();
 
         $upcomingConsultations = $residentIds->isEmpty()
@@ -281,21 +281,60 @@ class BhwDashboardBuilder
             })
             ->sum(fn ($household) => $household->max($peopleInHousehold));
 
-        $pregnantMonitored = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_PREGNANT)->count();
-        $seniorMonitored = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_SENIOR)->count();
-        $generalMonitored = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_GENERAL)->count();
-        $seniorByAge = $residents->filter(fn ($resident) => (int) ($resident->age ?? 0) >= 60)->count();
+        $pregnantCases = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_PREGNANT);
+        $pregnantMonitoredCount = $pregnantCases->count();
+        $needMaintenanceCases = $monitoringCases->whereIn('member_type', [
+            HouseholdMonitoringCase::TYPE_PREGNANT,
+            HouseholdMonitoringCase::TYPE_SENIOR,
+        ]);
+        $needMaintenanceCount = $needMaintenanceCases->count();
+
+        $householdSeniorMembers = collect();
+        foreach ($residents as $resident) {
+            $familyNumber = trim((string) ($resident->family_number ?? ''));
+            $purokName = trim((string) ($resident->purok?->name ?? '')) ?: '—';
+            $householdName = trim((string) ($resident->full_name ?? '')) ?: '—';
+
+            foreach (is_array($resident->household_seniors) ? $resident->household_seniors : [] as $senior) {
+                if (! is_array($senior)) {
+                    continue;
+                }
+
+                $name = trim((string) ($senior['full_name'] ?? $senior['name'] ?? ''));
+                if ($name === '') {
+                    continue;
+                }
+
+                $householdSeniorMembers->push([
+                    'name' => $name,
+                    'family_number' => $familyNumber !== '' ? $familyNumber : 'Not assigned',
+                    'household' => $householdName,
+                    'purok' => $purokName,
+                ]);
+            }
+        }
+
+        $householdSeniorMembers = $householdSeniorMembers
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+        $householdSeniorCount = $householdSeniorMembers->count();
 
         $mapMonitoringMembers = function ($cases) {
             return $cases
                 ->map(function (HouseholdMonitoringCase $case) {
                     $familyNumber = trim((string) ($case->residentRequest?->family_number ?? ''));
+                    $reason = match ($case->member_type) {
+                        HouseholdMonitoringCase::TYPE_PREGNANT => 'Pregnant',
+                        HouseholdMonitoringCase::TYPE_SENIOR => 'Senior',
+                        default => 'Maintenance',
+                    };
 
                     return [
                         'name' => trim((string) ($case->member_name ?? '')) ?: ($case->residentRequest?->full_name ?: 'Household member'),
                         'family_number' => $familyNumber !== '' ? $familyNumber : 'Not assigned',
                         'household' => $case->residentRequest?->full_name ?: '—',
                         'purok' => trim((string) ($case->residentRequest?->purok?->name ?? '')) ?: '—',
+                        'reason' => $reason,
                     ];
                 })
                 ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
@@ -449,23 +488,35 @@ class BhwDashboardBuilder
         $maxPurokCases = (int) collect($illnessByPurokRows)->max('cases');
         $illnessByPurokIndex = collect($illnessByPurokRows)->keyBy('purok');
 
-        $householdsByPurok = $residents
-            ->groupBy(function (ResidentRequest $resident) {
-                return trim((string) ($resident->purok?->name ?? $resident->user?->purok?->name ?? '')) ?: 'Unassigned';
-            })
-            ->map(function (Collection $group) {
-                return $group
-                    ->map(function (ResidentRequest $resident) {
-                        $familyNumber = trim((string) ($resident->family_number ?? ''));
+        $householdKey = static function (ResidentRequest $resident): string {
+            $familyNumber = trim((string) ($resident->family_number ?? ''));
 
-                        return $familyNumber !== '' ? 'family:'.$familyNumber : 'resident:'.$resident->id;
-                    })
+            return $familyNumber !== '' ? 'family:'.$familyNumber : 'resident:'.$resident->id;
+        };
+
+        $purokNameOf = static function (ResidentRequest $resident): string {
+            return trim((string) ($resident->purok?->name ?? $resident->user?->purok?->name ?? '')) ?: 'Unassigned';
+        };
+
+        $householdsByPurok = $residents
+            ->groupBy($purokNameOf)
+            ->map(function (Collection $group) use ($householdKey) {
+                return $group
+                    ->map($householdKey)
                     ->unique()
                     ->count();
             });
 
+        $residentsByPurok = $residents
+            ->groupBy($purokNameOf)
+            ->map(function (Collection $group) use ($householdKey, $peopleInHousehold) {
+                return $group
+                    ->groupBy($householdKey)
+                    ->sum(fn ($household) => $household->max($peopleInHousehold));
+            });
+
         $purokAlertLevels = $coveredPurokNames
-            ->map(function (string $purokName) use ($illnessByPurokIndex, $maxPurokCases, $householdsByPurok) {
+            ->map(function (string $purokName) use ($illnessByPurokIndex, $maxPurokCases, $householdsByPurok, $residentsByPurok) {
                 $row = $illnessByPurokIndex->get($purokName, [
                     'purok' => $purokName,
                     'cases' => 0,
@@ -493,6 +544,7 @@ class BhwDashboardBuilder
                 return [
                     'purok' => $purokName,
                     'households' => (int) ($householdsByPurok->get($purokName) ?? 0),
+                    'residents' => (int) ($residentsByPurok->get($purokName) ?? 0),
                     'cases' => $cases,
                     'Hypertension' => (int) ($row['Hypertension'] ?? 0),
                     'Diabetes' => (int) ($row['Diabetes'] ?? 0),
@@ -525,8 +577,8 @@ class BhwDashboardBuilder
                 'medicine_pcs_dispensed' => $medicineDispensedPcs,
                 'pending_requests' => (int) ($meta['pending_requests'] ?? 0),
                 'upcoming_consultations' => $upcomingConsultations,
-                'pregnant_women_monitored' => $pregnantMonitored,
-                'senior_citizens_monitored' => max($seniorMonitored, $seniorByAge),
+                'pregnant_women_monitored' => $pregnantMonitoredCount,
+                'senior_citizens_monitored' => $householdSeniorCount,
                 'active_monitoring_cases' => $monitoringCases->count(),
                 'total_residents' => $residents->count(),
             ],
@@ -535,13 +587,13 @@ class BhwDashboardBuilder
                 'chart_periods' => $chartPeriods,
             ],
             'monitoringMix' => [
-                'labels' => ['Pregnant', 'Senior', 'General'],
-                'values' => [$pregnantMonitored, $seniorMonitored, $generalMonitored],
+                'labels' => ['Pregnant', 'Senior', 'Need maintenance'],
+                'values' => [$pregnantMonitoredCount, $householdSeniorCount, $needMaintenanceCount],
                 'colors' => ['#EC4899', '#8B5CF6', '#4A90E2'],
                 'members' => [
-                    'Pregnant' => $mapMonitoringMembers($monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_PREGNANT)),
-                    'Senior' => $mapMonitoringMembers($monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_SENIOR)),
-                    'General' => $mapMonitoringMembers($monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_GENERAL)),
+                    'Pregnant' => $mapMonitoringMembers($pregnantCases),
+                    'Senior' => $householdSeniorMembers->all(),
+                    'Need maintenance' => $mapMonitoringMembers($needMaintenanceCases),
                 ],
             ],
             'illnessByPurok' => $illnessByPurokRows,
@@ -551,6 +603,156 @@ class BhwDashboardBuilder
                 'values' => array_values($conditionCounts),
                 'colors' => $conditionColors,
             ],
+            'populationDistribution' => self::populationDistribution($residents),
         ];
+    }
+
+    /**
+     * Age buckets for all household members, filterable by gender, plus gender totals.
+     *
+     * @param  Collection<int, ResidentRequest>  $residents
+     * @return array{
+     *     age_labels: list<string>,
+     *     age_by_gender: array{all: list<int>, male: list<int>, female: list<int>},
+     *     gender: array{labels: list<string>, values: list<int>, colors: list<string>}
+     * }
+     */
+    public static function populationDistribution(Collection $residents): array
+    {
+        $labels = ['0–17', '18–35', '36–59', '60+'];
+        $ageByGender = [
+            'all' => [0, 0, 0, 0],
+            'male' => [0, 0, 0, 0],
+            'female' => [0, 0, 0, 0],
+        ];
+        $genderCounts = ['Male' => 0, 'Female' => 0];
+
+        foreach (self::householdPeople($residents) as $person) {
+            $age = $person['age'];
+            $gender = $person['gender'];
+            $bucket = self::ageBucketIndex($age);
+
+            if ($bucket === null) {
+                continue;
+            }
+
+            $ageByGender['all'][$bucket]++;
+
+            if ($gender === 'Male') {
+                $ageByGender['male'][$bucket]++;
+                $genderCounts['Male']++;
+            } elseif ($gender === 'Female') {
+                $ageByGender['female'][$bucket]++;
+                $genderCounts['Female']++;
+            }
+        }
+
+        return [
+            'age_labels' => $labels,
+            'age_by_gender' => $ageByGender,
+            'gender' => [
+                'labels' => ['Male', 'Female'],
+                'values' => [$genderCounts['Male'], $genderCounts['Female']],
+                'colors' => ['#4A90E2', '#EC4899'],
+            ],
+        ];
+    }
+
+    /**
+     * @param  Collection<int, ResidentRequest>  $residents
+     * @return list<array{age: int|null, gender: string|null}>
+     */
+    private static function householdPeople(Collection $residents): array
+    {
+        $people = [];
+
+        foreach ($residents as $resident) {
+            $headGender = self::normalizeGender(
+                $resident->user?->gender
+                ?? match ($resident->parent_role) {
+                    ResidentRequest::PARENT_ROLE_FATHER => 'Male',
+                    ResidentRequest::PARENT_ROLE_MOTHER => 'Female',
+                    default => null,
+                }
+            );
+            $headAge = self::resolveAge(
+                isset($resident->age) ? (int) $resident->age : null,
+                $resident->user?->date_of_birth?->toDateString()
+            );
+
+            $people[] = ['age' => $headAge, 'gender' => $headGender];
+
+            $spouse = is_array($resident->spouse_details) ? $resident->spouse_details : [];
+            if ($spouse !== [] || filled($resident->spouse_full_name)) {
+                $people[] = [
+                    'age' => self::resolveAge(
+                        isset($spouse['age']) ? (int) $spouse['age'] : null,
+                        isset($spouse['birthdate']) ? (string) $spouse['birthdate'] : null
+                    ),
+                    'gender' => self::normalizeGender($spouse['gender'] ?? null)
+                        ?? ($headGender === 'Male' ? 'Female' : ($headGender === 'Female' ? 'Male' : null)),
+                ];
+            }
+
+            foreach (is_array($resident->household_children) ? $resident->household_children : [] as $child) {
+                if (! is_array($child)) {
+                    continue;
+                }
+
+                $people[] = [
+                    'age' => self::resolveAge(
+                        isset($child['age']) ? (int) $child['age'] : null,
+                        isset($child['birthdate']) ? (string) $child['birthdate'] : null
+                    ),
+                    'gender' => self::normalizeGender($child['gender'] ?? null),
+                ];
+            }
+
+            foreach (is_array($resident->household_seniors) ? $resident->household_seniors : [] as $senior) {
+                if (! is_array($senior)) {
+                    continue;
+                }
+
+                $people[] = [
+                    'age' => self::resolveAge(
+                        isset($senior['age']) ? (int) $senior['age'] : null,
+                        isset($senior['birthdate']) ? (string) $senior['birthdate'] : null
+                    ),
+                    'gender' => self::normalizeGender($senior['gender'] ?? null),
+                ];
+            }
+        }
+
+        return $people;
+    }
+
+    private static function resolveAge(?int $age, ?string $birthdate): ?int
+    {
+        if ($age !== null && $age >= 0 && $age <= 130) {
+            return $age;
+        }
+
+        return PersonAge::ageInYears($birthdate);
+    }
+
+    private static function normalizeGender(mixed $gender): ?string
+    {
+        $value = ucfirst(strtolower(trim((string) ($gender ?? ''))));
+
+        return in_array($value, ['Male', 'Female'], true) ? $value : null;
+    }
+
+    private static function ageBucketIndex(?int $age): ?int
+    {
+        if ($age === null || $age < 0) {
+            return null;
+        }
+
+        return match (true) {
+            $age <= 17 => 0,
+            $age <= 35 => 1,
+            $age <= 59 => 2,
+            default => 3,
+        };
     }
 }

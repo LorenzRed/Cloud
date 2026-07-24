@@ -228,6 +228,18 @@
                     $monitoringMix = $monitoringMix ?? ['labels' => [], 'values' => [], 'colors' => [], 'members' => []];
                     $illnessByPurok = $illnessByPurok ?? [];
                     $purokAlertLevels = $purokAlertLevels ?? [];
+                    $populationDistribution = $populationDistribution ?? [
+                        'age_labels' => ['0–17', '18–35', '36–59', '60+'],
+                        'age_by_gender' => ['all' => [0, 0, 0, 0], 'male' => [0, 0, 0, 0], 'female' => [0, 0, 0, 0]],
+                        'gender' => ['labels' => ['Male', 'Female'], 'values' => [0, 0], 'colors' => ['#4A90E2', '#EC4899']],
+                    ];
+                    $bnsNutritionStats = $bnsNutritionStats ?? [];
+                    $bnsImmunizationOverview = $bnsImmunizationOverview ?? [];
+                    $bnsDashboardCharts = $bnsDashboardCharts ?? [];
+                    $bnsChartPeriods = $bnsDashboardCharts['chart_periods'] ?? [];
+                    $bnsDefaultChartPeriod = $bnsDashboardCharts['default_period'] ?? 'month';
+                    $bnsNutritionSplit = $bnsDashboardCharts['nutrition_split'] ?? ['labels' => [], 'values' => []];
+                    $managedBnsCount = $managedBnsCount ?? 0;
                     $purokLevelStyles = [
                         'high' => [
                             'card' => 'border-accent-red/40 bg-accent-red/10 dark:bg-accent-red/15',
@@ -256,9 +268,12 @@
                     ];
 
                     $primaryKpis = [
-                        ['label' => 'Households covered', 'key' => 'total_households_assigned', 'icon' => 'home', 'tone' => 'bg-primary/10 text-primary', 'coverage_selector' => true],
-                        ['label' => 'Active health concerns', 'key' => 'active_illness_cases', 'icon' => 'cardiology', 'tone' => 'bg-accent-red/10 text-accent-red'],
-                        ['label' => 'Transactions this month', 'key' => 'transactions_this_month', 'icon' => 'medication', 'tone' => 'bg-secondary/15 text-teal-700 dark:text-secondary'],
+                        ['label' => 'Households covered', 'key' => 'total_households_assigned', 'icon' => 'home', 'tone' => 'bg-primary/10 text-primary', 'coverage_selector' => true, 'source' => 'bhw'],
+                        ['label' => 'Active health concerns', 'key' => 'active_illness_cases', 'icon' => 'cardiology', 'tone' => 'bg-accent-red/10 text-accent-red', 'source' => 'bhw'],
+                        ['label' => 'Transactions this month', 'key' => 'transactions_this_month', 'icon' => 'medication', 'tone' => 'bg-secondary/15 text-teal-700 dark:text-secondary', 'source' => 'bhw'],
+                        ['label' => 'Children monitored', 'key' => 'total_children_0_5', 'icon' => 'child_care', 'tone' => 'bg-primary/10 text-primary', 'source' => 'bns'],
+                        ['label' => 'Malnourished', 'key' => 'malnutrition_cases', 'icon' => 'warning', 'tone' => 'bg-accent-red/10 text-accent-red', 'source' => 'bns'],
+                        ['label' => 'Normal nutrition', 'key' => 'normal_bmi_count', 'icon' => 'check_circle', 'tone' => 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300', 'source' => 'bns'],
                     ];
 
                     $secondaryKpis = [
@@ -279,17 +294,17 @@
                     </div>
                 @else
                 <header class="dash-hero rounded-2xl border border-border-light dark:border-border-dark p-5 md:p-6">
-                    <div class="flex flex-wrap justify-between items-start gap-4">
-                        <div class="min-w-0">
+                    <div class="flex flex-nowrap justify-between items-start gap-3">
+                        <div class="min-w-0 flex-1">
                             <p class="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Barangay Captain</p>
                             <h1 class="text-2xl sm:text-3xl font-bold leading-tight text-text-light dark:text-text-dark">Barangay Dashboard</h1>
-                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1.5 max-w-xl">
-                                Combined overview from all assigned BHWs — residents, medicine transactions, monitoring, and illness across every covered purok.
+                            <p class="hidden sm:block text-sm text-text-light/70 dark:text-text-dark/70 mt-1.5 max-w-xl">
+                                Combined barangay overview from BHWs and BNS — community health, child nutrition (0–5), monitoring, and illness across every covered purok.
                             </p>
                         </div>
-                        <div class="flex flex-col items-end gap-2 shrink-0">
+                        <div class="flex flex-col items-end gap-2 shrink-0 max-w-[46%] sm:max-w-none">
                             @if (filled($assignedPurokLabel ?? null))
-                                <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-white/80 dark:bg-card-dark/80 border border-border-light dark:border-border-dark text-primary shadow-sm max-w-[16rem] sm:max-w-xs">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold bg-white/80 dark:bg-card-dark/80 border border-border-light dark:border-border-dark text-primary shadow-sm max-w-full">
                                     <span class="material-symbols-outlined text-base shrink-0">location_city</span>
                                     <span class="truncate" title="{{ $assignedPurokLabel }}">{{ $assignedPurokLabel }}</span>
                                 </span>
@@ -300,7 +315,7 @@
                                     <span class="truncate">{{ $purokCoverageLabel }}</span>
                                 </span>
                             @endif
-                            <p class="text-xs text-text-light/50 dark:text-text-dark/50">{{ now()->format('l, M d, Y') }}</p>
+                            <p class="text-[11px] sm:text-xs text-text-light/50 dark:text-text-dark/50 text-right">{{ now()->format('l, M d, Y') }}</p>
                         </div>
                     </div>
                 </header>
@@ -316,6 +331,11 @@
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-orange/10 text-accent-orange font-semibold"><span class="size-2 rounded-full bg-accent-orange"></span>Watch</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary font-semibold"><span class="size-2 rounded-full bg-primary"></span>Low</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold"><span class="size-2 rounded-full bg-emerald-500"></span>Clear</span>
+                        </div>
+                        <div class="flex flex-col sm:flex-row sm:flex-wrap gap-1 sm:gap-x-4 sm:gap-y-1 text-xs text-text-light/70 dark:text-text-dark/70">
+                            <p><span class="font-bold text-text-light dark:text-text-dark">HTN</span> — Hypertension (high blood pressure)</p>
+                            <p><span class="font-bold text-text-light dark:text-text-dark">DM</span> — Diabetes Mellitus</p>
+                            <p><span class="font-bold text-text-light dark:text-text-dark">Lipid</span> — Hyperlipidemia (high cholesterol/fats)</p>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -340,8 +360,8 @@
                                         <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">concern cases</p>
                                     </div>
                                     <div>
-                                        <p class="text-2xl font-bold tabular-nums">{{ number_format((int) ($alert['households'] ?? 0)) }}</p>
-                                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">households</p>
+                                        <p class="text-2xl font-bold tabular-nums">{{ number_format((int) ($alert['residents'] ?? $alert['households'] ?? 0)) }}</p>
+                                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">individual residents</p>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-black/5 dark:border-white/10 text-center">
@@ -369,8 +389,13 @@
 
                 <section>
                     <h2 class="text-sm font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-3">At a glance</h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 dash-kpi-grid-mobile-span">
                         @foreach ($primaryKpis as $card)
+                            @php
+                                $kpiValue = ($card['source'] ?? 'bhw') === 'bns'
+                                    ? (int) ($bnsNutritionStats[$card['key']] ?? 0)
+                                    : (int) ($bhwStats[$card['key']] ?? 0);
+                            @endphp
                             <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 shadow-sm {{ ($card['coverage_selector'] ?? false) ? 'dash-coverage-card' : '' }}">
                                 <div class="flex items-start justify-between gap-2 mb-3">
                                     <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl {{ $card['tone'] }}">
@@ -390,7 +415,7 @@
                                         data-households="{{ (int) ($bhwStats['total_households_assigned'] ?? 0) }}"
                                         data-people="{{ (int) ($bhwStats['total_people_assigned'] ?? 0) }}"
                                     @endif
-                                >{{ number_format((int) ($bhwStats[$card['key']] ?? 0)) }}</p>
+                                >{{ number_format($kpiValue) }}</p>
                                 <p
                                     class="text-xs sm:text-sm text-text-light/60 dark:text-text-dark/60 mt-1 leading-snug"
                                     @if ($card['coverage_selector'] ?? false) id="coverageCountLabel" @endif
@@ -401,6 +426,36 @@
                                         <option value="people">Total residents</option>
                                     </select>
                                 @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+
+                <section>
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-3">Nutrition breakdown (child)</h2>
+                    @php
+                        $bnsSecondaryKpis = [
+                            ['label' => 'Fully immunized', 'value' => (int) ($bnsImmunizationOverview['fully_immunized'] ?? 0)],
+                            ['label' => 'Missed vaccine doses', 'value' => (int) ($bnsImmunizationOverview['with_missed_doses'] ?? 0)],
+                            ['label' => 'Severely malnourished', 'value' => (int) ($bnsNutritionStats['severely_underweight_cases'] ?? 0)],
+                            ['label' => 'No weight record', 'value' => (int) ($bnsNutritionStats['no_weight_record'] ?? 0)],
+                            ['label' => 'Overweight / obese', 'value' => (int) ($bnsNutritionStats['overweight_cases'] ?? 0)],
+                            ['label' => 'Puroks covered', 'value' => (int) ($bnsNutritionStats['puroks_covered'] ?? 0)],
+                        ];
+                        $bnsSplitLegend = [
+                            ['label' => 'Malnourished', 'tone' => 'bg-accent-red'],
+                            ['label' => 'Normal', 'tone' => 'bg-secondary'],
+                            ['label' => 'Overweight', 'tone' => 'bg-accent-orange'],
+                            ['label' => 'No record', 'tone' => 'bg-gray-400'],
+                        ];
+                        $bnsSplitValuesByLabel = array_combine($bnsNutritionSplit['labels'] ?? [], $bnsNutritionSplit['values'] ?? []) ?: [];
+                    @endphp
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 dash-kpi-grid-mobile-span">
+                        @foreach ($bnsSecondaryKpis as $card)
+                            <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-3">
+                                <p class="text-xl font-bold tabular-nums">{{ number_format((int) $card['value']) }}</p>
+                                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 leading-snug">{{ $card['label'] }}</p>
                             </div>
                         @endforeach
                     </div>
@@ -484,7 +539,7 @@
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm xl:col-span-2">
                         <div class="mb-4">
                             <h2 class="text-base font-bold">Household monitoring mix</h2>
-                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Active pregnant, senior, and general monitoring cases</p>
+                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Pregnant cases, household seniors, and seniors receiving BHW maintenance</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                             <div class="h-56 sm:h-64 max-w-xs mx-auto w-full">
@@ -494,7 +549,7 @@
                                 @foreach ([
                                     ['label' => 'Pregnant', 'key' => 'Pregnant', 'tone' => 'bg-pink-500', 'clickable' => true],
                                     ['label' => 'Senior', 'key' => 'Senior', 'tone' => 'bg-violet-500', 'clickable' => true],
-                                    ['label' => 'General', 'key' => 'General', 'tone' => 'bg-primary', 'clickable' => false],
+                                    ['label' => 'Need maintenance', 'key' => 'Need maintenance', 'tone' => 'bg-primary', 'clickable' => true],
                                 ] as $index => $item)
                                     @php
                                         $value = (int) (($monitoringMix['values'] ?? [])[$index] ?? 0);
@@ -502,7 +557,7 @@
                                     @if ($item['clickable'])
                                         <button
                                             type="button"
-                                            class="mnt-mix-legend__item {{ $item['key'] === 'General' ? 'mnt-mix-legend__item--wide' : '' }} text-left"
+                                            class="mnt-mix-legend__item {{ $item['key'] === 'Need maintenance' ? 'mnt-mix-legend__item--wide' : '' }} text-left"
                                             data-monitoring-type="{{ $item['key'] }}"
                                             aria-label="View {{ strtolower($item['label']) }} members"
                                         >
@@ -543,7 +598,7 @@
                                     <thead>
                                         <tr class="border-b border-border-light dark:border-border-dark text-text-light/60 dark:text-text-dark/60">
                                             <th class="font-semibold text-left">Purok</th>
-                                            <th class="font-semibold text-center">HH</th>
+                                            <th class="font-semibold text-center">Res.</th>
                                             <th class="font-semibold text-center">Cases</th>
                                             <th class="font-semibold text-center">HTN</th>
                                             <th class="font-semibold text-center">DM</th>
@@ -568,7 +623,7 @@
                                                         {{ $row['purok'] }}
                                                     </span>
                                                 </td>
-                                                <td class="text-center tabular-nums font-semibold">{{ number_format((int) ($row['households'] ?? 0)) }}</td>
+                                                <td class="text-center tabular-nums font-semibold">{{ number_format((int) ($row['residents'] ?? $row['households'] ?? 0)) }}</td>
                                                 <td class="text-center tabular-nums font-bold">{{ number_format((int) ($row['cases'] ?? 0)) }}</td>
                                                 <td class="text-center tabular-nums">{{ number_format((int) ($row['Hypertension'] ?? 0)) }}</td>
                                                 <td class="text-center tabular-nums">{{ number_format((int) ($row['Diabetes'] ?? 0)) }}</td>
@@ -581,6 +636,58 @@
                                         @endforelse
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                @include('partials.population-distribution-charts')
+
+                <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm">
+                        <div class="flex flex-col gap-3 mb-4">
+                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                <div class="min-w-0">
+                                    <h3 class="text-base font-bold">Average weight trend (child)</h3>
+                                    <p id="bnsWeightTrendSubtitle" class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Average weight from weigh-ins</p>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5 shrink-0" role="group" aria-label="Child weight trend period">
+                                    <button type="button" class="dash-period-btn text-xs font-semibold px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80" data-bns-weight-period="week" aria-pressed="false">This week</button>
+                                    <button type="button" class="dash-period-btn text-xs font-semibold px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80" data-bns-weight-period="month" aria-pressed="true">This month</button>
+                                    <button type="button" class="dash-period-btn text-xs font-semibold px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80" data-bns-weight-period="year" aria-pressed="false">This year</button>
+                                </div>
+                            </div>
+                            <p id="bnsWeightRangeLabel" class="text-[11px] font-medium text-primary/80 dark:text-primary/90"></p>
+                        </div>
+                        <div class="dash-chart-wrap">
+                            <canvas id="bnsWeightTrendChart" aria-label="Child average weight trend"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm">
+                        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
+                            <div>
+                                <h3 class="text-base font-bold">Population nutrition mix (child)</h3>
+                                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Share of monitored children by nutrition category</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                            <div class="h-56 sm:h-64 max-w-xs mx-auto w-full">
+                                <canvas id="bnsNutritionMixChart" aria-label="Child nutrition mix"></canvas>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                @foreach ($bnsSplitLegend as $index => $item)
+                                    @php
+                                        $value = (int) ($bnsSplitValuesByLabel[$item['label']] ?? ($bnsNutritionSplit['values'][$index] ?? 0));
+                                    @endphp
+                                    <div class="rounded-lg border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 px-3 py-2.5">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="size-2.5 rounded-full {{ $item['tone'] }}"></span>
+                                            <span class="text-xs text-text-light/60 dark:text-text-dark/60">{{ $item['label'] }}</span>
+                                        </div>
+                                        <p class="text-lg font-bold tabular-nums">{{ number_format($value) }}</p>
+                                    </div>
+                                @endforeach
                             </div>
                         </div>
                     </div>
@@ -949,7 +1056,7 @@
                     onClick: (_event, elements) => {
                         if (!elements.length) return;
                         const label = monitoringMix.labels?.[elements[0].index];
-                        if (label === 'Pregnant' || label === 'Senior') {
+                        if (label === 'Pregnant' || label === 'Senior' || label === 'Need maintenance') {
                             openMonitoringMembersModal(label);
                         }
                     },
@@ -1060,6 +1167,7 @@
                 monitoringMembersList.innerHTML = members.map((member) => `
                     <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 px-3 py-3">
                         <p class="text-sm font-semibold break-words">${escapeHtml(member.name || '—')}</p>
+                        ${member.reason ? `<p class="text-xs font-medium text-primary mt-1">${escapeHtml(member.reason)}</p>` : ''}
                         <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Family no. <span class="font-semibold text-text-light dark:text-text-dark">${escapeHtml(member.family_number || 'Not assigned')}</span></p>
                         ${member.purok && member.purok !== '—' ? `<p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-0.5 truncate">Purok: ${escapeHtml(member.purok)}</p>` : ''}
                         ${member.household && member.household !== '—' ? `<p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-0.5 truncate">Household: ${escapeHtml(member.household)}</p>` : ''}
@@ -1092,6 +1200,113 @@
             closeMonitoringMembersModal();
         }
     });
+
+    const bnsChartPeriods = @json($bnsChartPeriods);
+    const bnsNutritionSplit = @json($bnsNutritionSplit);
+    const bnsDefaultChartPeriod = @json($bnsDefaultChartPeriod);
+    let bnsWeightChart = null;
+    let activeBnsWeightPeriod = bnsDefaultChartPeriod || 'month';
+
+    const bnsWeightSubtitleByPeriod = {
+        week: 'Daily average weight from weigh-ins this week',
+        month: 'Weekly average weight from weigh-ins this month',
+        year: 'Monthly average weight from weigh-ins this year',
+    };
+
+    function bnsPeriodBucket(period) {
+        return bnsChartPeriods[period] || {};
+    }
+
+    function updateBnsWeightChart() {
+        const bucket = bnsPeriodBucket(activeBnsWeightPeriod);
+        const trend = bucket.weight_trend || { labels: [], values: [] };
+        const rangeEl = document.getElementById('bnsWeightRangeLabel');
+        const subtitleEl = document.getElementById('bnsWeightTrendSubtitle');
+
+        if (rangeEl) rangeEl.textContent = bucket.range_label || '';
+        if (subtitleEl) subtitleEl.textContent = bnsWeightSubtitleByPeriod[activeBnsWeightPeriod] || bnsWeightSubtitleByPeriod.month;
+
+        document.querySelectorAll('[data-bns-weight-period]').forEach((button) => {
+            const isActive = button.getAttribute('data-bns-weight-period') === activeBnsWeightPeriod;
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+
+        if (!bnsWeightChart) return;
+        bnsWeightChart.data.labels = trend.labels || [];
+        bnsWeightChart.data.datasets[0].data = trend.values || [];
+        bnsWeightChart.update();
+    }
+
+    document.querySelectorAll('[data-bns-weight-period]').forEach((button) => {
+        button.addEventListener('click', () => {
+            activeBnsWeightPeriod = button.getAttribute('data-bns-weight-period') || 'month';
+            updateBnsWeightChart();
+        });
+    });
+
+    if (typeof Chart !== 'undefined') {
+        const bnsWeightCanvas = document.getElementById('bnsWeightTrendChart');
+        if (bnsWeightCanvas) {
+            const initial = bnsPeriodBucket(activeBnsWeightPeriod).weight_trend || { labels: [], values: [] };
+            bnsWeightChart = new Chart(bnsWeightCanvas, {
+                type: 'line',
+                data: {
+                    labels: initial.labels || [],
+                    datasets: [{
+                        label: 'Avg weight (kg)',
+                        data: initial.values || [],
+                        borderColor: '#50E3C2',
+                        backgroundColor: 'rgba(80, 227, 194, 0.15)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#50E3C2',
+                        spanGaps: true,
+                    }],
+                },
+                options: {
+                    ...chartDefaults,
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: tickColor(), font: { family: 'Manrope', size: 11 } },
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: gridColor() },
+                            ticks: { color: tickColor(), font: { family: 'Manrope', size: 11 } },
+                        },
+                    },
+                },
+            });
+            updateBnsWeightChart();
+        }
+
+        const bnsMixCanvas = document.getElementById('bnsNutritionMixChart');
+        if (bnsMixCanvas) {
+            new Chart(bnsMixCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: bnsNutritionSplit.labels || [],
+                    datasets: [{
+                        data: bnsNutritionSplit.values || [],
+                        backgroundColor: ['#D0021B', '#50E3C2', '#F5A623', '#9CA3AF'],
+                        borderWidth: 0,
+                    }],
+                },
+                options: {
+                    ...chartDefaults,
+                    plugins: {
+                        ...chartDefaults.plugins,
+                        legend: { display: false },
+                    },
+                    cutout: '58%',
+                },
+            });
+        }
+    }
 </script>
+@include('partials.population-distribution-charts-script')
 </body>
 </html>

@@ -19,6 +19,61 @@
         @media (min-width: 1024px) {
             .purok-map { min-height: 0; }
         }
+        @media (max-width: 1023px) {
+            #purokModal,
+            #editPurokModal {
+                padding: 0 !important;
+                align-items: stretch !important;
+                justify-content: stretch !important;
+            }
+            #purokModal > .purok-modal-shell,
+            #editPurokModal > .purok-modal-shell {
+                width: 100%;
+                max-width: none;
+                height: 100dvh;
+                max-height: 100dvh;
+                border-radius: 0;
+                border-left: 0;
+                border-right: 0;
+            }
+            .purok-modal-body {
+                display: flex;
+                flex-direction: column;
+                flex: 1 1 auto;
+                min-height: 0;
+            }
+            .purok-modal-map {
+                flex: 1 1 auto;
+                min-height: 62dvh;
+                height: auto !important;
+            }
+            .purok-modal-map .purok-map {
+                min-height: 62dvh;
+                height: 100%;
+            }
+            .purok-modal-form {
+                flex: 0 0 auto;
+                max-height: min(30dvh, 15rem);
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
+            }
+            .purok-modal-header {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+                padding-top: max(0.75rem, env(safe-area-inset-top, 0px)) !important;
+                padding-bottom: 0.75rem !important;
+            }
+            .leaflet-top.leaflet-right,
+            .leaflet-top.leaflet-left {
+                top: 0.35rem;
+            }
+            .leaflet-draw-toolbar a {
+                width: 34px !important;
+                height: 34px !important;
+                line-height: 34px !important;
+            }
+        }
         .purok-option.is-selected > div { border-color: rgb(74 144 226 / 1); background-color: rgb(74 144 226 / 0.10); box-shadow: 0 0 0 1px rgb(74 144 226 / 0.18); }
         .purok-option.is-occupied-locked { cursor: not-allowed; opacity: 0.72; }
         .purok-option.is-occupied-locked > div { border-color: rgb(148 163 184 / 0.9); background-color: rgb(148 163 184 / 0.12); }
@@ -27,6 +82,7 @@
         @keyframes toast-in { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         @keyframes toast-out { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-8px); opacity: 0; } }
         .leaflet-control-container { z-index: 10; }
+        .leaflet-control-attribution { display: none !important; }
         .purok-map-label {
             background: rgba(255, 255, 255, 0.94);
             border: 1px solid #4A90E2;
@@ -221,6 +277,10 @@
                                     @else
                                         <span class="flex-1 inline-flex items-center justify-center h-11 rounded-xl border border-border-light dark:border-border-dark text-xs text-text-light/50 dark:text-text-dark/50">Supervisor</span>
                                     @endif
+                                    <button type="button" class="open-password-modal-btn inline-flex items-center justify-center rounded-xl h-11 w-11 border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+                                        data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}" title="Change password" aria-label="Change password">
+                                        <span class="material-symbols-outlined text-base">lock_reset</span>
+                                    </button>
                                     <button type="button" class="open-kick-modal-btn inline-flex items-center justify-center rounded-xl h-11 w-11 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300"
                                         data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}" title="Remove permission">
                                         <span class="material-symbols-outlined text-base">person_remove</span>
@@ -232,6 +292,11 @@
                                 No health workers found for your barangay.
                             </div>
                         @endforelse
+                        <div id="workerSearchEmptyMobile" class="hidden rounded-xl border border-dashed border-border-light dark:border-border-dark px-4 py-10 text-center">
+                            <span class="material-symbols-outlined text-4xl text-text-light/40 dark:text-text-dark/40">search_off</span>
+                            <p class="mt-2 text-sm font-semibold">No workers found</p>
+                            <p class="mt-1 text-xs text-text-light/60 dark:text-text-dark/60">Try a different name or purok filter.</p>
+                        </div>
                     </div>
 
                     <div class="hidden sm:block overflow-x-auto border border-border-light dark:border-border-dark rounded-lg worker-list-scroll">
@@ -285,6 +350,10 @@
                                                 @else
                                                     <span class="text-xs text-text-light/50 dark:text-text-dark/50">Supervisor</span>
                                                 @endif
+                                                <button type="button" class="open-password-modal-btn inline-flex items-center justify-center rounded h-8 px-2 border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 transition"
+                                                    data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}" title="Change password" aria-label="Change password">
+                                                    <span class="material-symbols-outlined text-xs">lock_reset</span>
+                                                </button>
                                                 <button type="button" class="open-kick-modal-btn inline-flex items-center justify-center rounded h-8 px-2 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/70 transition"
                                                     data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}" title="Remove BHW permission">
                                                     <span class="material-symbols-outlined text-xs">person_remove</span>
@@ -295,6 +364,13 @@
                                 @empty
                                     <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-text-light/70 dark:text-text-dark/70">No health workers found for your barangay.</td></tr>
                                 @endforelse
+                                    <tr id="workerSearchEmptyDesktop" class="hidden">
+                                        <td colspan="6" class="px-4 py-10 text-center">
+                                            <span class="material-symbols-outlined text-4xl text-text-light/40 dark:text-text-dark/40">search_off</span>
+                                            <p class="mt-2 text-sm font-semibold">No workers found</p>
+                                            <p class="mt-1 text-xs text-text-light/60 dark:text-text-dark/60">Try a different name or purok filter.</p>
+                                        </td>
+                                    </tr>
                             </tbody>
                         </table>
                     </div>
@@ -371,25 +447,25 @@
     </div>
 </div>
 
-<div id="purokModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-2 sm:px-4 py-2 sm:py-6">
-    <div class="w-full max-w-6xl h-[min(92dvh,calc(100vh-1rem))] sm:h-[calc(100vh-3rem)] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
-        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4 bg-card-light dark:bg-card-dark z-10">
-            <div>
-                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">Create Purok</h2>
-                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Draw inside your barangay. Gray areas are taken — new shapes auto-align so they do not overlap.</p>
-        </div>
-            <button type="button" id="closeAddPurokModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark">
+<div id="purokModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4 py-0 sm:py-6">
+    <div class="purok-modal-shell w-full max-w-6xl h-[min(92dvh,calc(100vh-1rem))] sm:h-[calc(100vh-3rem)] overflow-hidden rounded-none sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
+        <div class="purok-modal-header flex items-center justify-between border-b border-border-light dark:border-border-dark px-4 sm:px-6 py-3 sm:py-4 bg-card-light dark:bg-card-dark z-10 shrink-0">
+            <div class="min-w-0 pr-2">
+                <h2 class="text-base sm:text-lg font-semibold text-text-light dark:text-text-dark">Create Purok</h2>
+                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 hidden sm:block">Draw inside your barangay. Gray areas are taken — new shapes auto-align so they do not overlap.</p>
+            </div>
+            <button type="button" id="closeAddPurokModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark shrink-0">
                 <span class="material-symbols-outlined">close</span>
             </button>
-                </div>
+        </div>
 
-        <div class="grid flex-1 min-h-0 gap-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,1fr)]">
-            <div class="border-b lg:border-b-0 lg:border-r border-border-light dark:border-border-dark min-h-0">
+        <div class="purok-modal-body grid flex-1 min-h-0 gap-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,1fr)]">
+            <div class="purok-modal-map border-b lg:border-b-0 lg:border-r border-border-light dark:border-border-dark min-h-0">
                 <div id="purokBoundaryMap" class="purok-map"></div>
             </div>
 
-            <div class="p-6 flex flex-col min-h-0 overflow-y-auto">
-                <form id="purokForm" method="POST" action="{{ route('barangay-captain.puroks.store') }}" class="flex flex-col gap-4">
+            <div class="purok-modal-form p-4 sm:p-6 flex flex-col min-h-0 overflow-y-auto">
+                <form id="purokForm" method="POST" action="{{ route('barangay-captain.puroks.store') }}" class="flex flex-col gap-3 sm:gap-4">
                 @csrf
                 <input type="hidden" name="purok_form" value="1" />
                 <input id="purok_boundary_geojson" name="boundary_geojson" type="hidden" value="{{ old('boundary_geojson') }}" required />
@@ -398,14 +474,14 @@
                         <div class="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary w-fit">
                             <span class="material-symbols-outlined text-base">location_city</span>
                             {{ $assignedBarangay->name }}
-                </div>
+                        </div>
                     @endif
 
-                    <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
+                    <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-3 sm:p-4">
                         <label for="purokName" class="block text-xs uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Purok Name</label>
                         <input id="purokName" name="name" type="text" value="{{ old('name') }}" required placeholder="e.g., Purok 1"
                             class="mt-2 w-full h-11 px-3 rounded-lg bg-card-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                        <p class="mt-2 text-xs text-text-light/60 dark:text-text-dark/60">Draw in the space beside gray purok. A very thin gap is kept between boundaries so they do not overlap.</p>
+                        <p class="mt-2 text-xs text-text-light/60 dark:text-text-dark/60 hidden sm:block">Draw in the space beside gray purok. A very thin gap is kept between boundaries so they do not overlap.</p>
                     </div>
 
                     <button type="submit" class="inline-flex w-full items-center justify-center gap-2 h-11 px-4 bg-primary text-white text-sm font-bold rounded-lg hover:opacity-90 transition-colors">
@@ -492,55 +568,119 @@
     </div>
 </div>
 
+<div id="changeWorkerPasswordModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4" role="dialog" aria-modal="true" aria-labelledby="changeWorkerPasswordTitle">
+    <div class="w-full sm:max-w-md max-h-[90dvh] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
+        <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-4 sm:px-5 py-4 shrink-0">
+            <div class="min-w-0 pr-2">
+                <h2 id="changeWorkerPasswordTitle" class="text-lg font-bold">Change Password</h2>
+                <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-0.5">Set a new password for <span id="passwordWorkerName" class="font-semibold text-text-light dark:text-text-dark"></span>.</p>
+            </div>
+            <button type="button" id="closeChangeWorkerPasswordModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark shrink-0" aria-label="Close">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <form method="POST" action="{{ route('barangay-captain.bhw-workers.password') }}" class="flex flex-col min-h-0 flex-1">
+            @csrf
+            <input type="hidden" name="worker_id" id="passwordWorkerId" value="" />
+            <input type="hidden" name="password_form" value="1" />
+            <div class="overflow-y-auto px-4 sm:px-5 py-4 space-y-3 flex-1">
+                @if (($errors->has('password') || $errors->has('password_confirmation') || $errors->has('worker_id')) && old('password_form'))
+                    <div class="rounded-lg border border-accent-red/40 bg-accent-red/10 px-4 py-3 text-sm text-accent-red">
+                        <ul class="list-disc pl-5 space-y-1">
+                            @foreach ($errors->get('password') as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                            @foreach ($errors->get('password_confirmation') as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                            @foreach ($errors->get('worker_id') as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="worker_password">New Password</label>
+                    <div class="relative">
+                        <input id="worker_password" type="password" name="password" required autocomplete="new-password" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 pr-11 text-sm">
+                        <button type="button" id="toggleWorkerPasswordBtn" class="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-text-light/50 hover:text-primary" aria-label="Show password" aria-pressed="false">
+                            <span id="workerPasswordEyeOpen" class="material-symbols-outlined text-[20px]">visibility</span>
+                            <span id="workerPasswordEyeClosed" class="material-symbols-outlined text-[20px] hidden">visibility_off</span>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1" for="worker_password_confirmation">Confirm Password</label>
+                    <div class="relative">
+                        <input id="worker_password_confirmation" type="password" name="password_confirmation" required autocomplete="new-password" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 pr-11 text-sm">
+                        <button type="button" id="toggleWorkerPasswordConfirmationBtn" class="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-text-light/50 hover:text-primary" aria-label="Show password" aria-pressed="false">
+                            <span id="workerPasswordConfirmationEyeOpen" class="material-symbols-outlined text-[20px]">visibility</span>
+                            <span id="workerPasswordConfirmationEyeClosed" class="material-symbols-outlined text-[20px] hidden">visibility_off</span>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-text-light/60 dark:text-text-dark/60">Use at least 8 characters with letters and numbers.</p>
+            </div>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-border-light dark:border-border-dark px-4 sm:px-5 py-3 shrink-0" style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));">
+                <button type="button" id="cancelChangeWorkerPasswordModalBtn" class="h-11 w-full sm:w-auto px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                <button type="submit" class="h-11 w-full sm:w-auto px-4 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90">Save Password</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div id="deletePurokModal" class="fixed inset-0 z-[70] hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
     <div class="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
-        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
-            <div>
-                <h2 class="text-xl font-bold text-red-600 dark:text-red-300"><span class="material-symbols-outlined align-text-bottom mr-2">delete</span> Delete Purok</h2>
+        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-4 sm:px-6 py-4">
+            <div class="min-w-0 pr-2">
+                <h2 class="text-lg sm:text-xl font-bold text-red-600 dark:text-red-300"><span class="material-symbols-outlined align-text-bottom mr-2">delete</span> Delete Purok</h2>
                 <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">This action cannot be undone.</p>
             </div>
-            <button type="button" id="closeDeletePurokModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark"><span class="material-symbols-outlined">close</span></button>
+            <button type="button" id="closeDeletePurokModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark shrink-0"><span class="material-symbols-outlined">close</span></button>
         </div>
-        <form id="deletePurokForm" method="POST" action="" class="space-y-4 px-6 py-5">
+        <form id="deletePurokForm" method="POST" action="" class="space-y-4 px-4 sm:px-6 py-5" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));">
             @csrf
             <p class="text-sm leading-6 text-text-light/80 dark:text-text-dark/80">Are you sure you want to delete <span id="deletePurokName" class="font-semibold text-text-light dark:text-text-dark"></span>? BHW workers assigned to this purok will be unassigned from it.</p>
-            <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="submit" class="rounded-lg h-9 px-3 bg-red-100 text-red-700 text-xs border border-red-300 hover:bg-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800 dark:hover:bg-red-950/70">Confirm Delete</button>
-                <button type="button" id="cancelDeletePurokModalBtn" class="rounded-lg h-11 px-4 bg-gray-600 text-white text-sm font-semibold hover:bg-gray-700">Cancel</button>
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 pt-2">
+                <button type="button" id="cancelDeletePurokModalBtn" class="h-11 w-full sm:w-auto rounded-xl px-4 border border-border-light dark:border-border-dark text-sm font-semibold hover:bg-background-light dark:hover:bg-background-dark">Cancel</button>
+                <button type="submit" class="h-11 w-full sm:w-auto rounded-xl px-4 bg-red-600 text-white text-sm font-bold hover:bg-red-700">Confirm Delete</button>
             </div>
         </form>
     </div>
 </div>
 
 <div id="purokListModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
-    <div class="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
-        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
-            <h2 class="text-xl font-bold"><span class="material-symbols-outlined align-text-bottom mr-2">list</span> Purok</h2>
-            <button type="button" id="closePurokListModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark"><span class="material-symbols-outlined">close</span></button>
+    <div class="w-full sm:max-w-lg max-h-[88dvh] sm:max-h-[92dvh] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
+        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-4 sm:px-6 py-3 sm:py-4 shrink-0" style="padding-top: max(0.75rem, env(safe-area-inset-top, 0px));">
+            <div class="min-w-0 pr-2">
+                <h2 class="text-lg sm:text-xl font-bold"><span class="material-symbols-outlined align-text-bottom mr-2">list</span> Purok</h2>
+                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5 sm:hidden">Tap edit or delete for a purok.</p>
+            </div>
+            <button type="button" id="closePurokListModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark shrink-0"><span class="material-symbols-outlined">close</span></button>
         </div>
-        <div class="px-6 py-5 space-y-3 max-h-96 overflow-y-auto" id="purokListContainer"></div>
+        <div class="px-4 sm:px-6 py-4 space-y-2.5 overflow-y-auto flex-1 min-h-0" id="purokListContainer" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px)); -webkit-overflow-scrolling: touch;"></div>
     </div>
 </div>
 
-<div id="editPurokModal" class="fixed inset-0 z-[60] hidden items-end sm:items-center justify-center bg-black/50 px-2 sm:px-4 py-2 sm:py-6">
-    <div class="w-full max-w-6xl h-[min(92dvh,calc(100vh-1rem))] sm:h-[calc(100vh-3rem)] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
-        <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4 bg-card-light dark:bg-card-dark z-10">
-            <div>
-                <h2 class="text-lg font-semibold text-text-light dark:text-text-dark">Edit Purok</h2>
-                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Drag the blue corner dots or white edge dots to resize. Use Reset All to remove the shape and draw again.</p>
+<div id="editPurokModal" class="fixed inset-0 z-[60] hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4 py-0 sm:py-6">
+    <div class="purok-modal-shell w-full max-w-6xl h-[min(92dvh,calc(100vh-1rem))] sm:h-[calc(100vh-3rem)] overflow-hidden rounded-none sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
+        <div class="purok-modal-header flex items-center justify-between border-b border-border-light dark:border-border-dark px-4 sm:px-6 py-3 sm:py-4 bg-card-light dark:bg-card-dark z-10 shrink-0">
+            <div class="min-w-0 pr-2">
+                <h2 class="text-base sm:text-lg font-semibold text-text-light dark:text-text-dark">Edit Purok</h2>
+                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 hidden sm:block">Drag the blue corner dots or white edge dots to resize. Use Reset All to remove the shape and draw again.</p>
             </div>
-            <button type="button" id="closeEditPurokModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark">
+            <button type="button" id="closeEditPurokModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark shrink-0">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
 
-        <div class="grid flex-1 min-h-0 gap-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,1fr)]">
-            <div class="border-b lg:border-b-0 lg:border-r border-border-light dark:border-border-dark min-h-0">
+        <div class="purok-modal-body grid flex-1 min-h-0 gap-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(320px,1fr)]">
+            <div class="purok-modal-map border-b lg:border-b-0 lg:border-r border-border-light dark:border-border-dark min-h-0">
                 <div id="editPurokBoundaryMap" class="purok-map"></div>
             </div>
 
-            <div class="p-6 flex flex-col min-h-0 overflow-y-auto">
-                <form id="editPurokForm" method="POST" action="" class="flex flex-col gap-4">
+            <div class="purok-modal-form p-4 sm:p-6 flex flex-col min-h-0 overflow-y-auto">
+                <form id="editPurokForm" method="POST" action="" class="flex flex-col gap-3 sm:gap-4">
                     @csrf
                     <input type="hidden" name="edit_purok_form" value="1" />
                     <input type="hidden" name="edit_purok_id" id="editPurokId" value="" />
@@ -553,11 +693,11 @@
                         </div>
                     @endif
 
-                    <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
+                    <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-3 sm:p-4">
                         <label for="editPurokName" class="block text-xs uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Purok Name</label>
                         <input id="editPurokName" name="name" type="text" required placeholder="e.g., Purok 1"
                             class="mt-2 w-full h-11 px-3 rounded-lg bg-card-light dark:bg-background-dark border border-border-light dark:border-border-dark text-text-light dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
-                        <p class="mt-2 text-xs text-text-light/60 dark:text-text-dark/60"><strong>Blue dots</strong> = corners (drag to move). <strong>White dashed dots</strong> = edge midpoints (drag to add a corner).</p>
+                        <p class="mt-2 text-xs text-text-light/60 dark:text-text-dark/60 hidden sm:block"><strong>Blue dots</strong> = corners (drag to move). <strong>White dashed dots</strong> = edge midpoints (drag to add a corner).</p>
                     </div>
 
                     <button type="submit" class="inline-flex w-full items-center justify-center gap-2 h-11 px-4 bg-primary text-white text-sm font-bold rounded-lg hover:opacity-90 transition-colors">
@@ -1923,14 +2063,47 @@
             });
         }
 
-        if (workerSearch) {
-            workerSearch.addEventListener('input', function() {
-                const normalized = (this.value || '').trim().toLowerCase();
-                workerRows.forEach(row => {
-                    const rowName = row.dataset.workerName || '';
-                    row.style.display = rowName.includes(normalized) ? '' : 'none';
-                });
+        function applyWorkerFilters() {
+            const searchValue = ((document.getElementById('workerSearch')?.value) || '').trim().toLowerCase();
+            const filterValue = (document.getElementById('purokFilter')?.value) || '';
+            const mobileRows = document.querySelectorAll('#workerCards .worker-row');
+            const desktopRows = document.querySelectorAll('#workerTableBody .worker-row');
+            const emptyMobile = document.getElementById('workerSearchEmptyMobile');
+            const emptyDesktop = document.getElementById('workerSearchEmptyDesktop');
+            let visibleCount = 0;
+
+            const applyToRow = (row) => {
+                const rowName = row.dataset.workerName || '';
+                const purokLabels = (row.dataset.purokLabels || '').split('|').filter(Boolean);
+                const matchesSearch = !searchValue || rowName.includes(searchValue);
+                let matchesPurok = true;
+
+                if (filterValue === 'unassigned') {
+                    matchesPurok = purokLabels.length === 0;
+                } else if (filterValue !== '') {
+                    matchesPurok = purokLabels.includes(filterValue);
+                }
+
+                const show = matchesSearch && matchesPurok;
+                row.style.display = show ? '' : 'none';
+                return show;
+            };
+
+            mobileRows.forEach((row) => {
+                if (applyToRow(row)) {
+                    visibleCount += 1;
+                }
             });
+            desktopRows.forEach((row) => applyToRow(row));
+
+            const hasWorkers = mobileRows.length > 0;
+            const showEmpty = hasWorkers && visibleCount === 0;
+            emptyMobile?.classList.toggle('hidden', !showEmpty);
+            emptyDesktop?.classList.toggle('hidden', !showEmpty);
+        }
+
+        if (workerSearch) {
+            workerSearch.addEventListener('input', applyWorkerFilters);
         }
 
         // ---------- Toast ----------
@@ -2024,15 +2197,15 @@
             }
             puroks.forEach(purok => {
                 const div = document.createElement('div');
-                div.className = 'flex items-center justify-between gap-3 p-3 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark hover:bg-primary/5';
+                div.className = 'flex items-center justify-between gap-3 p-3.5 rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark';
                 div.innerHTML = `
-                    <p class="text-sm font-semibold text-text-light dark:text-text-dark">${escapeHtml(purok.name)}</p>
-                    <div class="flex items-center gap-1 shrink-0">
-                        <button type="button" class="open-edit-purok-btn p-1.5 rounded-lg text-primary hover:bg-primary/10" data-purok-id="${purok.id}" title="Edit purok">
-                            <span class="material-symbols-outlined text-base">edit</span>
+                    <p class="text-sm font-semibold text-text-light dark:text-text-dark min-w-0 truncate">${escapeHtml(purok.name)}</p>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <button type="button" class="open-edit-purok-btn inline-flex h-10 w-10 items-center justify-center rounded-xl text-primary bg-primary/10 hover:bg-primary/15" data-purok-id="${purok.id}" title="Edit purok" aria-label="Edit ${escapeHtml(purok.name)}">
+                            <span class="material-symbols-outlined text-[20px]">edit</span>
                         </button>
-                        <button type="button" class="open-delete-purok-btn p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 dark:text-red-400" data-purok-id="${purok.id}" data-purok-name="${escapeHtml(purok.name)}" title="Delete purok">
-                            <span class="material-symbols-outlined text-base">delete</span>
+                        <button type="button" class="open-delete-purok-btn inline-flex h-10 w-10 items-center justify-center rounded-xl text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/60" data-purok-id="${purok.id}" data-purok-name="${escapeHtml(purok.name)}" title="Delete purok" aria-label="Delete ${escapeHtml(purok.name)}">
+                            <span class="material-symbols-outlined text-[20px]">delete</span>
                         </button>
                     </div>
                 `;
@@ -2064,17 +2237,102 @@
 
         // ---------- Filter by Purok ----------
         if (purokFilter) {
-            purokFilter.addEventListener('change', function() {
-                const filterValue = this.value;
-                workerRows.forEach(row => {
-                    const purokLabels = (row.dataset.purokLabels || '').split('|').filter(Boolean);
-                    let show = true;
-                    if (filterValue === '') show = true;
-                    else if (filterValue === 'unassigned') show = purokLabels.length === 0;
-                    else show = purokLabels.includes(filterValue);
-                    row.style.display = show ? '' : 'none';
-                });
+            purokFilter.addEventListener('change', applyWorkerFilters);
+        }
+
+        // ---------- Change worker password ----------
+        const changeWorkerPasswordModal = document.getElementById('changeWorkerPasswordModal');
+        const passwordWorkerId = document.getElementById('passwordWorkerId');
+        const passwordWorkerName = document.getElementById('passwordWorkerName');
+        const workerPasswordInput = document.getElementById('worker_password');
+        const workerPasswordConfirmationInput = document.getElementById('worker_password_confirmation');
+        const closeChangeWorkerPasswordModalBtn = document.getElementById('closeChangeWorkerPasswordModalBtn');
+        const cancelChangeWorkerPasswordModalBtn = document.getElementById('cancelChangeWorkerPasswordModalBtn');
+        const openPasswordButtons = document.querySelectorAll('.open-password-modal-btn');
+        const shouldOpenWorkerPasswordModal = @json(old('password_form') && ($errors->has('password') || $errors->has('password_confirmation') || $errors->has('worker_id')));
+
+        function bindWorkerPasswordToggle(toggleBtn, input, eyeOpen, eyeClosed) {
+            if (!toggleBtn || !input || !eyeOpen || !eyeClosed) return;
+            toggleBtn.addEventListener('click', () => {
+                const isHidden = input.getAttribute('type') === 'password';
+                input.setAttribute('type', isHidden ? 'text' : 'password');
+                const nowVisible = input.getAttribute('type') === 'text';
+                toggleBtn.setAttribute('aria-pressed', nowVisible ? 'true' : 'false');
+                toggleBtn.setAttribute('aria-label', nowVisible ? 'Hide password' : 'Show password');
+                eyeOpen.classList.toggle('hidden', nowVisible);
+                eyeClosed.classList.toggle('hidden', !nowVisible);
             });
+        }
+
+        function resetWorkerPasswordFields() {
+            if (workerPasswordInput) {
+                workerPasswordInput.value = '';
+                workerPasswordInput.setAttribute('type', 'password');
+            }
+            if (workerPasswordConfirmationInput) {
+                workerPasswordConfirmationInput.value = '';
+                workerPasswordConfirmationInput.setAttribute('type', 'password');
+            }
+            document.getElementById('workerPasswordEyeOpen')?.classList.remove('hidden');
+            document.getElementById('workerPasswordEyeClosed')?.classList.add('hidden');
+            document.getElementById('workerPasswordConfirmationEyeOpen')?.classList.remove('hidden');
+            document.getElementById('workerPasswordConfirmationEyeClosed')?.classList.add('hidden');
+        }
+
+        function openChangeWorkerPasswordModal(workerId, workerName) {
+            if (!changeWorkerPasswordModal || !passwordWorkerId) return;
+            passwordWorkerId.value = workerId || '';
+            if (passwordWorkerName) passwordWorkerName.textContent = workerName || 'this worker';
+            resetWorkerPasswordFields();
+            changeWorkerPasswordModal.classList.remove('hidden');
+            changeWorkerPasswordModal.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+            window.setTimeout(() => workerPasswordInput?.focus(), 120);
+        }
+
+        function closeChangeWorkerPasswordModal() {
+            if (!changeWorkerPasswordModal) return;
+            changeWorkerPasswordModal.classList.add('hidden');
+            changeWorkerPasswordModal.classList.remove('flex');
+            document.body.classList.remove('overflow-hidden');
+            resetWorkerPasswordFields();
+        }
+
+        bindWorkerPasswordToggle(
+            document.getElementById('toggleWorkerPasswordBtn'),
+            workerPasswordInput,
+            document.getElementById('workerPasswordEyeOpen'),
+            document.getElementById('workerPasswordEyeClosed')
+        );
+        bindWorkerPasswordToggle(
+            document.getElementById('toggleWorkerPasswordConfirmationBtn'),
+            workerPasswordConfirmationInput,
+            document.getElementById('workerPasswordConfirmationEyeOpen'),
+            document.getElementById('workerPasswordConfirmationEyeClosed')
+        );
+
+        openPasswordButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                openChangeWorkerPasswordModal(button.dataset.workerId || '', button.dataset.workerName || '');
+            });
+        });
+        closeChangeWorkerPasswordModalBtn?.addEventListener('click', closeChangeWorkerPasswordModal);
+        cancelChangeWorkerPasswordModalBtn?.addEventListener('click', closeChangeWorkerPasswordModal);
+        changeWorkerPasswordModal?.addEventListener('click', (event) => {
+            if (event.target === changeWorkerPasswordModal) {
+                closeChangeWorkerPasswordModal();
+            }
+        });
+
+        if (shouldOpenWorkerPasswordModal) {
+            const oldWorkerId = @json(old('worker_id'));
+            const oldWorkerBtn = oldWorkerId
+                ? document.querySelector(`.open-password-modal-btn[data-worker-id="${oldWorkerId}"]`)
+                : null;
+            openChangeWorkerPasswordModal(
+                oldWorkerId || '',
+                oldWorkerBtn?.dataset.workerName || 'this worker'
+            );
         }
 
         // ---------- Preserve old form errors ----------
@@ -2084,7 +2342,7 @@
         @if ($errors->any() && old('purok_form'))
             openPurokModal();
         @endif
-        @if ($errors->any() && old('worker_id'))
+        @if ($errors->any() && old('worker_id') && ! old('password_form'))
             openAssignModal(presetWorkerId || '', (presetPurokIds || []).map(String));
         @endif
 
@@ -2138,7 +2396,7 @@
                 center: barangayCenter,
                 zoom: hasValidBoundary ? 14 : mindoroDefaultZoom,
                 zoomControl: true,
-                attributionControl: true,
+                attributionControl: false,
                 minZoom: 3,
             });
 
@@ -2516,9 +2774,8 @@
             syncEditPurokBoundaryInput();
             installEditPurokDrawControl({ allowDraw: true });
 
-            if (hasValidBoundary && barangayBounds.isValid()) {
-                editMap.fitBounds(barangayBounds, { padding: [20, 20] });
-            }
+            // Keep current zoom/center so Reset All does not zoom out on mobile.
+            editMap.invalidateSize();
 
             showToast('Purok reset. Draw a new shape on the map.', 'success');
         }
@@ -2563,7 +2820,7 @@
                 center: barangayCenter,
                 zoom: hasValidBoundary ? 14 : mindoroDefaultZoom,
                 zoomControl: true,
-                attributionControl: true,
+                attributionControl: false,
                 minZoom: 3,
             });
 
@@ -2655,23 +2912,35 @@
 
             syncEditPurokBoundaryInput();
 
-            const editableLayer = editDrawnItems.getLayers()[0];
-            if (editableLayer && editableLayer.getBounds().isValid()) {
-                editMap.fitBounds(editableLayer.getBounds(), { padding: [60, 60], maxZoom: 18 });
-            } else if (hasValidBoundary && barangayBounds.isValid()) {
-                editMap.fitBounds(barangayBounds, { padding: [20, 20] });
-            }
-
-            setTimeout(() => {
-                editMap?.invalidateSize();
-                const layer = editDrawnItems.getLayers()[0];
-                if (layer) {
-                    rebuildEditPurokVertexHandles(layer, purok.id);
-                    if (layer.getBounds().isValid()) {
-                        editMap.fitBounds(layer.getBounds(), { padding: [60, 60], maxZoom: 18 });
-                    }
+            const fitEditPurokView = function() {
+                if (!editMap) {
+                    return;
                 }
-            }, 300);
+
+                editMap.invalidateSize();
+                const layer = editDrawnItems?.getLayers()?.[0];
+                const isMobile = window.matchMedia('(max-width: 1023px)').matches;
+                const padding = isMobile ? [28, 28] : [60, 60];
+                const maxZoom = isMobile ? 19 : 18;
+
+                if (layer && layer.getBounds && layer.getBounds().isValid()) {
+                    editMap.fitBounds(layer.getBounds(), { padding, maxZoom });
+                    return;
+                }
+
+                if (hasValidBoundary && barangayBounds.isValid()) {
+                    editMap.fitBounds(barangayBounds, { padding: isMobile ? [16, 16] : [20, 20], maxZoom });
+                }
+            };
+
+            fitEditPurokView();
+            setTimeout(fitEditPurokView, 150);
+            setTimeout(fitEditPurokView, 400);
+
+            const editableLayer = editDrawnItems.getLayers()[0];
+            if (editableLayer) {
+                setTimeout(() => rebuildEditPurokVertexHandles(editableLayer, purok.id), 180);
+            }
         }
 
         function openEditPurokModal(purokId) {
@@ -2711,7 +2980,6 @@
             editPurokModal.classList.remove('hidden');
             editPurokModal.classList.add('flex');
             setTimeout(() => initEditPurokMap(purok), 75);
-            setTimeout(() => editMap?.invalidateSize(), 250);
         }
 
         function closeEditPurokModal() {
@@ -2877,6 +3145,7 @@
             purokModal.classList.add('flex');
             setTimeout(initPurokMap, 75);
             setTimeout(() => map?.invalidateSize(), 250);
+            setTimeout(() => map?.invalidateSize(), 500);
         }
 
         function closePurokModal() {

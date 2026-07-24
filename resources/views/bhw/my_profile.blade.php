@@ -42,8 +42,10 @@
 @include('sidebars.bhw')
 
 <div id="bhwContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
+    @include('partials.bhw-mobile-topbar')
+
     <main class="flex-1 flex flex-col min-h-0 px-4 sm:px-5 md:px-6 lg:px-8 pt-4 lg:pt-6 pb-24 lg:pb-6 overflow-y-auto">
-        <div class="w-full max-w-2xl mx-auto space-y-6">
+        <div class="w-full max-w-2xl mx-auto md:max-w-none md:mx-0 space-y-6">
             <div class="flex justify-center">
                 <div class="flex flex-col items-center text-center gap-2">
                     <div class="relative mt-2 lg:mt-4 mb-2 h-28 w-28 overflow-visible">
@@ -70,12 +72,45 @@
                 </div>
             </div>
 
-            <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm overflow-hidden">
+            @php
+                $unreadChatTotal = (int) ($unreadChatTotal ?? 0);
+                $unreadMessageTotal = (int) ($unreadMessageTotal ?? 0);
+            @endphp
+            <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-sm overflow-hidden divide-y divide-border-light dark:divide-border-dark">
                 <a href="{{ route('bhw.settings') }}" class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-primary/5 transition-colors">
                     <div class="min-w-0">
                         <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Profile</p>
                         <h2 class="mt-1 text-lg font-bold text-text-light dark:text-text-dark">Profile Details</h2>
                         <p class="mt-1 text-sm text-text-light/70 dark:text-text-dark/70">Open your full editable profile form.</p>
+                    </div>
+                    <span class="material-symbols-outlined text-[22px] text-text-light/50 dark:text-text-dark/50 shrink-0">chevron_right</span>
+                </a>
+                <a href="{{ route('bhw.unread-chats') }}" class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-primary/5 transition-colors">
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Messages</p>
+                        <h2 class="mt-1 text-lg font-bold text-text-light dark:text-text-dark">Unread Chats</h2>
+                        <p class="mt-1 text-sm text-text-light/70 dark:text-text-dark/70">
+                            @if ($unreadChatTotal > 0)
+                                {{ $unreadChatTotal }} chat{{ $unreadChatTotal === 1 ? '' : 's' }}@if ($unreadMessageTotal > 0) · {{ $unreadMessageTotal }} unread message{{ $unreadMessageTotal === 1 ? '' : 's' }}@endif
+                            @else
+                                See messages from residents who contacted you.
+                            @endif
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        @if ($unreadChatTotal > 0)
+                            <span class="inline-flex min-w-[1.75rem] h-7 items-center justify-center rounded-full bg-accent-red px-2 text-xs font-bold text-white" title="{{ $unreadChatTotal }} unread chat{{ $unreadChatTotal === 1 ? '' : 's' }}">
+                                {{ $unreadChatTotal > 99 ? '99+' : $unreadChatTotal }}
+                            </span>
+                        @endif
+                        <span class="material-symbols-outlined text-[22px] text-text-light/50 dark:text-text-dark/50">chevron_right</span>
+                    </div>
+                </a>
+                <a href="{{ route('bhw.all-records') }}" class="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-primary/5 transition-colors">
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">History</p>
+                        <h2 class="mt-1 text-lg font-bold text-text-light dark:text-text-dark">All Records</h2>
+                        <p class="mt-1 text-sm text-text-light/70 dark:text-text-dark/70">Browse transactions and maintenance visits with filters.</p>
                     </div>
                     <span class="material-symbols-outlined text-[22px] text-text-light/50 dark:text-text-dark/50 shrink-0">chevron_right</span>
                 </a>

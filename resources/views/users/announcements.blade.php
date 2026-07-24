@@ -74,7 +74,7 @@
                         <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Posted announcements.</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="{{ route('users.profile.chat-support') }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open messages">
+                        <a href="{{ route('users.profile.bhw-chat') }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open BHW chat">
                             <span class="material-symbols-outlined text-[16px]">message</span>
                         </a>
                         <a href="{{ route('users.notifications') }}" class="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Notifications">
@@ -88,49 +88,80 @@
                     </div>
                 </header>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                @if (session('status'))
+                    <div class="mb-4 rounded-xl border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
+                        {{ session('status') }}
+                    </div>
+                @endif
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                     @forelse ($announcements as $announcement)
                         @php
                             $announcementImage = $announcement->image_url;
                             if ($announcementImage && !\Illuminate\Support\Str::startsWith($announcementImage, ['http://', 'https://', '/'])) {
                                 $announcementImage = \Illuminate\Support\Facades\Storage::url($announcementImage);
                             }
+                            $scopeLabel = $announcement->isBarangayWide() ? 'Barangay post' : 'Purok post';
+                            $isExpired = $announcement->isExpired();
+                            $viewedIds = collect(session('viewed_announcement_ids', []))->map(fn ($id) => (int) $id)->all();
+                            $isNew = ! $isExpired
+                                && ! in_array((int) $announcement->id, $viewedIds, true)
+                                && $announcement->created_at
+                                && $announcement->created_at->gte(now()->subDays(7));
                         @endphp
-                        <article class="overflow-hidden rounded-xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                        <a href="{{ route('users.announcements.show', $announcement) }}" class="group relative overflow-hidden rounded-2xl border {{ $isExpired ? 'border-gray-200 dark:border-gray-700 opacity-90' : 'border-[#d0e7d9] dark:border-gray-700' }} bg-white dark:bg-gray-800 shadow-sm transition active:scale-[0.99] hover:border-primary/40 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+                            <div class="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5">
+                                @if ($isExpired)
+                                    <span class="inline-flex items-center rounded-full bg-gray-800/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm dark:bg-gray-900/90">
+                                        Expired
+                                    </span>
+                                @elseif ($isNew)
+                                    <span class="inline-flex items-center rounded-full bg-[#0f9f55] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm ring-2 ring-white/80 dark:ring-gray-800">
+                                        New
+                                    </span>
+                                @endif
+                            </div>
+
                             @if ($announcementImage)
-                                <img src="{{ $announcementImage }}" alt="{{ $announcement->title }}" class="h-44 w-full object-cover" />
+                                <div class="h-40 w-full overflow-hidden bg-[#f2fbf6] dark:bg-gray-700/40 {{ $isExpired ? 'grayscale-[35%]' : '' }}">
+                                    <img src="{{ $announcementImage }}" alt="{{ $announcement->title }}" class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                                </div>
                             @else
-                                <div class="flex h-44 w-full items-center justify-center bg-[#f2fbf6] dark:bg-gray-700/40 text-[#4e976b] dark:text-gray-400">
-                                    <span class="material-symbols-outlined text-5xl">campaign</span>
+                                <div class="flex h-28 w-full items-center justify-center {{ $isExpired ? 'bg-gray-100 dark:bg-gray-700/40 text-gray-400' : 'bg-gradient-to-br from-[#e8f7ee] to-[#f2fbf6] dark:from-gray-700/50 dark:to-gray-800 text-[#1f7f4e] dark:text-gray-400' }}">
+                                    <span class="material-symbols-outlined text-4xl">campaign</span>
                                 </div>
                             @endif
 
-                            <div class="p-4 md:p-5">
+                            <div class="p-4">
                                 <div class="mb-2 flex items-center justify-between gap-2">
-                                    <span class="inline-flex items-center rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-[#1f7f4e] dark:text-[#8cefb5]">
-                                        Announcement
+                                    <span class="inline-flex items-center rounded-full {{ $isExpired ? 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' : 'bg-primary/15 text-[#1f7f4e] dark:text-[#8cefb5]' }} px-2.5 py-1 text-[11px] font-semibold">
+                                        {{ $scopeLabel }}
                                     </span>
-                                    <span class="text-xs text-[#4e976b] dark:text-gray-400">
-                                        {{ $announcement->expiresAt()?->format('M d, Y · h:i A') ?? $announcement->event_date?->format('M d, Y') ?? $announcement->created_at?->format('M d, Y') ?? 'TBA' }}
+                                    <span class="text-[11px] text-[#4e976b] dark:text-gray-400 shrink-0">
+                                        {{ $announcement->created_at?->diffForHumans() ?? '—' }}
                                     </span>
                                 </div>
 
-                                <h2 class="text-lg font-bold leading-tight text-[#0e1b13] dark:text-white">{{ $announcement->title }}</h2>
+                                <h2 class="text-base font-bold leading-snug text-[#0e1b13] dark:text-white line-clamp-2 {{ $isExpired ? '' : 'group-hover:text-[#1f7f4e]' }}">{{ $announcement->title }}</h2>
 
                                 @if ($announcement->description)
-                                    <p class="mt-2 text-sm text-[#376f50] dark:text-gray-300 line-clamp-3">{{ $announcement->description }}</p>
+                                    <p class="mt-1.5 text-sm text-[#376f50] dark:text-gray-300 line-clamp-2">{{ $announcement->description }}</p>
                                 @endif
 
-                                <div class="mt-4 space-y-1.5 text-sm text-[#376f50] dark:text-gray-300">
-                                    <p class="flex items-center gap-2 text-xs text-[#4e976b] dark:text-gray-400 pt-1">
-                                        <span class="material-symbols-outlined text-base">edit_calendar</span>
-                                        <span>Posted {{ $announcement->created_at?->diffForHumans() }}</span>
+                                @if ($isExpired && $announcement->expiresAt())
+                                    <p class="mt-2 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                                        Ended {{ $announcement->expiresAt()->format('M d, Y · h:i A') }}
                                     </p>
-                                </div>
+                                @endif
+
+                                <span class="mt-3 inline-flex items-center gap-0.5 text-xs font-semibold {{ $isExpired ? 'text-gray-500' : 'text-[#1f7f4e]' }}">
+                                    {{ $isExpired ? 'View post' : 'Read full post' }}
+                                    <span class="material-symbols-outlined text-[16px] transition group-hover:translate-x-0.5">chevron_right</span>
+                                </span>
                             </div>
-                        </article>
+                        </a>
                     @empty
-                        <div class="md:col-span-2 rounded-xl border border-dashed border-[#d0e7d9] dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 p-10 text-center">
+                        <div class="md:col-span-2 rounded-2xl border border-dashed border-[#d0e7d9] dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 p-10 text-center">
                             <span class="material-symbols-outlined text-5xl text-[#4e976b] dark:text-gray-400">campaign</span>
                             <p class="mt-3 text-base font-semibold">No announcements yet.</p>
                             <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Check back later for updates from your barangay and health workers.</p>
@@ -141,6 +172,7 @@
         </main>
 
         @include('partials.users-mobile-nav')
+        @include('partials.users-chat-support-fab')
     </div>
 
     <script>

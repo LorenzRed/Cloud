@@ -19,6 +19,10 @@
                 'opsz' 24
         }
 
+        .leaflet-control-attribution {
+            display: none !important;
+        }
+
         .progress-bar {
             height: 8px;
             border-radius: 4px;
@@ -1145,6 +1149,7 @@
 
             barangayOverviewMap = L.map('barangayOverviewMap', {
                 minZoom: 3,
+                attributionControl: false,
             }).setView(mindoroCenter, mindoroDefaultZoom);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1302,6 +1307,7 @@
 
             barangayBoundaryMap = L.map('barangayBoundaryMap', {
                 minZoom: 3,
+                attributionControl: false,
             }).setView(mindoroCenter, mindoroDefaultZoom);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     @include('partials.users-viewport')
-    <title>Bantay Kalusugan - Maintenance Records</title>
+    <title>Bantay Kalusugan - Maintenance History</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -59,15 +59,15 @@
     @include('sidebars.users')
 
     <div id="usersContent" class="flex min-h-screen flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] transition-all duration-200">
-        <main class="flex-1 px-4 sm:px-5 md:px-6 lg:px-7 pt-4 md:pt-6 pb-24 md:pb-6 overflow-y-auto">
-            <div class="w-full max-w-none">
-                <header class="mb-6 flex items-center justify-between gap-3">
+        <main class="flex-1 px-4 sm:px-5 md:px-8 lg:px-7 pt-4 md:pt-7 pb-24 lg:pb-6 overflow-y-auto">
+            <div class="mx-auto w-full max-w-xl md:max-w-none">
+                <header class="mb-6 md:mb-7 flex items-center justify-between gap-3">
                     <div>
-                        <h1 class="text-2xl font-bold">Maintenance Records</h1>
-                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Household monitoring visits recorded by your Barangay Health Worker.</p>
+                        <h1 class="text-2xl font-bold">Maintenance History</h1>
+                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Monitoring records from your BHW</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="{{ route('users.profile.chat-support') }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open messages">
+                        <a href="{{ route('users.profile.bhw-chat') }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open BHW chat">
                             <span class="material-symbols-outlined text-[16px]">message</span>
                         </a>
                         <a href="{{ route('users.notifications') }}" class="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Notifications">
@@ -81,94 +81,168 @@
                     </div>
                 </header>
 
-                <div class="space-y-4 md:space-y-5">
+                <div class="space-y-3.5 md:space-y-4 lg:space-y-2">
                     @forelse ($monitoringCases as $monitoringCase)
-                        <article class="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-5 border border-[#e7f3ec] dark:border-gray-700 shadow-sm">
-                            <div class="flex items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">{{ $monitoringCase->typeLabel() }}</p>
-                                    <h2 class="mt-1 text-lg font-bold text-[#0e1b13] dark:text-white">{{ $monitoringCase->member_name ?: 'Household member' }}</h2>
-                                    @if (filled($monitoringCase->issue_notes))
-                                        <p class="mt-2 text-sm text-[#376f50] dark:text-gray-300">{{ $monitoringCase->issue_notes }}</p>
-                                    @endif
+                        @php
+                            $visitCount = $monitoringCase->visits->count();
+                            $latestVisit = $monitoringCase->visits->last();
+                            $typeIcon = $monitoringCase->isPregnant()
+                                ? 'pregnant_woman'
+                                : ($monitoringCase->isSenior() ? 'elderly' : 'health_and_safety');
+                            $familyRole = match (strtolower(trim((string) ($monitoringCase->member_source ?? '')))) {
+                                'resident' => 'Resident',
+                                'spouse' => 'Spouse',
+                                'household_child', 'child' => 'Child',
+                                'household_senior', 'senior' => 'Senior',
+                                default => filled($monitoringCase->member_source)
+                                    ? ucwords(str_replace('_', ' ', (string) $monitoringCase->member_source))
+                                    : null,
+                            };
+                        @endphp
+                        <article class="rounded-2xl border border-[#e7f3ec] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
+                            <div class="px-4 md:px-5 pt-4 md:pt-5 pb-3 md:pb-4">
+                                <div class="flex items-center gap-3 md:gap-4">
+                                    <span class="inline-flex size-12 md:size-14 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
+                                        <span class="material-symbols-outlined text-[26px] md:text-[30px]">{{ $typeIcon }}</span>
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <h2 class="text-[15px] md:text-base font-bold text-[#0e1b13] dark:text-white leading-snug truncate">
+                                                {{ $monitoringCase->member_name ?: 'Household member' }}
+                                            </h2>
+                                            <span class="shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $monitoringCase->is_active ? 'bg-[#f2fbf6] text-[#1f7f4e] dark:bg-gray-700 dark:text-[#8cefb5]' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}">
+                                                {{ $monitoringCase->is_active ? 'Active' : 'Completed' }}
+                                            </span>
+                                        </div>
+                                        <p class="mt-0.5 text-sm text-[#4e976b] dark:text-gray-400">
+                                            <span class="font-semibold text-[#376f50] dark:text-gray-300">{{ $monitoringCase->typeLabel() }}</span>
+                                            @if ($familyRole)
+                                                <span class="mx-1.5 text-[#d0e7d9] dark:text-gray-600">·</span>
+                                                <span>{{ $familyRole }}</span>
+                                            @endif
+                                        </p>
+                                    </div>
                                 </div>
-                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold shrink-0 {{ $monitoringCase->is_active ? 'bg-primary/15 text-[#1f7f4e]' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}">
-                                    {{ $monitoringCase->is_active ? 'Active' : 'Completed' }}
-                                </span>
+
+                                <div class="mt-3.5 md:mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+                                    <div class="rounded-xl bg-[#f7fbf8] dark:bg-gray-700/40 px-3 md:px-4 py-2.5 md:py-3">
+                                        <p class="text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Visits</p>
+                                        <p class="mt-0.5 text-sm md:text-base font-bold text-[#0e1b13] dark:text-white">{{ $visitCount }}</p>
+                                    </div>
+                                    <div class="rounded-xl bg-[#f7fbf8] dark:bg-gray-700/40 px-3 md:px-4 py-2.5 md:py-3 min-w-0 md:col-span-3">
+                                        <p class="text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">{{ $monitoringCase->is_active ? 'Latest visit' : 'Last visit' }}</p>
+                                        <p class="mt-0.5 text-sm md:text-base font-bold text-[#0e1b13] dark:text-white truncate">
+                                            {{ $latestVisit?->visit_date?->format('M d, Y') ?: '—' }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                @if (filled($monitoringCase->issue_notes))
+                                    <p class="mt-3 md:mt-4 text-sm md:text-[15px] leading-snug text-[#376f50] dark:text-gray-300 line-clamp-2 md:line-clamp-3">{{ $monitoringCase->issue_notes }}</p>
+                                @endif
+
+                                @if ($monitoringCase->isPregnant() && ($monitoringCase->first_period_date || $monitoringCase->last_period_date))
+                                    <div class="mt-3 md:mt-4 grid grid-cols-2 gap-2 md:gap-3">
+                                        <div class="rounded-xl bg-pink-50 dark:bg-pink-900/20 px-3 md:px-4 py-2.5 md:py-3">
+                                            <p class="text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-pink-700 dark:text-pink-200">First period</p>
+                                            <p class="mt-0.5 text-sm md:text-base font-bold text-pink-900 dark:text-pink-100 truncate">{{ $monitoringCase->first_period_date?->format('M d, Y') ?? '—' }}</p>
+                                        </div>
+                                        <div class="rounded-xl bg-pink-50 dark:bg-pink-900/20 px-3 md:px-4 py-2.5 md:py-3">
+                                            <p class="text-[10px] md:text-[11px] font-semibold uppercase tracking-wide text-pink-700 dark:text-pink-200">Last period</p>
+                                            <p class="mt-0.5 text-sm md:text-base font-bold text-pink-900 dark:text-pink-100 truncate">{{ $monitoringCase->last_period_date?->format('M d, Y') ?? '—' }}</p>
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
 
-                            @if (! $monitoringCase->is_active && $monitoringCase->completed_at)
-                                <p class="mt-2 text-xs text-[#4e976b] dark:text-gray-400">
-                                    Monitoring completed {{ $monitoringCase->completed_at->format('M d, Y') }}. Previous visits remain available below.
-                                </p>
-                            @endif
+                            @if ($visitCount > 0)
+                                <details class="group border-t border-[#e7f3ec] dark:border-gray-700">
+                                    <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-4 md:px-5 py-3.5 md:py-4 select-none [&::-webkit-details-marker]:hidden active:bg-[#f7fbf8] dark:active:bg-gray-700/30">
+                                        <span class="flex items-center gap-2.5 min-w-0">
+                                            <span class="inline-flex size-8 md:size-9 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
+                                                <span class="material-symbols-outlined text-[18px] md:text-[20px]">history</span>
+                                            </span>
+                                            <span class="min-w-0">
+                                                <span class="block text-sm md:text-[15px] font-bold text-[#0e1b13] dark:text-white">Visit history</span>
+                                                <span class="block text-xs md:text-sm text-[#4e976b] dark:text-gray-400">{{ $visitCount }} visit{{ $visitCount === 1 ? '' : 's' }} · tap to view</span>
+                                            </span>
+                                        </span>
+                                        <span class="material-symbols-outlined shrink-0 text-[22px] text-[#4e976b] transition duration-200 group-open:rotate-180">expand_more</span>
+                                    </summary>
 
-                            @if ($monitoringCase->isPregnant() && ($monitoringCase->first_period_date || $monitoringCase->last_period_date))
-                                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-[#376f50] dark:text-gray-300">
-                                    @if ($monitoringCase->first_period_date)
-                                        <p>First period: <span class="font-semibold">{{ $monitoringCase->first_period_date->format('M d, Y') }}</span></p>
-                                    @endif
-                                    @if ($monitoringCase->last_period_date)
-                                        <p>Last period: <span class="font-semibold">{{ $monitoringCase->last_period_date->format('M d, Y') }}</span></p>
-                                    @endif
-                                </div>
-                            @endif
+                                    <div class="px-4 md:px-5 pb-4 md:pb-5 space-y-2 md:space-y-0 md:grid md:grid-cols-2 md:gap-3">
+                                        @foreach ($monitoringCase->visits as $visit)
+                                            @php
+                                                $resolved = $visit->resolvedVitals($monitoringCase->visits);
+                                                $visitLabel = (! $monitoringCase->is_active && $loop->last)
+                                                    ? 'Last Visit'
+                                                    : $resolved['visit_label'];
+                                                $vitalRows = collect([
+                                                    $resolved['height_cm'] !== null ? ['label' => 'Height', 'value' => $resolved['height_cm'].' cm'] : null,
+                                                    $resolved['weight_kg'] !== null ? ['label' => 'Weight', 'value' => $resolved['weight_kg'].' kg'] : null,
+                                                    $resolved['bmi_value'] !== null ? ['label' => 'BMI', 'value' => (string) $resolved['bmi_value']] : null,
+                                                    $resolved['muac_cm'] !== null ? ['label' => 'MUAC', 'value' => $resolved['muac_cm'].' cm'] : null,
+                                                    filled($resolved['anti_tetanus']) ? ['label' => 'Anti-tetanus', 'value' => (string) $resolved['anti_tetanus']] : null,
+                                                    filled($resolved['blood_pressure']) ? ['label' => 'BP', 'value' => (string) $resolved['blood_pressure']] : null,
+                                                ])->filter()->values();
+                                            @endphp
+                                            <div class="rounded-xl border border-[#e7f3ec] dark:border-gray-700 bg-[#fbfdfc] dark:bg-gray-800/80 px-3.5 md:px-4 py-3">
+                                                <div class="flex items-start justify-between gap-3">
+                                                    <div class="min-w-0">
+                                                        <p class="text-[10px] md:text-[11px] font-bold uppercase tracking-wide text-sky-600 dark:text-sky-300">
+                                                            {{ $visitLabel }}
+                                                        </p>
+                                                        <p class="mt-0.5 text-sm md:text-[15px] font-semibold text-[#0e1b13] dark:text-white leading-snug">
+                                                            {{ $visit->visit_date?->format('M d, Y') ?: 'No date' }}
+                                                        </p>
+                                                    </div>
+                                                    <span class="shrink-0 text-[11px] md:text-xs text-[#4e976b] dark:text-gray-400">
+                                                        {{ $visit->created_at?->diffForHumans() }}
+                                                    </span>
+                                                </div>
 
-                            @if ($monitoringCase->visits->isNotEmpty())
-                                <div class="mt-4 space-y-2">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Visit history</p>
-                                    @if ($monitoringCase->isPregnant())
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-lg bg-pink-50 px-3 py-2 text-sm text-pink-900 dark:bg-pink-900/20 dark:text-pink-100">
-                                            <p>First Period: <span class="font-semibold">{{ $monitoringCase->first_period_date?->format('M d, Y') ?? 'Not recorded' }}</span></p>
-                                            <p>Last Period: <span class="font-semibold">{{ $monitoringCase->last_period_date?->format('M d, Y') ?? 'Not recorded' }}</span></p>
-                                        </div>
-                                    @endif
-                                    @foreach ($monitoringCase->visits as $visit)
-                                        <div class="rounded-lg border border-[#d0e7d9] dark:border-gray-700 p-3 text-sm">
-                                            <div class="flex items-center justify-between gap-2">
-                                                <p class="font-semibold text-[#0e1b13] dark:text-white">{{ $visit->visit_date?->format('M d, Y') ?: 'No date' }}</p>
-                                                <p class="text-xs text-[#4e976b] dark:text-gray-400">{{ $visit->created_at?->diffForHumans() }}</p>
-                                            </div>
-                                            <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-[#376f50] dark:text-gray-300">
-                                                @if ($visit->height_cm !== null)
-                                                    <span>Height: {{ $visit->height_cm }} cm</span>
+                                                @if ($vitalRows->isNotEmpty())
+                                                    <div class="mt-2.5 grid grid-cols-2 md:grid-cols-3 gap-2">
+                                                        @foreach ($vitalRows as $vital)
+                                                            <div class="rounded-lg bg-white dark:bg-gray-800 border border-[#e7f3ec] dark:border-gray-700 px-2.5 md:px-3 py-2 min-w-0">
+                                                                <p class="text-[10px] font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">{{ $vital['label'] }}</p>
+                                                                <p class="mt-0.5 text-sm font-bold text-[#0e1b13] dark:text-white truncate">{{ $vital['value'] }}</p>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
                                                 @endif
-                                                @if ($visit->weight_kg !== null)
-                                                    <span>Weight: {{ $visit->weight_kg }} kg</span>
-                                                @endif
-                                                @if ($visit->bmi_value !== null)
-                                                    <span>BMI: {{ $visit->bmi_value }}</span>
-                                                @endif
-                                                @if ($visit->muac_cm !== null)
-                                                    <span>MUAC: {{ $visit->muac_cm }} cm</span>
-                                                @endif
-                                                @if ($visit->anti_tetanus)
-                                                    <span>Anti-tetanus: {{ $visit->anti_tetanus }}</span>
-                                                @endif
-                                                @if ($visit->blood_pressure)
-                                                    <span>BP: {{ $visit->blood_pressure }}</span>
+
+                                                @if ($visit->notes)
+                                                    <p class="mt-2.5 text-xs md:text-sm leading-relaxed text-[#4e976b] dark:text-gray-400 border-t border-[#e7f3ec] dark:border-gray-700 pt-2">
+                                                        {{ $visit->notes }}
+                                                    </p>
                                                 @endif
                                             </div>
-                                            @if ($visit->maintenance_medicines)
-                                                <p class="mt-2 text-[#376f50] dark:text-gray-300"><span class="font-semibold">Maintenance:</span> {{ $visit->maintenance_medicines }}</p>
-                                            @endif
-                                            @if ($visit->notes)
-                                                <p class="mt-2 text-[#4e976b] dark:text-gray-400">{{ $visit->notes }}</p>
-                                            @endif
-                                        </div>
-                                    @endforeach
-                                </div>
+                                        @endforeach
+                                    </div>
+                                </details>
                             @else
-                                <p class="mt-4 text-sm text-[#4e976b] dark:text-gray-400">No visits recorded yet for this member.</p>
+                                <div class="border-t border-[#e7f3ec] dark:border-gray-700 px-4 md:px-5 py-3.5">
+                                    <p class="text-sm md:text-[15px] text-[#4e976b] dark:text-gray-400">No visits recorded yet for this member.</p>
+                                </div>
                             @endif
+
+                            <div class="flex items-center gap-1.5 border-t border-[#e7f3ec] dark:border-gray-700 px-4 md:px-5 py-2.5 md:py-3 text-xs md:text-sm text-[#4e976b] dark:text-gray-400">
+                                <span class="material-symbols-outlined text-[15px]">schedule</span>
+                                @if (! $monitoringCase->is_active && $monitoringCase->completed_at)
+                                    <span>Completed {{ $monitoringCase->completed_at->diffForHumans() }}</span>
+                                @else
+                                    <span>Updated {{ $monitoringCase->updated_at?->diffForHumans() ?? '—' }}</span>
+                                @endif
+                            </div>
                         </article>
                     @empty
-                        <div class="rounded-xl border border-[#d0e7d9] dark:border-gray-700 p-8 md:p-12 text-center bg-white dark:bg-gray-800 shadow-sm">
-                            <div class="flex justify-center mb-4">
-                                <span class="material-symbols-outlined text-5xl text-[#4e976b] dark:text-gray-500">health_and_safety</span>
-                            </div>
-                            <h3 class="text-lg font-bold text-[#0e1b13] dark:text-white mb-2">No Maintenance Records Yet</h3>
-                            <p class="text-sm text-[#4e976b] dark:text-gray-400">Household monitoring and maintenance visit records will appear here once your BHW adds them.</p>
+                        <div class="rounded-2xl border border-dashed border-[#d0e7d9] dark:border-gray-700 bg-white/70 dark:bg-gray-800/70 px-6 py-14 text-center">
+                            <span class="inline-flex size-14 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200">
+                                <span class="material-symbols-outlined text-4xl">health_and_safety</span>
+                            </span>
+                            <p class="mt-4 text-base font-semibold text-[#0e1b13] dark:text-white">No maintenance records yet</p>
+                            <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Monitoring visits will show up here when your BHW adds them.</p>
                         </div>
                     @endforelse
                 </div>
@@ -176,6 +250,7 @@
         </main>
 
         @include('partials.users-mobile-nav')
+        @include('partials.users-chat-support-fab')
     </div>
 
     <script>

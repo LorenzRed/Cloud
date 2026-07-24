@@ -108,6 +108,17 @@ class ResidentTransaction extends Model
         return $name !== '' ? $name : 'Household member';
     }
 
+    public function familyRoleLabel(): string
+    {
+        return match (strtolower(trim((string) ($this->member_source ?? '')))) {
+            'resident' => 'Resident',
+            'spouse' => 'Spouse',
+            'household_child', 'child' => 'Child',
+            'household_senior', 'senior' => 'Senior',
+            default => filled($this->member_source) ? ucwords(str_replace('_', ' ', (string) $this->member_source)) : 'Family member',
+        };
+    }
+
     public function residentRequest(): BelongsTo
     {
         return $this->belongsTo(ResidentRequest::class);
@@ -162,27 +173,6 @@ class ResidentTransaction extends Model
 
     public function notificationSummary(): string
     {
-        $parts = [
-            'Recipient '.$this->recipientLabel(),
-            'Age '.$this->age,
-            'Date '.$this->transaction_date?->format('M d, Y'),
-            'Gender '.$this->gender,
-            'PhilHealth '.$this->philhealth_number,
-        ];
-
-        $medicationParts = collect($this->medicationEntries())
-            ->map(fn (array $entry) => $entry['label'].' '.$entry['pcs'].' pc'.($entry['pcs'] === 1 ? '' : 's'))
-            ->all();
-
-        if ($medicationParts !== []) {
-            $parts[] = 'Medications: '.implode(', ', $medicationParts);
-        }
-
-        $conditions = $this->inferredConditions();
-        if ($conditions !== []) {
-            $parts[] = 'Health concerns: '.implode(', ', $conditions);
-        }
-
-        return implode('. ', $parts).'.';
+        return 'Check the info in Transactions.';
     }
 }

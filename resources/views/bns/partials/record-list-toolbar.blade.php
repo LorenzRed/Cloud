@@ -62,7 +62,7 @@
             <span class="material-symbols-outlined text-base">download</span>
             Download all
         </a>
-        <button type="button" id="downloadFilteredBtn" class="record-export-btn bg-primary text-white">
+        <button type="button" id="downloadFilteredBtn" class="record-export-btn bg-primary text-white" disabled aria-disabled="true" title="Select From and To receive dates to enable">
             <span class="material-symbols-outlined text-base">file_download</span>
             Download filtered
         </button>

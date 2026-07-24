@@ -238,7 +238,7 @@
                             <div class="grid grid-cols-3 gap-2 mt-4 text-center text-sm">
                                 <div><span class="block font-bold text-pink-500">{{ number_format((int) ($monitoring['pregnant'] ?? 0)) }}</span>Pregnant</div>
                                 <div><span class="block font-bold text-violet-500">{{ number_format((int) ($monitoring['senior'] ?? 0)) }}</span>Senior</div>
-                                <div><span class="block font-bold text-primary">{{ number_format((int) ($monitoring['general'] ?? 0)) }}</span>General</div>
+                                <div><span class="block font-bold text-primary">{{ number_format((int) ($monitoring['need_maintenance'] ?? 0)) }}</span>Need maintenance</div>
                             </div>
                         </section>
                     </div>

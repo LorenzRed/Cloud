@@ -191,14 +191,28 @@ class BhwReportBuilder
 
         $activeMonitoring = $monitoringCases->where('is_active', true);
         $pregnantMonitored = $activeMonitoring->where('member_type', HouseholdMonitoringCase::TYPE_PREGNANT)->count();
-        $seniorMonitored = $activeMonitoring->where('member_type', HouseholdMonitoringCase::TYPE_SENIOR)->count();
-        $generalMonitored = $activeMonitoring->where('member_type', HouseholdMonitoringCase::TYPE_GENERAL)->count();
+        $needMaintenance = $activeMonitoring->whereIn('member_type', [
+            HouseholdMonitoringCase::TYPE_PREGNANT,
+            HouseholdMonitoringCase::TYPE_SENIOR,
+        ])->count();
+
+        $householdSeniorCount = $residents->sum(function (ResidentRequest $resident) {
+            return collect(is_array($resident->household_seniors) ? $resident->household_seniors : [])
+                ->filter(function ($senior) {
+                    if (! is_array($senior)) {
+                        return false;
+                    }
+
+                    return filled(trim((string) ($senior['full_name'] ?? $senior['name'] ?? '')));
+                })
+                ->count();
+        });
 
         $visits = $residentIds->isEmpty()
             ? collect()
             : HouseholdMonitoringVisit::query()
                 ->whereHas('monitoringCase', fn ($q) => $q->whereIn('resident_request_id', $residentIds))
-                ->with('monitoringCase.residentRequest')
+                ->with('monitoringCase.residentRequest.purok')
                 ->orderByDesc('visit_date')
                 ->get();
 
@@ -208,7 +222,7 @@ class BhwReportBuilder
             ? collect()
             : Consultation::query()
                 ->whereIn('resident_request_id', $residentIds)
-                ->with('residentRequest')
+                ->with(['residentRequest.purok', 'residentRequest.user.purok'])
                 ->orderByDesc('scheduled_at')
                 ->get();
 
@@ -344,6 +358,7 @@ class BhwReportBuilder
         $recentActivities = collect()
             ->merge($periodTransactions->take(15)->map(function (ResidentTransaction $tx) {
                 $conditions = $tx->inferredConditions();
+                $resident = $tx->residentRequest;
 
                 return [
                     'sort' => optional($tx->transaction_date)->timestamp ?? 0,
@@ -353,30 +368,36 @@ class BhwReportBuilder
                     'detail' => $conditions !== []
                         ? implode(', ', $conditions)
                         : (collect($tx->medicationEntries())->pluck('label')->implode(', ') ?: 'Medicine dispensed'),
+                    'purok' => self::purokLabel($resident),
                 ];
             }))
             ->merge($periodVisits->take(15)->map(function (HouseholdMonitoringVisit $visit) {
                 $case = $visit->monitoringCase;
+                $resident = $case?->residentRequest;
 
                 return [
                     'sort' => optional($visit->visit_date)->timestamp ?? 0,
                     'date' => $visit->visit_date?->format('M d, Y') ?: '—',
                     'type' => 'Monitoring visit',
-                    'name' => $case?->member_name ?: ($case?->residentRequest?->full_name ?: 'Member'),
+                    'name' => $case?->member_name ?: ($resident?->full_name ?: 'Member'),
                     'detail' => trim(collect([
                         $case?->typeLabel(),
                         $visit->blood_pressure ? 'BP '.$visit->blood_pressure : null,
                         $visit->bmi_value ? 'BMI '.$visit->bmi_value : null,
                     ])->filter()->implode(' · ')),
+                    'purok' => self::purokLabel($resident),
                 ];
             }))
             ->merge($periodConsultations->take(15)->map(function (Consultation $consultation) {
+                $resident = $consultation->residentRequest;
+
                 return [
                     'sort' => optional($consultation->scheduled_at)->timestamp ?? 0,
                     'date' => $consultation->scheduled_at?->format('M d, Y') ?: '—',
                     'type' => 'Consultation',
-                    'name' => $consultation->residentRequest?->full_name ?: 'Resident',
+                    'name' => $resident?->full_name ?: 'Resident',
                     'detail' => $consultation->medical_checkup ?: 'Scheduled consultation',
+                    'purok' => self::purokLabel($resident),
                 ];
             }))
             ->sortByDesc('sort')
@@ -430,11 +451,11 @@ class BhwReportBuilder
             ],
             'monitoring' => [
                 'pregnant' => $pregnantMonitored,
-                'senior' => $seniorMonitored,
-                'general' => $generalMonitored,
+                'senior' => $householdSeniorCount,
+                'need_maintenance' => $needMaintenance,
                 'chart' => [
-                    'labels' => ['Pregnant', 'Senior', 'General'],
-                    'values' => [$pregnantMonitored, $seniorMonitored, $generalMonitored],
+                    'labels' => ['Pregnant', 'Senior', 'Need maintenance'],
+                    'values' => [$pregnantMonitored, $householdSeniorCount, $needMaintenance],
                     'colors' => ['#EC4899', '#8B5CF6', '#4A90E2'],
                 ],
             ],
@@ -444,6 +465,20 @@ class BhwReportBuilder
             'activity_chart' => self::activityChart($periodTransactions, $periodVisits, $periodConsultations, $chartGranularity, $from, $to),
             'recent_activities' => $recentActivities,
         ];
+    }
+
+    /**
+     * @param  ResidentRequest|null  $resident
+     */
+    private static function purokLabel(?ResidentRequest $resident): string
+    {
+        if (! $resident) {
+            return '—';
+        }
+
+        $purok = trim((string) ($resident->purok?->name ?? $resident->user?->purok?->name ?? ''));
+
+        return $purok !== '' ? $purok : '—';
     }
 
     /**

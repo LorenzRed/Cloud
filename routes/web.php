@@ -3,8 +3,10 @@
 use App\Mail\PasswordResetOtpMail;
 use App\Models\Barangay;
 use App\Support\BhwDashboardBuilder;
+use App\Support\AllRecordsBuilder;
 use App\Support\BhwReportBuilder;
 use App\Support\BhwHeadScope;
+use App\Support\BhwHouseholdEditor;
 use App\Support\BhwResidentScope;
 use App\Support\BnsChildHealth;
 use App\Support\BnsChildNutrition;
@@ -311,12 +313,51 @@ Route::middleware('auth')->group(function () {
             ->whereNull('read_at')
             ->count();
 
+        $barangayName = $residentRequest?->barangay ?? null;
+        $barangay = $barangayName ? Barangay::where('name', $barangayName)->first() : null;
+
         $upcomingConsultations = Consultation::query()
             ->where('user_id', Auth::id())
             ->where('scheduled_at', '>=', now())
             ->orderBy('scheduled_at')
             ->limit(5)
             ->get();
+
+        $upcomingImmunizations = $verificationStatus === 'accepted' && $barangay
+            ? Event::query()
+                ->immunizationConsultations()
+                ->where('barangay_id', $barangay->id)
+                ->visibleToPurok($residentRequest?->purok_id ? (int) $residentRequest->purok_id : null)
+                ->whereNull('disabled_at')
+                ->whereDate('event_date', '>=', today())
+                ->orderBy('event_date')
+                ->orderBy('id')
+                ->limit(10)
+                ->get()
+            : collect();
+
+        $upcomingSchedule = collect()
+            ->merge($upcomingConsultations->map(static function (Consultation $consultation) {
+                return [
+                    'type' => 'consultation',
+                    'title' => $consultation->medical_checkup ?: 'General Consultation',
+                    'when_label' => $consultation->scheduled_at?->format('M d, Y · h:i A'),
+                    'note' => $consultation->note,
+                    'sort_at' => $consultation->scheduled_at,
+                ];
+            }))
+            ->merge($upcomingImmunizations->map(static function (Event $event) {
+                return [
+                    'type' => 'immunization',
+                    'title' => $event->title ?: 'Immunization consultation',
+                    'when_label' => $event->event_date?->format('M d, Y'),
+                    'note' => $event->description,
+                    'sort_at' => $event->event_date?->copy()->startOfDay(),
+                ];
+            }))
+            ->sortBy('sort_at')
+            ->take(5)
+            ->values();
 
         $transactionHistory = ResidentTransaction::query()
             ->where(function ($query) use ($residentRequest) {
@@ -328,11 +369,21 @@ Route::middleware('auth')->group(function () {
             })
             ->orderByDesc('transaction_date')
             ->orderByDesc('id')
-            ->limit(6)
+            ->limit(2)
             ->get();
 
-        $barangayName = $residentRequest?->barangay ?? null;
-        $barangay = $barangayName ? Barangay::where('name', $barangayName)->first() : null;
+        $maintenanceHistory = $residentRequest
+            ? HouseholdMonitoringCase::query()
+                ->withCount('visits')
+                ->with(['visits' => fn ($query) => $query->orderByDesc('visit_date')->orderByDesc('id')->limit(1)])
+                ->where(function ($query) use ($residentRequest) {
+                    $query->where('user_id', Auth::id())
+                        ->orWhere('resident_request_id', $residentRequest->id);
+                })
+                ->orderByDesc('updated_at')
+                ->limit(2)
+                ->get()
+            : collect();
 
         $events = $verificationStatus === 'accepted' && $barangay
             ? Event::query()
@@ -349,8 +400,9 @@ Route::middleware('auth')->group(function () {
 
         $announcements = $verificationStatus === 'accepted' && $barangay
             ? Event::query()
-                ->activeAnnouncements()
+                ->visibleToResidents()
                 ->where('barangay_id', $barangay->id)
+                ->visibleToPurok($residentRequest?->purok_id ? (int) $residentRequest->purok_id : null)
                 ->whereNull('disabled_at')
                 ->orderByDesc('event_date')
                 ->orderByDesc('end_time')
@@ -358,7 +410,18 @@ Route::middleware('auth')->group(function () {
                 ->get()
             : collect();
 
-        return view('users.main', compact('unreadInboxCount', 'verificationStatus', 'upcomingConsultations', 'transactionHistory', 'events', 'announcements', 'residentRequest'));
+        return view('users.main', compact(
+            'unreadInboxCount',
+            'verificationStatus',
+            'upcomingConsultations',
+            'upcomingImmunizations',
+            'upcomingSchedule',
+            'transactionHistory',
+            'maintenanceHistory',
+            'events',
+            'announcements',
+            'residentRequest'
+        ));
     })->name('users.main');
 
     Route::redirect('/users/events', '/users/announcements')->name('users.events');
@@ -367,11 +430,6 @@ Route::middleware('auth')->group(function () {
         if (Auth::user()->role !== 'users') {
             return redirect()->route('dashboard');
         }
-
-        $unreadInboxCount = InboxMessage::query()
-            ->where('user_id', Auth::id())
-            ->whereNull('read_at')
-            ->count();
 
         $residentRequest = ResidentRequest::query()
             ->where('user_id', Auth::id())
@@ -387,30 +445,129 @@ Route::middleware('auth')->group(function () {
 
         Event::purgeExpired();
 
+        InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->where(function ($query) {
+                $query
+                    ->where('title', 'Announcement')
+                    ->orWhere('title', 'like', '%Announcement%');
+            })
+            ->update([
+                'read_at' => now(),
+            ]);
+
         $announcements = $barangay
             ? Event::query()
-                ->activeAnnouncements()
+                ->visibleToResidents()
                 ->where('barangay_id', $barangay->id)
+                ->visibleToPurok($residentRequest->purok_id ? (int) $residentRequest->purok_id : null)
                 ->whereNull('disabled_at')
+                ->orderByDesc('created_at')
                 ->orderByDesc('event_date')
                 ->orderByDesc('end_time')
                 ->get()
             : collect();
 
+        $unreadInboxCount = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->count();
+
         return view('users.announcements', compact('announcements', 'unreadInboxCount'));
     })->name('users.announcements');
+
+    Route::get('/users/announcements/{announcement}', function (Event $announcement) {
+        if (Auth::user()->role !== 'users') {
+            return redirect()->route('dashboard');
+        }
+
+        $residentRequest = ResidentRequest::query()
+            ->where('user_id', Auth::id())
+            ->latest('created_at')
+            ->first();
+
+        if (! $residentRequest) {
+            return redirect()->route('users.verification');
+        }
+
+        $barangayName = $residentRequest->barangay ?? null;
+        $barangay = $barangayName ? Barangay::where('name', $barangayName)->first() : null;
+
+        Event::purgeExpired();
+
+        $stillExists = Event::query()
+            ->whereKey($announcement->id)
+            ->where('category', 'announcement')
+            ->exists();
+
+        if (
+            ! $barangay
+            || ! $stillExists
+            || (int) $announcement->barangay_id !== (int) $barangay->id
+            || $announcement->disabled_at
+            || $announcement->isHiddenFromResidents()
+        ) {
+            return redirect()
+                ->route('users.announcements')
+                ->with('status', 'This announcement is no longer available.');
+        }
+
+        $announcement = Event::query()
+            ->with(['barangay', 'createdBy'])
+            ->findOrFail($announcement->id);
+
+        $purokId = $residentRequest->purok_id ? (int) $residentRequest->purok_id : null;
+        $isVisible = $announcement->isBarangayWide()
+            || (
+                $purokId
+                && is_array($announcement->target_purok_ids)
+                && (
+                    in_array($purokId, $announcement->target_purok_ids, true)
+                    || in_array((string) $purokId, $announcement->target_purok_ids, true)
+                )
+            );
+
+        if (! $isVisible) {
+            return redirect()
+                ->route('users.announcements')
+                ->with('status', 'This announcement is not available for your purok.');
+        }
+
+        $viewedIds = collect(session('viewed_announcement_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->push((int) $announcement->id)
+            ->unique()
+            ->values()
+            ->all();
+        session(['viewed_announcement_ids' => $viewedIds]);
+
+        $unreadInboxCount = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->count();
+
+        return view('users.announcement-show', compact('announcement', 'unreadInboxCount', 'barangay', 'residentRequest'));
+    })->name('users.announcements.show');
 
     Route::get('/users/notifications', function () {
         if (Auth::user()->role !== 'users') {
             return redirect()->route('dashboard');
         }
 
+        // Remove old notifications so the list does not stay cluttered forever.
         InboxMessage::query()
             ->where('user_id', Auth::id())
-            ->whereNull('read_at')
-            ->update([
-                'read_at' => now(),
-            ]);
+            ->where('title', '!=', 'Message from BHW')
+            ->where(function ($query) {
+                $query
+                    ->where(function ($read) {
+                        $read->whereNotNull('read_at')
+                            ->where('read_at', '<', now()->subDays(3));
+                    })
+                    ->orWhere('created_at', '<', now()->subDays(14));
+            })
+            ->delete();
 
         $notifications = InboxMessage::query()
             ->where('user_id', Auth::id())
@@ -418,10 +575,52 @@ Route::middleware('auth')->group(function () {
             ->latest()
             ->get();
 
-        $unreadInboxCount = $notifications->whereNull('read_at')->count();
+        $unreadInboxCount = InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('read_at')
+            ->where('title', '!=', 'Message from BHW')
+            ->count();
 
         return view('users.notifications', compact('notifications', 'unreadInboxCount'));
     })->name('users.notifications');
+
+    Route::post('/users/notifications/{notification}/read', function (InboxMessage $notification) {
+        if (Auth::user()->role !== 'users') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ((int) $notification->user_id !== (int) Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ($notification->read_at === null) {
+            $notification->forceFill(['read_at' => now()])->save();
+        }
+
+        if (request()->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
+
+        return redirect()->route('users.notifications');
+    })->name('users.notifications.read');
+
+    Route::delete('/users/notifications/{notification}', function (InboxMessage $notification) {
+        if (Auth::user()->role !== 'users') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        if ((int) $notification->user_id !== (int) Auth::id()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $notification->delete();
+
+        if (request()->expectsJson()) {
+            return response()->json(['ok' => true]);
+        }
+
+        return redirect()->route('users.notifications')->with('status', 'Notification removed.');
+    })->name('users.notifications.delete');
 
     Route::post('/users/notifications/read-all', function () {
         if (Auth::user()->role !== 'users') {
@@ -431,12 +630,27 @@ Route::middleware('auth')->group(function () {
         InboxMessage::query()
             ->where('user_id', Auth::id())
             ->whereNull('read_at')
+            ->where('title', '!=', 'Message from BHW')
             ->update([
                 'read_at' => now(),
             ]);
 
         return redirect()->route('users.notifications')->with('status', 'All notifications marked as read.');
     })->name('users.notifications.read-all');
+
+    Route::post('/users/notifications/clear-read', function () {
+        if (Auth::user()->role !== 'users') {
+            return redirect()->route('dashboard');
+        }
+
+        InboxMessage::query()
+            ->where('user_id', Auth::id())
+            ->where('title', '!=', 'Message from BHW')
+            ->whereNotNull('read_at')
+            ->delete();
+
+        return redirect()->route('users.notifications')->with('status', 'Read notifications cleared.');
+    })->name('users.notifications.clear-read');
 
     Route::get('/users/profile', function () {
         if (Auth::user()->role !== 'users') {
@@ -535,12 +749,13 @@ Route::middleware('auth')->group(function () {
         }
         RateLimiter::hit($rateKey, 60);
 
-        $apiKey = config('services.openai.key');
-        $model = config('services.openai.model', 'gpt-4o-mini');
+        $apiKey = config('services.groq.key');
+        $model = config('services.groq.model', 'llama-3.3-70b-versatile');
+        $baseUrl = rtrim((string) config('services.groq.base_url', 'https://api.groq.com/openai/v1'), '/');
 
         if (! $apiKey) {
             return response()->json([
-                'message' => 'AI chat is not configured yet. Add OPENAI_API_KEY to your .env file.',
+                'message' => 'AI chat is not configured yet. Add GROQ_API_KEY to your .env file.',
             ], 503);
         }
 
@@ -567,14 +782,15 @@ Route::middleware('auth')->group(function () {
 
         $response = Http::withToken($apiKey)
             ->acceptJson()
-            ->post('https://api.openai.com/v1/chat/completions', [
+            ->timeout(45)
+            ->post($baseUrl.'/chat/completions', [
                 'model' => $model,
                 'messages' => $messages,
                 'temperature' => 0.4,
             ]);
 
         if (! $response->successful()) {
-            report(new \RuntimeException('OpenAI chat request failed: '.$response->body()));
+            report(new \RuntimeException('Groq chat request failed: '.$response->body()));
 
             return response()->json([
                 'message' => 'The AI chat service is unavailable right now.',
@@ -817,13 +1033,22 @@ Route::middleware('auth')->group(function () {
         }
 
         $monitoringCases = HouseholdMonitoringCase::query()
-            ->with(['visits' => fn ($query) => $query->orderByDesc('visit_date')->orderByDesc('id')])
+            ->with(['visits' => fn ($query) => $query->orderBy('visit_date')->orderBy('id')])
             ->where(function ($query) use ($residentRequest) {
                 $query->where('user_id', Auth::id())
                     ->orWhere('resident_request_id', $residentRequest->id);
             })
             ->orderByDesc('updated_at')
             ->get();
+
+        foreach ($monitoringCases as $monitoringCase) {
+            HouseholdMonitoringVisit::backfillCarriedVitalsForCase(
+                (int) $monitoringCase->id,
+                $monitoringCase->visits
+            );
+            $monitoringCase->unsetRelation('visits');
+            $monitoringCase->load(['visits' => fn ($query) => $query->orderBy('visit_date')->orderBy('id')]);
+        }
 
         return view('users.maintenance-records', compact('monitoringCases', 'unreadInboxCount'));
     })->name('users.maintenance-records');
@@ -1880,9 +2105,17 @@ Route::middleware('auth')->group(function () {
             ->first();
 
         $dashboard = BhwDashboardBuilder::forCaptain($assignedBarangay);
+        $bnsDashboard = BnsChildMonitoring::dashboardPayloadForBarangay(
+            $assignedBarangay?->name,
+            true
+        );
 
         return view('barangay_captain.main', array_merge($dashboard, [
             'assignedBarangay' => $assignedBarangay,
+            'bnsNutritionStats' => $bnsDashboard['nutritionStats'],
+            'bnsImmunizationOverview' => $bnsDashboard['immunizationOverview'],
+            'bnsDashboardCharts' => $bnsDashboard['dashboardCharts'],
+            'managedBnsCount' => $bnsDashboard['managedBnsCount'],
         ]));
     })->name('barangay-captain.main');
 
@@ -1896,9 +2129,17 @@ Route::middleware('auth')->group(function () {
             ->first();
 
         $dashboard = BhwDashboardBuilder::forCaptain($assignedBarangay);
+        $bnsDashboard = BnsChildMonitoring::dashboardPayloadForBarangay(
+            $assignedBarangay?->name,
+            true
+        );
 
         return view('barangay_captain.main', array_merge($dashboard, [
             'assignedBarangay' => $assignedBarangay,
+            'bnsNutritionStats' => $bnsDashboard['nutritionStats'],
+            'bnsImmunizationOverview' => $bnsDashboard['immunizationOverview'],
+            'bnsDashboardCharts' => $bnsDashboard['dashboardCharts'],
+            'managedBnsCount' => $bnsDashboard['managedBnsCount'],
         ]));
     })->name('brgcaptain.main');
 
@@ -1912,6 +2153,7 @@ Route::middleware('auth')->group(function () {
             ->first();
 
         $period = $request->query('period', 'this_month');
+        $reportTab = $request->query('tab', 'bhw') === 'bns' ? 'bns' : 'bhw';
         [$fromDate, $toDate, $periodKey] = BhwReportBuilder::resolvePeriod(
             $period,
             $request->query('from_date'),
@@ -1919,10 +2161,13 @@ Route::middleware('auth')->group(function () {
         );
 
         $report = BhwReportBuilder::buildForCaptain($assignedBarangay, $fromDate, $toDate, $periodKey);
+        $bnsReport = BnsReportBuilder::buildForCaptain($assignedBarangay, $fromDate, $toDate, $periodKey);
 
         return view('barangay_captain.reports', [
             'assignedBarangay' => $assignedBarangay,
             'report' => $report,
+            'bnsReport' => $bnsReport,
+            'reportTab' => $reportTab,
             'activePeriod' => $periodKey,
             'fromDate' => $fromDate,
             'toDate' => $toDate,
@@ -1977,8 +2222,9 @@ Route::middleware('auth')->group(function () {
 
         $posts = $assignedBarangay
             ? Event::query()
-                ->activeAnnouncements()
+                ->staffAnnouncements()
                 ->where('barangay_id', $assignedBarangay->id)
+                ->where('created_by', Auth::id())
                 ->orderByDesc('event_date')
                 ->orderByDesc('end_time')
                 ->get()
@@ -1999,6 +2245,23 @@ Route::middleware('auth')->group(function () {
 
         if (! $assignedBarangay) {
             return response()->json(['error' => 'No assigned barangay'], 404);
+        }
+
+        $targetPurokIds = Auth::user()->assignedPuroks()
+            ->pluck('puroks.id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        if ($targetPurokIds === []) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'You must be assigned to a purok before posting announcements.',
+                    'errors' => ['title' => ['You must be assigned to a purok before posting announcements.']],
+                ], 422);
+            }
+
+            return back()->withErrors(['title' => 'You must be assigned to a purok before posting announcements.'])->withInput();
         }
 
         $data = $request->validate([
@@ -2046,6 +2309,7 @@ Route::middleware('auth')->group(function () {
 
         $post = Event::create([
             'barangay_id' => $assignedBarangay->id,
+            'target_purok_ids' => $targetPurokIds,
             'created_by' => Auth::id(),
             'title' => $data['title'],
             'description' => $data['description'] ?? null,
@@ -2057,15 +2321,12 @@ Route::middleware('auth')->group(function () {
             'image_url' => null,
         ]);
 
-        $notificationMessage = $data['title'];
-
-        if (filled($data['description'] ?? null)) {
-            $notificationMessage .= ': '.Str::limit(trim((string) $data['description']), 240);
-        }
+        $notificationMessage = 'Check announcement';
 
         $residentUserIds = ResidentRequest::query()
             ->where('barangay', $assignedBarangay->name)
             ->where('status', 'accepted')
+            ->whereIn('purok_id', $targetPurokIds)
             ->pluck('user_id');
 
         $now = now();
@@ -2073,7 +2334,7 @@ Route::middleware('auth')->group(function () {
         foreach ($residentUserIds as $residentUserId) {
             InboxMessage::query()->create([
                 'user_id' => $residentUserId,
-                'title' => 'New Barangay Announcement',
+                'title' => 'Announcement',
                 'message' => $notificationMessage,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -2103,7 +2364,12 @@ Route::middleware('auth')->group(function () {
             ? Barangay::query()->where('name', $barangayName)->first()
             : null;
 
-        abort_unless($assignedBarangay && $post->barangay_id === $assignedBarangay->id, 404);
+        abort_unless(
+            $assignedBarangay
+                && $post->barangay_id === $assignedBarangay->id
+                && (int) $post->created_by === (int) Auth::id(),
+            404
+        );
 
         $post->disabled_at = $post->disabled_at ? null : now();
         $post->save();
@@ -2121,7 +2387,12 @@ Route::middleware('auth')->group(function () {
             ? Barangay::query()->where('name', $barangayName)->first()
             : null;
 
-        abort_unless($assignedBarangay && $post->barangay_id === $assignedBarangay->id, 404);
+        abort_unless(
+            $assignedBarangay
+                && $post->barangay_id === $assignedBarangay->id
+                && (int) $post->created_by === (int) Auth::id(),
+            404
+        );
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:'.SafeInput::TITLE_MAX],
@@ -2174,7 +2445,12 @@ Route::middleware('auth')->group(function () {
             ? Barangay::query()->where('name', $barangayName)->first()
             : null;
 
-        abort_unless($assignedBarangay && $post->barangay_id === $assignedBarangay->id, 404);
+        abort_unless(
+            $assignedBarangay
+                && $post->barangay_id === $assignedBarangay->id
+                && (int) $post->created_by === (int) Auth::id(),
+            404
+        );
 
         $post->delete();
 
@@ -2533,6 +2809,50 @@ Route::middleware('auth')->group(function () {
             ->with('status', 'Worker account role removed successfully.');
     })->name('barangay-captain.bhw-workers.kick');
 
+    Route::post('/barangay-captain/bhw-workers/password', function (Request $request) {
+        if (Auth::user()->role !== 'BrgCaptain') {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        if (! $assignedBarangay) {
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->withErrors(['worker_id' => 'No assigned barangay yet.']);
+        }
+
+        $data = $request->validate([
+            'worker_id' => ['required', 'integer', 'exists:users,id'],
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+        ], [
+            'password.required' => 'Please enter a new password.',
+            'password.confirmed' => 'The new password confirmation does not match.',
+        ]);
+
+        $worker = User::query()
+            ->whereKey($data['worker_id'])
+            ->whereIn('role', [User::ROLE_BHW, User::ROLE_BHW_HEAD])
+            ->where('barangay', $assignedBarangay->name)
+            ->first();
+
+        if (! $worker) {
+            return redirect()
+                ->route('barangay-captain.bhw-workers')
+                ->withErrors(['worker_id' => 'Unable to update this account.']);
+        }
+
+        $worker->update([
+            'password' => $data['password'],
+        ]);
+
+        return redirect()
+            ->route('barangay-captain.bhw-workers')
+            ->with('status', 'Password updated for '.$worker->name.'.');
+    })->name('barangay-captain.bhw-workers.password');
+
     Route::get('/barangay-captain/bns-workers', function () {
         if (Auth::user()->role !== 'BrgCaptain') {
             return redirect()->route('dashboard');
@@ -2637,6 +2957,50 @@ Route::middleware('auth')->group(function () {
             ->with('status', 'BNS worker role removed successfully.');
     })->name('barangay-captain.bns-workers.kick');
 
+    Route::post('/barangay-captain/bns-workers/password', function (Request $request) {
+        if (Auth::user()->role !== 'BrgCaptain') {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        if (! $assignedBarangay) {
+            return redirect()
+                ->route('barangay-captain.bns-workers')
+                ->withErrors(['worker_id' => 'No assigned barangay yet.']);
+        }
+
+        $data = $request->validate([
+            'worker_id' => ['required', 'integer', 'exists:users,id'],
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+        ], [
+            'password.required' => 'Please enter a new password.',
+            'password.confirmed' => 'The new password confirmation does not match.',
+        ]);
+
+        $worker = User::query()
+            ->whereKey($data['worker_id'])
+            ->where('role', User::ROLE_BNS)
+            ->where('barangay', $assignedBarangay->name)
+            ->first();
+
+        if (! $worker) {
+            return redirect()
+                ->route('barangay-captain.bns-workers')
+                ->withErrors(['worker_id' => 'Unable to update this account.']);
+        }
+
+        $worker->update([
+            'password' => $data['password'],
+        ]);
+
+        return redirect()
+            ->route('barangay-captain.bns-workers')
+            ->with('status', 'Password updated for '.$worker->name.'.');
+    })->name('barangay-captain.bns-workers.password');
+
     Route::post('/barangay-captain/puroks/{id}/delete', function ($id) {
         if (Auth::user()->role !== 'BrgCaptain') {
             return redirect()->route('dashboard');
@@ -2694,6 +3058,73 @@ Route::middleware('auth')->group(function () {
             'user' => Auth::user(),
         ]);
     })->name('barangay-captain.my-profile');
+
+    Route::get('/barangay-captain/all-records', function (Request $request) {
+        if (Auth::user()->role !== 'BrgCaptain') {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        $type = (string) $request->query('type', 'all');
+        if (! in_array($type, ['all', 'transactions', 'maintenance'], true)) {
+            $type = 'all';
+        }
+
+        $period = (string) $request->query('period', 'all');
+        [$fromDate, $toDate, $periodKey] = BhwReportBuilder::resolvePeriod(
+            $period,
+            $request->query('from_date'),
+            $request->query('to_date')
+        );
+
+        $purokOptions = AllRecordsBuilder::purokOptionsForCaptain($assignedBarangay);
+        $activePurokId = (string) $request->query('purok', 'all');
+        $allowedPurokIds = $purokOptions->pluck('id')->map(fn ($id) => (string) $id)->all();
+        if ($activePurokId !== 'all' && ! in_array($activePurokId, $allowedPurokIds, true)) {
+            $activePurokId = 'all';
+        }
+
+        $built = AllRecordsBuilder::build(
+            AllRecordsBuilder::acceptedResidentIdsForCaptain($assignedBarangay, $activePurokId),
+            $type,
+            $fromDate,
+            $toDate
+        );
+
+        $periodLabel = match ($periodKey) {
+            'this_week' => 'This week',
+            'last_week' => 'Last week',
+            'this_month' => 'This month',
+            'last_month' => 'Last month',
+            'custom' => 'Custom range',
+            default => 'All time',
+        };
+
+        return view('bhw.all_records', [
+            'records' => $built['records'],
+            'activeType' => $type,
+            'activePeriod' => $periodKey,
+            'periodLabel' => $periodLabel,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
+            'transactionCount' => $built['transactionCount'],
+            'maintenanceCount' => $built['maintenanceCount'],
+            'recordsRouteName' => 'barangay-captain.all-records',
+            'backRouteName' => 'barangay-captain.my-profile',
+            'sidebarPartial' => 'sidebars.barangay_captain',
+            'mobileNavPartial' => 'partials.captain-mobile-nav',
+            'mobileTopbarPartial' => 'partials.captain-mobile-topbar',
+            'shellStylesPartial' => 'partials.captain-shell-styles',
+            'contentElementId' => 'captainContent',
+            'showMobileTopbar' => false,
+            'wideDesktop' => true,
+            'purokOptions' => $purokOptions,
+            'activePurokId' => $activePurokId,
+        ]);
+    })->name('barangay-captain.all-records');
 
     Route::post('/barangay-captain/my-profile/avatar', function (Request $request) {
         if (Auth::user()->role !== 'BrgCaptain') {
@@ -2842,6 +3273,23 @@ Route::middleware('auth')->group(function () {
         return response()->json(BnsChildHealth::healthPayload(Auth::user(), $childKey));
     })->name('bns.monitoring.weight.store');
 
+    Route::post('/bns/monitoring/children/{childKey}/weight/{log}', function (Request $request, string $childKey, int $log) {
+        if (Auth::user()->role !== User::ROLE_BNS) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'weight_kg' => ['required', 'numeric', 'min:0.1', 'max:50'],
+            'height_cm' => ['nullable', 'numeric', 'min:1', 'max:200'],
+            'muac_cm' => ['nullable', 'numeric', 'min:5', 'max:25'],
+            'recorded_on' => ['required', 'date', 'before_or_equal:today'],
+        ]);
+
+        BnsChildHealth::updateWeight(Auth::user(), $childKey, $log, $data);
+
+        return response()->json(BnsChildHealth::healthPayload(Auth::user(), $childKey));
+    })->name('bns.monitoring.weight.update');
+
     Route::post('/bns/monitoring/children/{childKey}/deworming', function (Request $request, string $childKey) {
         if (Auth::user()->role !== User::ROLE_BNS) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -2849,14 +3297,38 @@ Route::middleware('auth')->group(function () {
 
         $data = $request->validate([
             'given_on' => ['required', 'date', 'before_or_equal:today'],
-            'medicine' => ['nullable', 'string', 'max:255'],
-            'notes' => ['nullable', 'string', 'max:500'],
+            'medicine' => ['required', 'string', 'in:1/2 tablet,1 tablet'],
         ]);
 
         BnsChildHealth::storeDeworming(Auth::user(), $childKey, $data);
 
         return response()->json(BnsChildHealth::healthPayload(Auth::user(), $childKey));
     })->name('bns.monitoring.deworming.store');
+
+    Route::post('/bns/monitoring/children/{childKey}/deworming/{log}', function (Request $request, string $childKey, int $log) {
+        if (Auth::user()->role !== User::ROLE_BNS) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'given_on' => ['required', 'date', 'before_or_equal:today'],
+            'medicine' => ['required', 'string', 'in:1/2 tablet,1 tablet'],
+        ]);
+
+        BnsChildHealth::updateDeworming(Auth::user(), $childKey, $log, $data);
+
+        return response()->json(BnsChildHealth::healthPayload(Auth::user(), $childKey));
+    })->name('bns.monitoring.deworming.update');
+
+    Route::delete('/bns/monitoring/children/{childKey}/deworming/{log}', function (string $childKey, int $log) {
+        if (Auth::user()->role !== User::ROLE_BNS) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        BnsChildHealth::deleteDeworming(Auth::user(), $childKey, $log);
+
+        return response()->json(BnsChildHealth::healthPayload(Auth::user(), $childKey));
+    })->name('bns.monitoring.deworming.delete');
 
     Route::post('/bns/monitoring/children/{childKey}/vitamin-a', function (Request $request, string $childKey) {
         if (Auth::user()->role !== User::ROLE_BNS) {
@@ -2865,13 +3337,28 @@ Route::middleware('auth')->group(function () {
 
         $data = $request->validate([
             'given_on' => ['required', 'date', 'before_or_equal:today'],
-            'notes' => ['nullable', 'string', 'max:500'],
+            'medicine' => ['required', 'string', 'in:1/2 tablet,1 tablet'],
         ]);
 
         BnsChildHealth::storeVitaminA(Auth::user(), $childKey, $data);
 
         return response()->json(BnsChildHealth::healthPayload(Auth::user(), $childKey));
     })->name('bns.monitoring.vitamin-a.store');
+
+    Route::post('/bns/monitoring/children/{childKey}/vitamin-a/{log}', function (Request $request, string $childKey, int $log) {
+        if (Auth::user()->role !== User::ROLE_BNS) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'given_on' => ['required', 'date', 'before_or_equal:today'],
+            'medicine' => ['required', 'string', 'in:1/2 tablet,1 tablet'],
+        ]);
+
+        BnsChildHealth::updateVitaminA(Auth::user(), $childKey, $log, $data);
+
+        return response()->json(BnsChildHealth::healthPayload(Auth::user(), $childKey));
+    })->name('bns.monitoring.vitamin-a.update');
 
     Route::post('/bns/monitoring/children/{childKey}/immunizations/{immunization}', function (Request $request, string $childKey, int $immunization) {
         if (Auth::user()->role !== User::ROLE_BNS) {
@@ -2889,6 +3376,45 @@ Route::middleware('auth')->group(function () {
         return response()->json(BnsChildHealth::healthPayload(Auth::user(), $childKey));
     })->name('bns.monitoring.immunization.update');
 
+    Route::post('/bns/monitoring/children/{childKey}/immunizations/{immunization}/notify', function (Request $request, string $childKey, int $immunization) {
+        if (Auth::user()->role !== User::ROLE_BNS) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $data = $request->validate([
+            'consultation_date' => ['required', 'date', 'after_or_equal:today'],
+        ]);
+
+        $result = BnsChildHealth::notifyImmunizationConsultation(Auth::user(), $childKey, $immunization, $data);
+
+        return response()->json($result);
+    })->name('bns.monitoring.immunization.notify');
+
+    Route::get('/bns/posts', function () {
+        if (Auth::user()->role !== User::ROLE_BNS) {
+            return redirect()->route('dashboard');
+        }
+
+        $barangayName = BnsChildMonitoring::barangayNameFor(Auth::user());
+        $assignedBarangay = filled($barangayName)
+            ? Barangay::query()->where('name', $barangayName)->first()
+            : null;
+
+        Event::purgeExpired();
+
+        $posts = $assignedBarangay
+            ? Event::query()
+                ->immunizationConsultations()
+                ->where('barangay_id', $assignedBarangay->id)
+                ->where('created_by', Auth::id())
+                ->orderByDesc('event_date')
+                ->orderByDesc('id')
+                ->get()
+            : collect();
+
+        return view('bns.posts', compact('assignedBarangay', 'barangayName', 'posts'));
+    })->name('bns.posts');
+
     Route::get('/bns/vitamin-distribution', function () {
         if (Auth::user()->role !== User::ROLE_BNS) {
             return redirect()->route('dashboard');
@@ -2905,13 +3431,14 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('dashboard');
         }
 
-        $rows = BnsHealthRecordList::vitaminDistributionRows(Auth::user());
+        $rows = BnsHealthRecordList::vitaminDistributionLogRows(Auth::user());
 
         return BnsHealthRecordList::csvDownload(
             'vitamin-a-distribution-'.now()->format('Y-m-d').'.csv',
-            ['Child Name', 'Current Age', 'Gender', 'Purok', 'Family Number', 'Date Given', 'Age When Given', 'Notes'],
-            ['child_name', 'age_label', 'gender', 'purok', 'family_number', 'given_on_label', 'age_in_months_label', 'notes'],
-            $rows
+            ['Child Name', 'Sex', 'Age', 'Contact of Parent/Guardian', 'Dose Received', 'Date Received'],
+            ['child_name', 'sex', 'age_label', 'contact', 'dose_received', 'given_on_label'],
+            $rows,
+            'Vitamin A Distribution Records'
         );
     })->name('bns.vitamin-distribution.export');
 
@@ -2931,13 +3458,14 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('dashboard');
         }
 
-        $rows = BnsHealthRecordList::dewormingRows(Auth::user());
+        $rows = BnsHealthRecordList::dewormingLogRows(Auth::user());
 
         return BnsHealthRecordList::csvDownload(
             'deworming-records-'.now()->format('Y-m-d').'.csv',
-            ['Child Name', 'Age', 'Gender', 'Purok', 'Family Number', 'Date Given', 'Medicine', 'Notes'],
-            ['child_name', 'age_label', 'gender', 'purok', 'family_number', 'given_on_label', 'medicine', 'notes'],
-            $rows
+            ['Child Name', 'Sex', 'Age', 'Contact of Parent/Guardian', 'Dose Received', 'Date Received'],
+            ['child_name', 'sex', 'age_label', 'contact', 'dose_received', 'given_on_label'],
+            $rows,
+            'Deworming Records'
         );
     })->name('bns.deworming.export');
 
@@ -3078,9 +3606,15 @@ Route::middleware('auth')->group(function () {
         $head = Auth::user();
         $assignedBarangay = $resolveBhwHeadBarangay($head);
         $dashboard = BhwDashboardBuilder::forHead($head);
+        $bnsDashboard = BnsChildMonitoring::dashboardPayloadForBarangay(
+            $assignedBarangay?->name,
+            true
+        );
 
         return view('bhw_head.main', array_merge($dashboard, [
             'assignedBarangay' => $assignedBarangay,
+            'bnsNutritionStats' => $bnsDashboard['nutritionStats'],
+            'bnsImmunizationOverview' => $bnsDashboard['immunizationOverview'],
         ]));
     })->name('bhw-head.main');
 
@@ -3249,6 +3783,38 @@ Route::middleware('auth')->group(function () {
             ->route('bhw-head.bhw-workers')
             ->with('status', 'BHW account role removed successfully.');
     })->name('bhw-head.bhw-workers.kick');
+
+    Route::post('/bhw-head/bhw-workers/password', function (Request $request) {
+        if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
+            return redirect()->route('dashboard');
+        }
+
+        $head = Auth::user();
+
+        $data = $request->validate([
+            'worker_id' => ['required', 'integer', 'exists:users,id'],
+            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+        ], [
+            'password.required' => 'Please enter a new password.',
+            'password.confirmed' => 'The new password confirmation does not match.',
+        ]);
+
+        $worker = User::query()->whereKey($data['worker_id'])->first();
+
+        if (! $worker || ! BhwHeadScope::canManageWorker($head, $worker)) {
+            return redirect()
+                ->route('bhw-head.bhw-workers')
+                ->withErrors(['worker_id' => 'Unable to update this account.']);
+        }
+
+        $worker->update([
+            'password' => $data['password'],
+        ]);
+
+        return redirect()
+            ->route('bhw-head.bhw-workers')
+            ->with('status', 'Password updated for '.$worker->name.'.');
+    })->name('bhw-head.bhw-workers.password');
 
     Route::post('/bhw-head/bhw-workers/puroks', function (Request $request) use ($resolveBhwHeadBarangay) {
         if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
@@ -3458,6 +4024,232 @@ Route::middleware('auth')->group(function () {
         ]);
     })->name('bhw-head.reports');
 
+    Route::get('/bhw-head/announcements', function () {
+        if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('bhw_head.events');
+    })->name('bhw-head.announcements');
+
+    Route::get('/bhw-head/posts', function () use ($resolveBhwHeadBarangay) {
+        if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = $resolveBhwHeadBarangay(Auth::user());
+
+        Event::purgeExpired();
+
+        $posts = $assignedBarangay
+            ? Event::query()
+                ->staffAnnouncements()
+                ->where('barangay_id', $assignedBarangay->id)
+                ->where('created_by', Auth::id())
+                ->whereNull('target_purok_ids')
+                ->orderByDesc('event_date')
+                ->orderByDesc('end_time')
+                ->get()
+            : collect();
+
+        return view('bhw_head.posts', compact('assignedBarangay', 'posts'));
+    })->name('bhw-head.posts');
+
+    Route::post('/bhw-head/posts', function (Request $request) use ($resolveBhwHeadBarangay) {
+        if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $assignedBarangay = $resolveBhwHeadBarangay(Auth::user());
+
+        if (! $assignedBarangay) {
+            return response()->json(['error' => 'No assigned barangay'], 404);
+        }
+
+        $data = $request->validate([
+            'type' => ['nullable', 'in:announcement'],
+            'title' => ['required', 'string', 'max:'.SafeInput::TITLE_MAX],
+            'description' => ['nullable', 'string', 'max:'.SafeInput::DESCRIPTION_MAX],
+            'event_date' => ['required', 'date', 'after_or_equal:today'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i'],
+            'location' => ['nullable', 'string', 'max:'.SafeInput::TITLE_MAX],
+        ]);
+
+        $data['title'] = SafeInput::plainText($data['title']);
+        $data['description'] = filled($data['description'] ?? null)
+            ? SafeInput::plainText((string) $data['description'], true)
+            : null;
+        $data['location'] = filled($data['location'] ?? null)
+            ? SafeInput::plainText((string) $data['location'])
+            : null;
+
+        if ($data['title'] === '') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Please enter a valid title.',
+                    'errors' => ['title' => ['Please enter a valid title.']],
+                ], 422);
+            }
+
+            return back()->withErrors(['title' => 'Please enter a valid title.'])->withInput();
+        }
+
+        $expiresAt = Carbon::parse($data['event_date'].' '.$data['end_time']);
+        if ($expiresAt->lte(now())) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Remove date and time must be in the future.',
+                    'errors' => ['end_time' => ['Remove date and time must be in the future.']],
+                ], 422);
+            }
+
+            return back()
+                ->withErrors(['end_time' => 'Remove date and time must be in the future.'])
+                ->withInput();
+        }
+
+        $post = Event::create([
+            'barangay_id' => $assignedBarangay->id,
+            'target_purok_ids' => null,
+            'created_by' => Auth::id(),
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+            'event_date' => $data['event_date'],
+            'start_time' => $data['start_time'] ?? null,
+            'end_time' => $data['end_time'],
+            'location' => $data['location'] ?? null,
+            'category' => 'announcement',
+            'image_url' => null,
+        ]);
+
+        $notificationMessage = 'Check announcement';
+
+        $residentUserIds = ResidentRequest::query()
+            ->where('barangay', $assignedBarangay->name)
+            ->where('status', 'accepted')
+            ->pluck('user_id');
+
+        $now = now();
+
+        foreach ($residentUserIds as $residentUserId) {
+            InboxMessage::query()->create([
+                'user_id' => $residentUserId,
+                'title' => 'Announcement',
+                'message' => $notificationMessage,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+
+        if (! $request->expectsJson()) {
+            return redirect()
+                ->route('bhw-head.posts')
+                ->with('status', 'Announcement posted to all barangay residents.');
+        }
+
+        return response()->json([
+            'success' => true,
+            'post' => $post,
+            'message' => 'Announcement posted to all barangay residents.',
+        ]);
+    })->name('bhw-head.posts.store');
+
+    Route::post('/bhw-head/posts/{post}/toggle-disable', function (Event $post) use ($resolveBhwHeadBarangay) {
+        if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = $resolveBhwHeadBarangay(Auth::user());
+
+        abort_unless(
+            $assignedBarangay
+                && $post->barangay_id === $assignedBarangay->id
+                && (int) $post->created_by === (int) Auth::id(),
+            404
+        );
+
+        $post->disabled_at = $post->disabled_at ? null : now();
+        $post->save();
+
+        return redirect()->route('bhw-head.posts')->with('status', $post->disabled_at ? 'Post disabled successfully.' : 'Post re-enabled successfully.');
+    })->name('bhw-head.posts.toggle-disable');
+
+    Route::put('/bhw-head/posts/{post}', function (Request $request, Event $post) use ($resolveBhwHeadBarangay) {
+        if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = $resolveBhwHeadBarangay(Auth::user());
+
+        abort_unless(
+            $assignedBarangay
+                && $post->barangay_id === $assignedBarangay->id
+                && (int) $post->created_by === (int) Auth::id(),
+            404
+        );
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:'.SafeInput::TITLE_MAX],
+            'description' => ['nullable', 'string', 'max:'.SafeInput::DESCRIPTION_MAX],
+            'event_date' => ['required', 'date', 'after_or_equal:today'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i'],
+            'location' => ['nullable', 'string', 'max:'.SafeInput::TITLE_MAX],
+        ]);
+
+        $data['title'] = SafeInput::plainText($data['title']);
+        $data['description'] = filled($data['description'] ?? null)
+            ? SafeInput::plainText((string) $data['description'], true)
+            : null;
+        $data['location'] = filled($data['location'] ?? null)
+            ? SafeInput::plainText((string) $data['location'])
+            : null;
+
+        if ($data['title'] === '') {
+            return back()->withErrors(['title' => 'Please enter a valid title.'])->withInput();
+        }
+
+        $expiresAt = Carbon::parse($data['event_date'].' '.$data['end_time']);
+        if ($expiresAt->lte(now())) {
+            return back()
+                ->withErrors(['end_time' => 'Remove date and time must be in the future.'])
+                ->withInput();
+        }
+
+        $post->update([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'event_date' => $data['event_date'],
+            'start_time' => $data['start_time'] ?? null,
+            'end_time' => $data['end_time'],
+            'location' => $data['location'] ?? null,
+            'category' => 'announcement',
+            'target_purok_ids' => null,
+        ]);
+
+        return redirect()->route('bhw-head.posts')->with('status', 'Post updated successfully.');
+    })->name('bhw-head.posts.update');
+
+    Route::delete('/bhw-head/posts/{post}', function (Event $post) use ($resolveBhwHeadBarangay) {
+        if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = $resolveBhwHeadBarangay(Auth::user());
+
+        abort_unless(
+            $assignedBarangay
+                && $post->barangay_id === $assignedBarangay->id
+                && (int) $post->created_by === (int) Auth::id(),
+            404
+        );
+
+        $post->delete();
+
+        return redirect()->route('bhw-head.posts')->with('status', 'Post deleted successfully.');
+    })->name('bhw-head.posts.destroy');
+
     Route::get('/bhw-head/my-profile', function () {
         if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
             return redirect()->route('dashboard');
@@ -3498,6 +4290,67 @@ Route::middleware('auth')->group(function () {
 
         return response()->json(['status' => 'ok', 'url' => $url]);
     })->name('bhw-head.my-profile.avatar');
+
+    Route::get('/bhw-head/all-records', function (Request $request) {
+        if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
+            return redirect()->route('dashboard');
+        }
+
+        $head = Auth::user();
+        $type = (string) $request->query('type', 'all');
+        if (! in_array($type, ['all', 'transactions', 'maintenance'], true)) {
+            $type = 'all';
+        }
+
+        $period = (string) $request->query('period', 'all');
+        [$fromDate, $toDate, $periodKey] = BhwReportBuilder::resolvePeriod(
+            $period,
+            $request->query('from_date'),
+            $request->query('to_date')
+        );
+
+        $purokOptions = AllRecordsBuilder::purokOptionsForHead($head);
+        $activePurokId = (string) $request->query('purok', 'all');
+        $allowedPurokIds = $purokOptions->pluck('id')->map(fn ($id) => (string) $id)->all();
+        if ($activePurokId !== 'all' && ! in_array($activePurokId, $allowedPurokIds, true)) {
+            $activePurokId = 'all';
+        }
+
+        $built = AllRecordsBuilder::build(
+            AllRecordsBuilder::acceptedResidentIdsForHead($head, $activePurokId),
+            $type,
+            $fromDate,
+            $toDate
+        );
+
+        $periodLabel = match ($periodKey) {
+            'this_week' => 'This week',
+            'last_week' => 'Last week',
+            'this_month' => 'This month',
+            'last_month' => 'Last month',
+            'custom' => 'Custom range',
+            default => 'All time',
+        };
+
+        return view('bhw.all_records', [
+            'records' => $built['records'],
+            'activeType' => $type,
+            'activePeriod' => $periodKey,
+            'periodLabel' => $periodLabel,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
+            'transactionCount' => $built['transactionCount'],
+            'maintenanceCount' => $built['maintenanceCount'],
+            'recordsRouteName' => 'bhw-head.all-records',
+            'backRouteName' => 'bhw-head.my-profile',
+            'sidebarPartial' => 'sidebars.bhw_head',
+            'mobileNavPartial' => 'partials.bhw-head-mobile-nav',
+            'showMobileTopbar' => false,
+            'wideDesktop' => true,
+            'purokOptions' => $purokOptions,
+            'activePurokId' => $activePurokId,
+        ]);
+    })->name('bhw-head.all-records');
 
     Route::get('/bhw-head/settings', function () {
         if (Auth::user()->role !== User::ROLE_BHW_HEAD) {
@@ -3561,318 +4414,7 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('dashboard');
         }
 
-        $bhw = Auth::user();
-        $bhw->loadMissing(['assignedPuroks', 'purok']);
-
-        $assignedPurokNames = $bhw->assignedPuroks
-            ->pluck('name')
-            ->map(fn ($name) => trim((string) $name))
-            ->filter()
-            ->unique()
-            ->values();
-
-        if ($assignedPurokNames->isEmpty()) {
-            $fallbackPurok = trim((string) ($bhw->purok?->name ?? ''));
-            if ($fallbackPurok !== '') {
-                $assignedPurokNames = collect([$fallbackPurok]);
-            }
-        }
-
-        $assignedPurokLabel = $assignedPurokNames->isNotEmpty()
-            ? $assignedPurokNames->implode(', ')
-            : '';
-
-        $assignedResidents = ResidentRequest::query()
-            ->forBhw($bhw)
-            ->where('status', 'accepted')
-            ->latest('reviewed_at')
-            ->get();
-
-        $residentIds = $assignedResidents->pluck('id');
-        $totalHouseholdsAssigned = $assignedResidents
-            ->map(function (ResidentRequest $resident) {
-                $familyNumber = trim((string) ($resident->family_number ?? ''));
-
-                return $familyNumber !== '' ? 'family:'.$familyNumber : 'resident:'.$resident->id;
-            })
-            ->unique()
-            ->count();
-
-        $peopleInHousehold = static function (ResidentRequest $resident): int {
-            $names = collect([
-                $resident->full_name,
-                $resident->spouse_full_name,
-            ]);
-
-            foreach ([$resident->household_children, $resident->household_seniors] as $members) {
-                foreach (is_array($members) ? $members : [] as $member) {
-                    if (is_array($member)) {
-                        $names->push($member['full_name'] ?? $member['name'] ?? null);
-                    }
-                }
-            }
-
-            return max(1, $names
-                ->filter(fn ($name) => filled($name))
-                ->map(fn ($name) => mb_strtolower(trim((string) $name)))
-                ->unique()
-                ->count());
-        };
-
-        $totalPeopleAssigned = $assignedResidents
-            ->groupBy(function (ResidentRequest $resident) {
-                $familyNumber = trim((string) ($resident->family_number ?? ''));
-
-                return $familyNumber !== '' ? 'family:'.$familyNumber : 'resident:'.$resident->id;
-            })
-            ->sum(fn ($household) => $household->max($peopleInHousehold));
-
-        $pendingRequests = ResidentRequest::query()
-            ->forBhw($bhw)
-            ->where('status', 'pending')
-            ->count();
-
-        $transactions = $residentIds->isEmpty()
-            ? collect()
-            : ResidentTransaction::query()
-                ->whereIn('resident_request_id', $residentIds)
-                ->orderByDesc('transaction_date')
-                ->orderByDesc('id')
-                ->get();
-
-        $monitoringCases = $residentIds->isEmpty()
-            ? collect()
-            : HouseholdMonitoringCase::query()
-                ->whereIn('resident_request_id', $residentIds)
-                ->where('is_active', true)
-                ->with('residentRequest')
-                ->get();
-
-        $upcomingConsultations = $residentIds->isEmpty()
-            ? 0
-            : Consultation::query()
-                ->whereIn('resident_request_id', $residentIds)
-                ->where('scheduled_at', '>=', now())
-                ->count();
-
-        $conditionCounts = [
-            'Hypertension' => 0,
-            'Diabetes' => 0,
-            'Hyperlipidemia' => 0,
-        ];
-        $activeIllnessKeys = [];
-        $householdsWithConcern = [];
-        $medicineDispensedPcs = 0;
-        $transactionsThisMonth = 0;
-        $monthStart = now()->startOfMonth()->toDateString();
-
-        foreach ($transactions as $transaction) {
-            $conditions = $transaction->inferredConditions();
-            $entries = $transaction->medicationEntries();
-
-            foreach ($entries as $entry) {
-                $medicineDispensedPcs += (int) ($entry['pcs'] ?? 0);
-            }
-
-            if ($transaction->transaction_date && $transaction->transaction_date->toDateString() >= $monthStart) {
-                $transactionsThisMonth++;
-            }
-
-            if ($conditions === []) {
-                continue;
-            }
-
-            $householdsWithConcern[$transaction->resident_request_id] = true;
-            $memberKey = $transaction->resident_request_id.'|'.mb_strtolower(trim((string) ($transaction->member_name ?: 'resident')));
-            $activeIllnessKeys[$memberKey] = true;
-
-            foreach ($conditions as $condition) {
-                if (isset($conditionCounts[$condition])) {
-                    $conditionCounts[$condition]++;
-                }
-            }
-        }
-
-        $pregnantMonitored = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_PREGNANT)->count();
-        $seniorMonitored = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_SENIOR)->count();
-        $generalMonitored = $monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_GENERAL)->count();
-        $seniorByAge = $assignedResidents->filter(fn ($resident) => (int) ($resident->age ?? 0) >= 60)->count();
-
-        $bhwStats = [
-            'total_households_assigned' => $totalHouseholdsAssigned,
-            'total_people_assigned' => $totalPeopleAssigned,
-            'active_illness_cases' => count($activeIllnessKeys),
-            'households_with_concern' => count($householdsWithConcern),
-            'transactions_this_month' => $transactionsThisMonth,
-            'medicine_pcs_dispensed' => $medicineDispensedPcs,
-            'pending_requests' => $pendingRequests,
-            'upcoming_consultations' => $upcomingConsultations,
-            'pregnant_women_monitored' => $pregnantMonitored,
-            'senior_citizens_monitored' => max($seniorMonitored, $seniorByAge),
-            'active_monitoring_cases' => $monitoringCases->count(),
-        ];
-
-        $conditionColors = ['#BE123C', '#0EA5E9', '#F59E0B'];
-        $conditionLabels = ['Hypertension', 'Diabetes', 'Hyperlipidemia'];
-
-        $periodBounds = function (string $period): array {
-            $to = now()->endOfDay();
-
-            return match ($period) {
-                'week' => [now()->startOfWeek()->startOfDay(), $to],
-                'year' => [now()->startOfYear()->startOfDay(), $to],
-                default => [now()->startOfMonth()->startOfDay(), $to],
-            };
-        };
-
-        $periodRangeLabel = function (Carbon $from, Carbon $to): string {
-            if ($from->isSameDay($to)) {
-                return $from->format('M j, Y');
-            }
-
-            if ($from->year === $to->year) {
-                return $from->format('M j').' – '.$to->format('M j, Y');
-            }
-
-            return $from->format('M j, Y').' – '.$to->format('M j, Y');
-        };
-
-        $transactionsInRange = function (Carbon $from, Carbon $to) use ($transactions) {
-            return $transactions->filter(function (ResidentTransaction $transaction) use ($from, $to) {
-                if (! $transaction->transaction_date) {
-                    return false;
-                }
-
-                $date = $transaction->transaction_date->copy()->startOfDay();
-
-                return $date->betweenIncluded($from->copy()->startOfDay(), $to->copy()->startOfDay());
-            });
-        };
-
-        $concernsForTransactions = function ($scopedTransactions) use ($conditionLabels, $conditionColors) {
-            $counts = array_fill_keys($conditionLabels, 0);
-
-            foreach ($scopedTransactions as $transaction) {
-                foreach ($transaction->inferredConditions() as $condition) {
-                    if (isset($counts[$condition])) {
-                        $counts[$condition]++;
-                    }
-                }
-            }
-
-            return [
-                'labels' => array_keys($counts),
-                'values' => array_values($counts),
-                'colors' => $conditionColors,
-                'transaction_count' => $scopedTransactions->filter(
-                    fn (ResidentTransaction $transaction) => $transaction->medicationEntries() !== [] || $transaction->inferredConditions() !== []
-                )->count(),
-            ];
-        };
-
-        $trendForPeriod = function (string $period, Carbon $from, Carbon $to) use ($transactionsInRange) {
-            $scoped = $transactionsInRange($from, $to);
-            $labels = [];
-            $values = [];
-
-            $countForBucket = function (Carbon $bucketStart, Carbon $bucketEnd) use ($scoped): int {
-                return $scoped->filter(function (ResidentTransaction $transaction) use ($bucketStart, $bucketEnd) {
-                    if (! $transaction->transaction_date) {
-                        return false;
-                    }
-
-                    if ($transaction->medicationEntries() === [] && $transaction->inferredConditions() === []) {
-                        return false;
-                    }
-
-                    $date = $transaction->transaction_date->copy()->startOfDay();
-
-                    return $date->betweenIncluded($bucketStart->copy()->startOfDay(), $bucketEnd->copy()->startOfDay());
-                })->count();
-            };
-
-            if ($period === 'week') {
-                $cursor = $from->copy()->startOfDay();
-                while ($cursor->lte($to)) {
-                    $labels[] = $cursor->format('D');
-                    $values[] = $countForBucket($cursor, $cursor->copy()->endOfDay());
-                    $cursor->addDay();
-                }
-            } elseif ($period === 'month') {
-                $cursor = $from->copy()->startOfWeek();
-                while ($cursor->lte($to)) {
-                    $weekEnd = $cursor->copy()->endOfWeek()->min($to);
-                    $labels[] = $cursor->format('M j');
-                    $values[] = $countForBucket($cursor, $weekEnd);
-                    $cursor->addWeek();
-                }
-            } else {
-                $cursor = $from->copy()->startOfMonth();
-                while ($cursor->lte($to)) {
-                    $monthEnd = $cursor->copy()->endOfMonth()->min($to);
-                    $labels[] = $cursor->format('M');
-                    $values[] = $countForBucket($cursor, $monthEnd);
-                    $cursor->addMonth();
-                }
-            }
-
-            return [
-                'labels' => $labels,
-                'values' => $values,
-            ];
-        };
-
-        $chartPeriods = [];
-        foreach (['week', 'month', 'year'] as $period) {
-            [$from, $to] = $periodBounds($period);
-            $scoped = $transactionsInRange($from, $to);
-            $concerns = $concernsForTransactions($scoped);
-
-            $chartPeriods[$period] = [
-                'range_label' => $periodRangeLabel($from, $to),
-                'transaction_trend' => $trendForPeriod($period, $from, $to),
-                'health_concerns' => $concerns,
-            ];
-        }
-
-        $dashboardCharts = [
-            'default_period' => 'month',
-            'chart_periods' => $chartPeriods,
-        ];
-
-        $mapMonitoringMembers = function ($cases) {
-            return $cases
-                ->map(function (HouseholdMonitoringCase $case) {
-                    $familyNumber = trim((string) ($case->residentRequest?->family_number ?? ''));
-
-                    return [
-                        'name' => trim((string) ($case->member_name ?? '')) ?: ($case->residentRequest?->full_name ?: 'Household member'),
-                        'family_number' => $familyNumber !== '' ? $familyNumber : 'Not assigned',
-                        'household' => $case->residentRequest?->full_name ?: '—',
-                    ];
-                })
-                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
-                ->values()
-                ->all();
-        };
-
-        $monitoringMix = [
-            'labels' => ['Pregnant', 'Senior', 'General'],
-            'values' => [$pregnantMonitored, $seniorMonitored, $generalMonitored],
-            'colors' => ['#EC4899', '#8B5CF6', '#4A90E2'],
-            'members' => [
-                'Pregnant' => $mapMonitoringMembers($monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_PREGNANT)),
-                'Senior' => $mapMonitoringMembers($monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_SENIOR)),
-                'General' => $mapMonitoringMembers($monitoringCases->where('member_type', HouseholdMonitoringCase::TYPE_GENERAL)),
-            ],
-        ];
-
-        return view('bhw.main', compact(
-            'bhwStats',
-            'dashboardCharts',
-            'monitoringMix',
-            'assignedPurokLabel'
-        ));
+        return view('bhw.main', BhwDashboardBuilder::forBhw(Auth::user()));
     })->name('bhw.main');
 
     Route::get('/bhw/residents', function () {
@@ -3982,9 +4524,18 @@ Route::middleware('auth')->group(function () {
             'user.purok',
             'purok',
             'transactions' => fn ($query) => $query->latest(),
-            'monitoringCases' => fn ($query) => $query->with(['visits' => fn ($visitQuery) => $visitQuery->latest('visit_date')])->latest(),
+            'monitoringCases' => fn ($query) => $query->with(['visits' => fn ($visitQuery) => $visitQuery->orderBy('visit_date')->orderBy('id')])->latest(),
             'consultations' => fn ($query) => $query->orderByDesc('scheduled_at'),
         ]);
+
+        foreach ($residentRequest->monitoringCases as $monitoringCase) {
+            HouseholdMonitoringVisit::backfillCarriedVitalsForCase(
+                (int) $monitoringCase->id,
+                $monitoringCase->visits
+            );
+            $monitoringCase->unsetRelation('visits');
+            $monitoringCase->load(['visits' => fn ($query) => $query->orderBy('visit_date')->orderBy('id')]);
+        }
 
         $residentChatUnreadCount = $residentRequest->user
             ? ResidentBhwChat::unreadCountForBhw(Auth::user(), $residentRequest->user)
@@ -3995,6 +4546,51 @@ Route::middleware('auth')->group(function () {
             'residentChatUnreadCount' => $residentChatUnreadCount,
         ]);
     })->name('bhw.residents.profile');
+
+    Route::post('/bhw/residents/{residentRequest}/household', function (Request $request, ResidentRequest $residentRequest) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        if (! $residentRequest->isAccessibleByBhw(Auth::user())) {
+            return redirect()->route('bhw.residents')->with('status', 'This resident is outside your assigned purok.');
+        }
+
+        if ($residentRequest->status !== 'accepted') {
+            return redirect()->route('bhw.residents')->with('status', 'Household updates are only available for accepted residents.');
+        }
+
+        $data = $request->validate([
+            'household_action' => ['required', 'string', Rule::in([
+                'add_child', 'update_child', 'remove_child',
+                'add_senior', 'update_senior', 'remove_senior',
+                'set_spouse', 'remove_spouse',
+            ])],
+            'member_index' => ['nullable', 'integer', 'min:0'],
+            'full_name' => ['nullable', 'string', 'max:255'],
+            'birthdate' => ['nullable', 'date', 'before_or_equal:today'],
+            'gender' => ['nullable', 'string', Rule::in(['Male', 'Female', 'male', 'female'])],
+            'relationship' => ['nullable', 'string', 'max:50'],
+            'currently_studying' => ['nullable', 'string', Rule::in(['yes', 'no', 'infant'])],
+            'school' => ['nullable', 'string', 'max:255'],
+            'educational_attainment' => ['nullable', 'string', 'max:100'],
+            'occupation' => ['nullable', 'string', 'max:255'],
+            'place_of_birth' => ['nullable', 'string', 'max:255'],
+            'spouse_first_name' => ['nullable', 'string', 'max:100'],
+            'spouse_last_name' => ['nullable', 'string', 'max:100'],
+            'spouse_middle_initial' => ['nullable', 'string', 'max:5'],
+            'spouse_birthdate' => ['nullable', 'date', 'before_or_equal:today'],
+            'spouse_parent_role' => ['nullable', 'string', Rule::in(ResidentRequest::PARENT_ROLES)],
+            'spouse_place_of_birth' => ['nullable', 'string', 'max:255'],
+            'spouse_educational_attainment' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        $message = BhwHouseholdEditor::apply($residentRequest, (string) $data['household_action'], $data);
+
+        return redirect()
+            ->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'family'])
+            ->with('status', $message);
+    })->name('bhw.residents.household.update');
 
     Route::get('/bhw/residents/{residentRequest}/chat', function (ResidentRequest $residentRequest) {
         if (Auth::user()->role !== 'BHW') {
@@ -4161,7 +4757,7 @@ Route::middleware('auth')->group(function () {
 
         InboxMessage::query()->create([
             'user_id' => $residentRequest->user_id,
-            'title' => 'Transaction Updated',
+            'title' => 'Transaction received',
             'message' => $transaction->notificationSummary(),
         ]);
 
@@ -4349,7 +4945,6 @@ Route::middleware('auth')->group(function () {
         if ($monitoringCase->isSenior()) {
             $rules['bp_systolic'] = ['nullable', 'integer', 'min:50', 'max:300'];
             $rules['bp_diastolic'] = ['nullable', 'integer', 'min:30', 'max:200'];
-            $rules['maintenance_medicines'] = ['nullable', 'string', 'max:1000'];
         }
 
         $data = $request->validate($rules, [
@@ -4357,19 +4952,39 @@ Route::middleware('auth')->group(function () {
             'last_period_date.after_or_equal' => 'Last period date must be on or after the first period date.',
         ]);
 
-        $weightKg = isset($data['weight_kg']) && $data['weight_kg'] !== '' ? (float) $data['weight_kg'] : null;
-        $heightCm = isset($data['height_cm']) && $data['height_cm'] !== '' ? (float) $data['height_cm'] : null;
-        $bmiValue = HouseholdMonitoringVisit::calculateBmi($weightKg, $heightCm);
+        $previousVisit = $monitoringCase->visits()
+            ->orderByDesc('visit_date')
+            ->orderByDesc('id')
+            ->first();
+
+        $weightProvided = array_key_exists('weight_kg', $data) && $data['weight_kg'] !== null && $data['weight_kg'] !== '';
+        $heightProvided = array_key_exists('height_cm', $data) && $data['height_cm'] !== null && $data['height_cm'] !== '';
+        $muacProvided = array_key_exists('muac_cm', $data) && $data['muac_cm'] !== null && $data['muac_cm'] !== '';
+
+        $weightKg = $weightProvided ? (float) $data['weight_kg'] : ($previousVisit?->weight_kg !== null ? (float) $previousVisit->weight_kg : null);
+        $heightCm = $heightProvided ? (float) $data['height_cm'] : ($previousVisit?->height_cm !== null ? (float) $previousVisit->height_cm : null);
+        $bmiValue = HouseholdMonitoringVisit::calculateBmi($weightKg, $heightCm)
+            ?? ($previousVisit?->bmi_value !== null ? (float) $previousVisit->bmi_value : null);
 
         $bloodPressure = null;
+        $systolic = $data['bp_systolic'] ?? null;
+        $diastolic = $data['bp_diastolic'] ?? null;
 
-        if ($monitoringCase->isSenior()) {
-            $systolic = $data['bp_systolic'] ?? null;
-            $diastolic = $data['bp_diastolic'] ?? null;
+        if ($systolic !== null && $systolic !== '' && $diastolic !== null && $diastolic !== '') {
+            $bloodPressure = ((int) $systolic).'/'.((int) $diastolic);
+        } else {
+            $bloodPressure = filled($previousVisit?->blood_pressure) ? (string) $previousVisit->blood_pressure : null;
+        }
 
-            if ($systolic !== null && $diastolic !== null) {
-                $bloodPressure = $systolic.'/'.$diastolic;
-            }
+        $muacCm = $muacProvided
+            ? (float) $data['muac_cm']
+            : ($previousVisit?->muac_cm !== null ? (float) $previousVisit->muac_cm : null);
+
+        $antiTetanus = null;
+        if ($monitoringCase->isPregnant()) {
+            $antiTetanus = filled($data['anti_tetanus'] ?? null)
+                ? trim((string) $data['anti_tetanus'])
+                : (filled($previousVisit?->anti_tetanus) ? (string) $previousVisit->anti_tetanus : null);
         }
 
         if ($monitoringCase->isPregnant() && array_key_exists('last_period_date', $data)) {
@@ -4385,15 +5000,25 @@ Route::middleware('auth')->group(function () {
             'weight_kg' => $weightKg,
             'height_cm' => $heightCm,
             'bmi_value' => $bmiValue,
-            'muac_cm' => $data['muac_cm'] ?? null,
-            'anti_tetanus' => $monitoringCase->isPregnant() ? ($data['anti_tetanus'] ?? null) : null,
+            'muac_cm' => $muacCm,
+            'anti_tetanus' => $antiTetanus,
             'blood_pressure' => $bloodPressure,
-            'maintenance_medicines' => $monitoringCase->isSenior() ? ($data['maintenance_medicines'] ?? null) : null,
+            'maintenance_medicines' => null,
             'notes' => filled($data['notes'] ?? null) ? trim((string) $data['notes']) : null,
         ]);
 
+        HouseholdMonitoringVisit::backfillCarriedVitalsForCase((int) $monitoringCase->id);
+
+        if ($residentRequest->user_id) {
+            InboxMessage::query()->create([
+                'user_id' => $residentRequest->user_id,
+                'title' => 'Maintenance received',
+                'message' => $visit->notificationSummary($monitoringCase),
+            ]);
+        }
+
         return redirect()->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'maintenance'])
-            ->with('status', 'Monitoring visit saved successfully.');
+            ->with('status', 'Monitoring visit saved successfully.'.($previousVisit ? ' Blank vitals were kept from the previous visit.' : ''));
     })->name('bhw.monitoring-cases.visits.store');
 
     Route::post('/bhw/medical-records/{medicalRecord}/update', function (Request $request, MedicalRecord $medicalRecord) {
@@ -4735,10 +5360,289 @@ Route::middleware('auth')->group(function () {
             return redirect()->route('dashboard');
         }
 
+        $user = Auth::user();
+        $unreadChats = ResidentBhwChat::unreadInboxForBhw($user);
+
         return view('bhw.my_profile', [
-            'user' => Auth::user(),
+            'user' => $user,
+            // Red badge = chats/users with unread. Subtitle can still mention message total.
+            'unreadChatTotal' => $unreadChats->count(),
+            'unreadMessageTotal' => (int) $unreadChats->sum('unread_count'),
         ]);
     })->name('bhw.my-profile');
+
+    Route::get('/bhw/unread-chats', function () {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $user = Auth::user();
+
+        return view('bhw.unread_chats', [
+            'unreadChats' => ResidentBhwChat::unreadInboxForBhw($user),
+        ]);
+    })->name('bhw.unread-chats');
+
+    Route::get('/bhw/all-records', function (Request $request) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $bhw = Auth::user();
+        $type = (string) $request->query('type', 'all');
+        if (! in_array($type, ['all', 'transactions', 'maintenance'], true)) {
+            $type = 'all';
+        }
+
+        $period = (string) $request->query('period', 'all');
+        [$fromDate, $toDate, $periodKey] = BhwReportBuilder::resolvePeriod(
+            $period,
+            $request->query('from_date'),
+            $request->query('to_date')
+        );
+
+        $residentIds = ResidentRequest::query()
+            ->forBhw($bhw)
+            ->where('status', 'accepted')
+            ->pluck('id');
+
+        $records = collect();
+        $transactionCount = 0;
+        $maintenanceCount = 0;
+
+        $transactions = collect();
+        $maintenanceVisits = collect();
+        $visitsByCase = collect();
+
+        if ($residentIds->isNotEmpty()) {
+            $txQuery = ResidentTransaction::query()
+                ->whereIn('resident_request_id', $residentIds)
+                ->with(['residentRequest.purok']);
+
+            if (filled($fromDate)) {
+                $txQuery->whereDate('transaction_date', '>=', $fromDate);
+            }
+            if (filled($toDate)) {
+                $txQuery->whereDate('transaction_date', '<=', $toDate);
+            }
+
+            $transactions = $txQuery
+                ->orderByDesc('transaction_date')
+                ->orderByDesc('id')
+                ->get();
+            $transactionCount = $transactions->count();
+
+            $visitQuery = HouseholdMonitoringVisit::query()
+                ->whereHas('monitoringCase', fn ($query) => $query->whereIn('resident_request_id', $residentIds))
+                ->with(['monitoringCase.residentRequest.purok']);
+
+            if (filled($fromDate)) {
+                $visitQuery->whereDate('visit_date', '>=', $fromDate);
+            }
+            if (filled($toDate)) {
+                $visitQuery->whereDate('visit_date', '<=', $toDate);
+            }
+
+            $maintenanceVisits = $visitQuery
+                ->orderByDesc('visit_date')
+                ->orderByDesc('id')
+                ->get();
+            $maintenanceCount = $maintenanceVisits->count();
+
+            $caseIds = $maintenanceVisits
+                ->pluck('household_monitoring_case_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            $visitsByCase = $caseIds === []
+                ? collect()
+                : HouseholdMonitoringVisit::query()
+                    ->whereIn('household_monitoring_case_id', $caseIds)
+                    ->orderBy('visit_date')
+                    ->orderBy('id')
+                    ->get()
+                    ->groupBy('household_monitoring_case_id');
+
+            foreach ($visitsByCase as $caseId => $caseVisits) {
+                HouseholdMonitoringVisit::backfillCarriedVitalsForCase((int) $caseId, $caseVisits);
+            }
+
+            if ($visitsByCase->isNotEmpty()) {
+                $maintenanceVisits = HouseholdMonitoringVisit::query()
+                    ->whereIn('id', $maintenanceVisits->pluck('id'))
+                    ->with(['monitoringCase.residentRequest.purok'])
+                    ->orderByDesc('visit_date')
+                    ->orderByDesc('id')
+                    ->get();
+
+                $visitsByCase = HouseholdMonitoringVisit::query()
+                    ->whereIn('household_monitoring_case_id', $caseIds)
+                    ->orderBy('visit_date')
+                    ->orderBy('id')
+                    ->get()
+                    ->groupBy('household_monitoring_case_id');
+            }
+        }
+
+        if (in_array($type, ['all', 'transactions'], true)) {
+            $records = $records->merge($transactions->map(function (ResidentTransaction $tx) {
+                $medEntries = $tx->medicationEntries();
+                $meds = collect($medEntries)
+                    ->map(fn (array $entry) => $entry['label'].' '.$entry['pcs'].' pcs')
+                    ->implode(', ');
+                $conditions = $tx->inferredConditions();
+                $detail = $meds !== ''
+                    ? $meds
+                    : ($conditions !== [] ? implode(', ', $conditions) : 'Medicine dispensed');
+                $purok = trim((string) ($tx->residentRequest?->purok?->name ?? ''));
+                $household = trim((string) ($tx->residentRequest?->full_name ?? 'Resident'));
+                $philhealth = trim((string) ($tx->philhealth_number ?? ''));
+                $gender = trim((string) ($tx->gender ?? ''));
+
+                $details = [
+                    ['label' => 'Household', 'value' => $household],
+                    ['label' => 'Recipient', 'value' => $tx->recipientLabel()],
+                    ['label' => 'Date', 'value' => $tx->transaction_date?->format('M d, Y') ?: '—'],
+                    ['label' => 'Age', 'value' => $tx->age !== null ? (string) $tx->age : '—'],
+                    ['label' => 'Gender', 'value' => $gender !== '' ? $gender : '—'],
+                    ['label' => 'Purok', 'value' => $purok !== '' ? $purok : '—'],
+                    ['label' => 'PhilHealth', 'value' => $philhealth !== '' ? $philhealth : '—'],
+                    ['label' => 'Medications', 'value' => $meds !== '' ? $meds : 'None recorded'],
+                    ['label' => 'Health concerns', 'value' => $conditions !== [] ? implode(', ', $conditions) : 'None'],
+                ];
+
+                return [
+                    'sort_at' => optional($tx->transaction_date)->timestamp ?? 0,
+                    'type' => 'transaction',
+                    'type_label' => 'Transaction',
+                    'icon' => 'medication',
+                    'tone' => 'primary',
+                    'title' => $tx->recipientLabel(),
+                    'subtitle' => $household.($purok !== '' ? ' · '.$purok : ''),
+                    'detail' => $detail,
+                    'date_label' => $tx->transaction_date?->format('M d, Y') ?: '—',
+                    'time_label' => null,
+                    'preview_chips' => collect($medEntries)
+                        ->take(4)
+                        ->map(fn (array $entry) => [
+                            'label' => $entry['label'],
+                            'value' => $entry['pcs'].' pcs',
+                        ])
+                        ->values()
+                        ->whenEmpty(fn () => collect($conditions)->take(4)->map(fn ($c) => [
+                            'label' => 'Concern',
+                            'value' => $c,
+                        ])->values())
+                        ->pad(4, ['label' => 'Med', 'value' => '—', 'empty' => true])
+                        ->all(),
+                    'details' => $details,
+                ];
+            }));
+        }
+
+        if (in_array($type, ['all', 'maintenance'], true)) {
+            $records = $records->merge($maintenanceVisits->map(function (HouseholdMonitoringVisit $visit) use ($visitsByCase) {
+                $case = $visit->monitoringCase;
+                $household = trim((string) ($case?->residentRequest?->full_name ?? 'Resident'));
+                $purok = trim((string) ($case?->residentRequest?->purok?->name ?? ''));
+                $memberName = trim((string) ($case?->member_name ?? 'Member'));
+                $typeLabel = $case?->typeLabel() ?: 'Monitoring';
+                $caseVisits = $visitsByCase->get($visit->household_monitoring_case_id, collect());
+                $resolved = $visit->resolvedVitals($caseVisits);
+                $visitLabel = $resolved['visit_label'];
+
+                $previewChips = collect([
+                    filled($resolved['anti_tetanus']) ? ['label' => 'Anti-TT', 'value' => (string) $resolved['anti_tetanus']] : null,
+                    $resolved['blood_pressure'] ? ['label' => 'BP', 'value' => (string) $resolved['blood_pressure']] : null,
+                    $resolved['weight_kg'] !== null ? ['label' => 'Weight', 'value' => $resolved['weight_kg'].' kg'] : null,
+                    $resolved['height_cm'] !== null ? ['label' => 'Height', 'value' => $resolved['height_cm'].' cm'] : null,
+                    $resolved['bmi_value'] !== null ? ['label' => 'BMI', 'value' => (string) $resolved['bmi_value']] : null,
+                    $resolved['muac_cm'] !== null ? ['label' => 'MUAC', 'value' => $resolved['muac_cm'].' cm'] : null,
+                ])->filter()->take(4)->pad(4, ['label' => 'Vital', 'value' => '—', 'empty' => true])->values()->all();
+
+                $detail = collect($previewChips)->map(fn ($chip) => $chip['label'].' '.$chip['value'])->implode(' · ');
+                if ($detail === '') {
+                    $detail = filled($visit->notes) ? (string) $visit->notes : 'Maintenance visit recorded';
+                }
+
+                $status = $case?->is_active
+                    ? 'Active'
+                    : ($case?->completed_at ? 'Completed '.$case->completed_at->format('M d, Y') : 'Inactive');
+                $isCompleted = ! (bool) ($case?->is_active ?? true);
+
+                $details = [
+                    ['label' => 'Visit', 'value' => $visitLabel],
+                    ['label' => 'Household', 'value' => $household],
+                    ['label' => 'Member', 'value' => $memberName],
+                    ['label' => 'Monitoring type', 'value' => $typeLabel],
+                    ['label' => 'Visit date', 'value' => $visit->visit_date?->format('M d, Y') ?: '—'],
+                    ['label' => 'Case status', 'value' => $status],
+                    ['label' => 'Purok', 'value' => $purok !== '' ? $purok : '—'],
+                    ['label' => 'Blood pressure', 'value' => filled($resolved['blood_pressure']) ? (string) $resolved['blood_pressure'] : '—'],
+                    ['label' => 'Weight', 'value' => $resolved['weight_kg'] !== null ? $resolved['weight_kg'].' kg' : '—'],
+                    ['label' => 'Height', 'value' => $resolved['height_cm'] !== null ? $resolved['height_cm'].' cm' : '—'],
+                    ['label' => 'BMI', 'value' => $resolved['bmi_value'] !== null ? (string) $resolved['bmi_value'] : '—'],
+                    ['label' => 'MUAC', 'value' => $resolved['muac_cm'] !== null ? $resolved['muac_cm'].' cm' : '—'],
+                    ['label' => 'Anti-tetanus', 'value' => filled($resolved['anti_tetanus']) ? (string) $resolved['anti_tetanus'] : '—'],
+                    ['label' => 'Notes', 'value' => filled($visit->notes) ? (string) $visit->notes : '—'],
+                ];
+
+                if ($case?->isPregnant()) {
+                    array_splice($details, 6, 0, [
+                        ['label' => 'First period', 'value' => $case->first_period_date?->format('M d, Y') ?: '—'],
+                        ['label' => 'Last period', 'value' => $case->last_period_date?->format('M d, Y') ?: '—'],
+                    ]);
+                }
+
+                if (filled($case?->issue_notes)) {
+                    $details[] = ['label' => 'Issue notes', 'value' => (string) $case->issue_notes];
+                }
+
+                return [
+                    'sort_at' => optional($visit->visit_date)->timestamp ?? 0,
+                    'type' => 'maintenance',
+                    'type_label' => 'Maintenance',
+                    'icon' => $isCompleted ? 'task_alt' : 'monitor_heart',
+                    'tone' => 'secondary',
+                    'status_label' => $visitLabel.($isCompleted ? ' · Completed' : ' · Active'),
+                    'is_completed' => $isCompleted,
+                    'visit_label' => $visitLabel,
+                    'title' => $memberName,
+                    'subtitle' => $visitLabel.' · '.$typeLabel.' · '.$household.($purok !== '' ? ' · '.$purok : ''),
+                    'detail' => $detail,
+                    'date_label' => $visit->visit_date?->format('M d, Y') ?: '—',
+                    'time_label' => null,
+                    'preview_chips' => $previewChips,
+                    'details' => $details,
+                ];
+            }));
+        }
+
+        $records = $records->sortByDesc('sort_at')->values();
+
+        $periodLabel = match ($periodKey) {
+            'this_week' => 'This week',
+            'last_week' => 'Last week',
+            'this_month' => 'This month',
+            'last_month' => 'Last month',
+            'custom' => 'Custom range',
+            default => 'All time',
+        };
+
+        return view('bhw.all_records', [
+            'records' => $records,
+            'activeType' => $type,
+            'activePeriod' => $periodKey,
+            'periodLabel' => $periodLabel,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
+            'transactionCount' => $transactionCount,
+            'maintenanceCount' => $maintenanceCount,
+            'wideDesktop' => true,
+        ]);
+    })->name('bhw.all-records');
 
     Route::post('/bhw/my-profile/avatar', function (Request $request) {
         if (Auth::user()->role !== 'BHW') {

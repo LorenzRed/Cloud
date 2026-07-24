@@ -47,7 +47,7 @@
 <aside id="usersSidebar" class="hidden lg:flex fixed left-0 top-0 h-screen w-64 shrink-0 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-800 border-r border-[#e7f3ec] dark:border-gray-700 flex-col z-20">
     @php
         $isDashboard = request()->routeIs('users.main');
-        $isAnnouncements = request()->routeIs('users.announcements');
+        $isAnnouncements = request()->routeIs('users.announcements*');
         $isProfile = request()->routeIs('users.profile');
         $isNotifications = request()->routeIs('users.notifications');
         $isMaintenanceRecords = request()->routeIs('users.maintenance-records');
@@ -91,11 +91,11 @@
         </a>
         <a href="{{ route('users.transaction-records') }}" class="sidebar-link {{ $isTransactionRecords ? $activeLinkClass : $inactiveLinkClass }}">
             <span class="material-symbols-outlined text-[20px]">medication</span>
-            <span class="sidebar-label">Transactions</span>
+            <span class="sidebar-label">Transaction History</span>
         </a>
         <a href="{{ route('users.maintenance-records') }}" class="sidebar-link {{ $isMaintenanceRecords ? $activeLinkClass : $inactiveLinkClass }}">
             <span class="material-symbols-outlined text-[20px]">health_and_safety</span>
-            <span class="sidebar-label">Maintenance</span>
+            <span class="sidebar-label">Maintenance History</span>
         </a>
         <a href="{{ route('users.profile') }}" class="sidebar-link {{ $isProfile ? $activeLinkClass : $inactiveLinkClass }}">
             <span class="material-symbols-outlined text-[20px]">person</span>

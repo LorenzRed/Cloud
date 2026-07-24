@@ -43,6 +43,197 @@ class HouseholdMonitoringVisit extends Model
     }
 
     /**
+     * Human-readable visit order label (First Visit, Second Visit, 11th Visit, …).
+     */
+    public static function ordinalLabel(int $number): string
+    {
+        if ($number < 1) {
+            return 'Visit';
+        }
+
+        $named = [
+            1 => 'First Visit',
+            2 => 'Second Visit',
+            3 => 'Third Visit',
+            4 => 'Fourth Visit',
+            5 => 'Fifth Visit',
+            6 => 'Sixth Visit',
+            7 => 'Seventh Visit',
+            8 => 'Eighth Visit',
+            9 => 'Ninth Visit',
+            10 => 'Tenth Visit',
+        ];
+
+        if (isset($named[$number])) {
+            return $named[$number];
+        }
+
+        $mod100 = $number % 100;
+        $suffix = match (true) {
+            $mod100 >= 11 && $mod100 <= 13 => 'th',
+            $number % 10 === 1 => 'st',
+            $number % 10 === 2 => 'nd',
+            $number % 10 === 3 => 'rd',
+            default => 'th',
+        };
+
+        return $number.$suffix.' Visit';
+    }
+
+    /**
+     * Effective vitals for a visit, carrying forward earlier values when fields were left blank.
+     *
+     * @param  \Illuminate\Support\Collection<int, self>|null  $orderedAsc
+     * @return array{
+     *     visit_number: int,
+     *     visit_label: string,
+     *     weight_kg: ?float,
+     *     height_cm: ?float,
+     *     bmi_value: ?float,
+     *     muac_cm: ?float,
+     *     blood_pressure: ?string,
+     *     anti_tetanus: ?string
+     * }
+     */
+    public function resolvedVitals($orderedAsc = null): array
+    {
+        $orderedAsc = $orderedAsc
+            ? $orderedAsc->values()
+            : self::query()
+                ->where('household_monitoring_case_id', $this->household_monitoring_case_id)
+                ->orderBy('visit_date')
+                ->orderBy('id')
+                ->get();
+
+        $weight = null;
+        $height = null;
+        $bmi = null;
+        $muac = null;
+        $bloodPressure = null;
+        $antiTetanus = null;
+        $visitNumber = 1;
+
+        foreach ($orderedAsc as $index => $visit) {
+            if ($visit->weight_kg !== null) {
+                $weight = (float) $visit->weight_kg;
+            }
+            if ($visit->height_cm !== null) {
+                $height = (float) $visit->height_cm;
+            }
+
+            $calculatedBmi = self::calculateBmi($weight, $height);
+            if ($calculatedBmi !== null) {
+                $bmi = $calculatedBmi;
+            } elseif ($visit->bmi_value !== null) {
+                $bmi = (float) $visit->bmi_value;
+            }
+
+            if ($visit->muac_cm !== null) {
+                $muac = (float) $visit->muac_cm;
+            }
+            if (filled($visit->blood_pressure)) {
+                $bloodPressure = (string) $visit->blood_pressure;
+            }
+            if (filled($visit->anti_tetanus)) {
+                $antiTetanus = (string) $visit->anti_tetanus;
+            }
+
+            if ((int) $visit->id === (int) $this->id) {
+                $visitNumber = $index + 1;
+                break;
+            }
+        }
+
+        return [
+            'visit_number' => $visitNumber,
+            'visit_label' => self::ordinalLabel($visitNumber),
+            'weight_kg' => $weight,
+            'height_cm' => $height,
+            'bmi_value' => $bmi,
+            'muac_cm' => $muac,
+            'blood_pressure' => $bloodPressure,
+            'anti_tetanus' => $antiTetanus,
+        ];
+    }
+
+    /**
+     * Persist carried-forward vitals onto visits that were saved with blank optional fields.
+     *
+     * @param  \Illuminate\Support\Collection<int, self>|null  $orderedAsc
+     */
+    public static function backfillCarriedVitalsForCase(int $caseId, $orderedAsc = null): int
+    {
+        $orderedAsc = $orderedAsc
+            ? $orderedAsc->values()
+            : self::query()
+                ->where('household_monitoring_case_id', $caseId)
+                ->orderBy('visit_date')
+                ->orderBy('id')
+                ->get();
+
+        $updated = 0;
+        $weight = null;
+        $height = null;
+        $bmi = null;
+        $muac = null;
+        $bloodPressure = null;
+        $antiTetanus = null;
+
+        foreach ($orderedAsc as $visit) {
+            if ($visit->weight_kg !== null) {
+                $weight = (float) $visit->weight_kg;
+            }
+            if ($visit->height_cm !== null) {
+                $height = (float) $visit->height_cm;
+            }
+
+            $calculatedBmi = self::calculateBmi($weight, $height);
+            if ($calculatedBmi !== null) {
+                $bmi = $calculatedBmi;
+            } elseif ($visit->bmi_value !== null) {
+                $bmi = (float) $visit->bmi_value;
+            }
+
+            if ($visit->muac_cm !== null) {
+                $muac = (float) $visit->muac_cm;
+            }
+            if (filled($visit->blood_pressure)) {
+                $bloodPressure = (string) $visit->blood_pressure;
+            }
+            if (filled($visit->anti_tetanus)) {
+                $antiTetanus = (string) $visit->anti_tetanus;
+            }
+
+            $payload = [];
+            if ($visit->weight_kg === null && $weight !== null) {
+                $payload['weight_kg'] = $weight;
+            }
+            if ($visit->height_cm === null && $height !== null) {
+                $payload['height_cm'] = $height;
+            }
+            if ($visit->bmi_value === null && $bmi !== null) {
+                $payload['bmi_value'] = $bmi;
+            }
+            if ($visit->muac_cm === null && $muac !== null) {
+                $payload['muac_cm'] = $muac;
+            }
+            if (! filled($visit->blood_pressure) && filled($bloodPressure)) {
+                $payload['blood_pressure'] = $bloodPressure;
+            }
+            if (! filled($visit->anti_tetanus) && filled($antiTetanus)) {
+                $payload['anti_tetanus'] = $antiTetanus;
+            }
+
+            if ($payload !== []) {
+                $visit->forceFill($payload)->save();
+                $updated++;
+            }
+        }
+
+        return $updated;
+    }
+
+    /**
      * Normalize height to centimeters. Values under 3 are treated as meters (e.g. 1.65 → 165).
      */
     public static function normalizeHeightCm(mixed $height): ?float
@@ -88,55 +279,6 @@ class HouseholdMonitoringVisit extends Model
 
     public function notificationSummary(HouseholdMonitoringCase $case): string
     {
-        $parts = [
-            $case->typeLabel().' monitoring for '.$case->member_name,
-            'Visit '.$this->visit_date?->format('M d, Y'),
-        ];
-
-        if ($case->isPregnant()) {
-            if ($this->weight_kg !== null) {
-                $parts[] = 'Weight '.$this->weight_kg.' kg';
-            }
-
-            if ($this->height_cm !== null) {
-                $parts[] = 'Height '.$this->height_cm.' cm';
-            }
-
-            if ($this->bmi_value !== null) {
-                $parts[] = 'BMI '.$this->bmi_value;
-            }
-
-            if ($this->muac_cm !== null) {
-                $parts[] = 'MUAC '.$this->muac_cm.' cm';
-            }
-
-            if (filled($this->anti_tetanus)) {
-                $parts[] = 'Anti-tetanus '.$this->anti_tetanus;
-            }
-        }
-
-        if ($case->isSenior()) {
-            if (filled($this->blood_pressure)) {
-                $parts[] = 'BP '.$this->blood_pressure;
-            }
-
-            if ($this->weight_kg !== null) {
-                $parts[] = 'Weight '.$this->weight_kg.' kg';
-            }
-
-            if ($this->height_cm !== null) {
-                $parts[] = 'Height '.$this->height_cm.' cm';
-            }
-
-            if ($this->bmi_value !== null) {
-                $parts[] = 'BMI '.$this->bmi_value;
-            }
-
-            if (filled($this->maintenance_medicines)) {
-                $parts[] = 'Maintenance: '.$this->maintenance_medicines;
-            }
-        }
-
-        return implode('. ', $parts).'.';
+        return 'Check the info in Maintenance.';
     }
 }

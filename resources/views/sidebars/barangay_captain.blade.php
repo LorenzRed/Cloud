@@ -6,7 +6,7 @@
         $isReports = request()->routeIs('barangay-captain.reports');
         $isBhwWorkers = request()->routeIs('barangay-captain.bhw-workers');
         $isBnsWorkers = request()->routeIs('barangay-captain.bns-workers');
-        $isProfile = request()->routeIs('barangay-captain.my-profile') || request()->routeIs('barangay-captain.settings*');
+        $isProfile = request()->routeIs('barangay-captain.my-profile') || request()->routeIs('barangay-captain.settings*') || request()->routeIs('barangay-captain.all-records');
 
         $activeLinkClass = 'flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 dark:bg-primary/20';
         $inactiveLinkClass = 'flex items-center gap-3 px-3 py-2 rounded hover:bg-primary/10 transition-colors';
@@ -69,15 +69,6 @@
                 <span class="{{ $isProfile ? $activeIconClass : 'material-symbols-outlined' }}" @if ($isProfile) style="font-variation-settings: 'FILL' 1;" @endif>person</span>
                 <p class="{{ $isProfile ? $activeTextClass : 'text-sm font-medium' }}">Profile</p>
             </a>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit"
-                    class="w-full nav-item flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-primary/10 transition-colors duration-200 cursor-pointer text-left"
-                    data-page="logout">
-                    <span class="material-symbols-outlined">logout</span>
-                    <p class="text-sm font-medium">Logout</p>
-                </button>
-            </form>
         </div>
     </div>
 </aside>

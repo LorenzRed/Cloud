@@ -44,53 +44,63 @@
                     @include('bns.partials.record-list-toolbar', [
                         'pageTitle' => 'Vitamin A distribution',
                         'exportAllRoute' => route('bns.vitamin-distribution.export'),
-                        'searchPlaceholder' => 'Search child, family, or notes...',
+                        'searchPlaceholder' => 'Search child, family, or dose...',
                         'purokOptions' => $purokOptions,
                     ])
 
                     <div class="record-table-wrap mt-3 sm:mt-3">
-                        <table class="w-full md:min-w-[800px]" id="recordsTable">
+                        <table class="w-full md:min-w-[880px]" id="recordsTable">
                             <thead class="hidden md:table-header-group">
                                 <tr class="border-b border-border-light dark:border-border-dark">
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Child</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Current age</th>
                                     <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Purok</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Date given</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Age when given</th>
-                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Notes</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Latest given</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Times given</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-light/70 dark:text-text-dark/70">Giving history</th>
                                 </tr>
                             </thead>
                             <tbody id="recordsTableBody">
                                 @forelse ($records as $row)
                                     @php
-                                        $csvPayload = json_encode([
-                                            'child_name' => $row['child_name'],
-                                            'age_label' => $row['age_label'],
-                                            'gender' => $row['gender'],
-                                            'purok' => $row['purok'],
-                                            'family_number' => $row['family_number'],
-                                            'given_on_label' => $row['given_on_label'],
-                                            'age_in_months_label' => $row['age_in_months_label'],
-                                            'notes' => $row['notes'],
-                                        ], JSON_HEX_APOS | JSON_HEX_QUOT);
+                                        $givings = collect($row['givings'] ?? []);
+                                        $searchParts = [
+                                            $row['child_name'],
+                                            $row['family_number'],
+                                            $row['purok'],
+                                            ...$givings->pluck('notes')->all(),
+                                            ...$givings->pluck('age_in_months_label')->all(),
+                                        ];
+                                        $csvPayload = json_encode(
+                                            $givings->map(fn ($giving) => [
+                                                'child_name' => $row['child_name'],
+                                                'sex' => $row['sex'] ?? ((strtolower((string) ($row['gender'] ?? '')) === 'male') ? 'M' : ((strtolower((string) ($row['gender'] ?? '')) === 'female') ? 'F' : '—')),
+                                                'age_label' => $row['age_label'],
+                                                'contact' => $row['contact'] ?? '—',
+                                                'dose_received' => $giving['dose_received'] ?? $giving['notes'] ?? '—',
+                                                'given_on' => $giving['given_on'] ?? '',
+                                                'given_on_label' => $giving['given_on_label'] ?? '—',
+                                            ])->values()->all(),
+                                            JSON_HEX_APOS | JSON_HEX_QUOT
+                                        );
+                                        $nameParts = preg_split('/\s+/', trim($row['child_name'])) ?: [];
+                                        $initials = strtoupper(substr($nameParts[0] ?? 'C', 0, 1).substr($nameParts[count($nameParts) - 1] ?? 'C', 0, 1));
+                                        $timesGiven = (int) ($row['times_given'] ?? $givings->count());
+                                        $givenDates = implode(',', $row['given_dates'] ?? $givings->pluck('given_on')->filter()->all());
                                     @endphp
                                     <tr
                                         class="record-row border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark"
-                                        data-search="{{ strtolower(implode(' ', [$row['child_name'], $row['notes'], $row['family_number'], $row['purok']])) }}"
+                                        data-search="{{ strtolower(implode(' ', $searchParts)) }}"
                                         data-purok="{{ $row['purok'] }}"
                                         data-date="{{ $row['given_on'] }}"
+                                        data-dates="{{ $givenDates }}"
                                         data-csv="{{ $csvPayload }}"
                                     >
-                                        @php
-                                            $nameParts = preg_split('/\s+/', trim($row['child_name'])) ?: [];
-                                            $initials = strtoupper(substr($nameParts[0] ?? 'C', 0, 1).substr($nameParts[count($nameParts) - 1] ?? 'C', 0, 1));
-                                        @endphp
-
                                         <td class="record-mobile-cell md:hidden" colspan="6">
                                             <button type="button" class="record-mobile-toggle" aria-expanded="false" aria-label="Show details for {{ $row['child_name'] }}">
                                                 <div class="size-9 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">{{ $initials }}</div>
                                                 <span class="text-sm font-semibold text-text-light dark:text-text-dark truncate min-w-0 flex-1">{{ $row['child_name'] }}</span>
-                                                <span class="record-mobile-status">{{ $row['given_on_label'] }}</span>
+                                                <span class="record-mobile-status">{{ $timesGiven }}× · {{ $row['given_on_label'] }}</span>
                                                 <span class="material-symbols-outlined record-chevron" aria-hidden="true">expand_more</span>
                                             </button>
                                             <div class="record-mobile-extra">
@@ -106,16 +116,24 @@
                                                     <span class="record-detail-value">{{ $row['purok'] }}</span>
                                                 </div>
                                                 <div class="record-detail-item">
-                                                    <span class="record-detail-label">Date given</span>
+                                                    <span class="record-detail-label">Latest given</span>
                                                     <span class="record-detail-value font-medium text-text-light dark:text-text-dark">{{ $row['given_on_label'] }}</span>
                                                 </div>
                                                 <div class="record-detail-item">
-                                                    <span class="record-detail-label">Age when given</span>
-                                                    <span class="record-detail-value">{{ $row['age_in_months_label'] }}</span>
+                                                    <span class="record-detail-label">Times given</span>
+                                                    <span class="record-detail-value font-medium text-text-light dark:text-text-dark">{{ number_format($timesGiven) }}</span>
                                                 </div>
-                                                <div class="record-detail-item">
-                                                    <span class="record-detail-label">Notes</span>
-                                                    <span class="record-detail-value text-text-light/70 dark:text-text-dark/70">{{ $row['notes'] ?: '—' }}</span>
+                                                <div class="record-detail-item record-detail-item--full">
+                                                    <span class="record-detail-label">Giving history</span>
+                                                    <div class="record-giving-list">
+                                                        @foreach ($givings as $giving)
+                                                            <div class="record-giving-item">
+                                                                <p class="font-medium text-text-light dark:text-text-dark">{{ $giving['given_on_label'] ?? '—' }}</p>
+                                                                <p class="text-xs text-text-light/70 dark:text-text-dark/70">Age when given: {{ $giving['age_in_months_label'] ?? '—' }}</p>
+                                                                <p class="text-xs text-text-light/70 dark:text-text-dark/70">Dose received: {{ $giving['notes'] ?? '—' }}</p>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -130,12 +148,21 @@
                                             <span class="font-medium">{{ $row['age_label'] }}</span>
                                         </td>
                                         <td class="record-desktop-cell px-4 py-3 text-sm" data-label="Purok">{{ $row['purok'] }}</td>
-                                        <td class="record-desktop-cell px-4 py-3 text-sm whitespace-nowrap" data-label="Date given">
+                                        <td class="record-desktop-cell px-4 py-3 text-sm whitespace-nowrap" data-label="Latest given">
                                             <span class="font-medium">{{ $row['given_on_label'] }}</span>
                                         </td>
-                                        <td class="record-desktop-cell px-4 py-3 text-sm whitespace-nowrap" data-label="Age when given">{{ $row['age_in_months_label'] }}</td>
-                                        <td class="record-desktop-cell px-4 py-3 text-sm text-text-light/70 dark:text-text-dark/70" data-label="Notes">
-                                            <span class="break-words">{{ $row['notes'] }}</span>
+                                        <td class="record-desktop-cell px-4 py-3 text-sm whitespace-nowrap" data-label="Times given">
+                                            <span class="inline-flex items-center rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs font-semibold">{{ number_format($timesGiven) }}</span>
+                                        </td>
+                                        <td class="record-desktop-cell px-4 py-3 text-sm" data-label="Giving history">
+                                            <div class="record-giving-list">
+                                                @foreach ($givings as $giving)
+                                                    <div class="record-giving-item">
+                                                        <p class="font-medium text-text-light dark:text-text-dark">{{ $giving['given_on_label'] ?? '—' }}</p>
+                                                        <p class="text-xs text-text-light/70 dark:text-text-dark/70">Age when given: {{ $giving['age_in_months_label'] ?? '—' }} · Dose received: {{ $giving['notes'] ?? '—' }}</p>
+                                                    </div>
+                                                @endforeach
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
@@ -159,7 +186,7 @@
                     <div class="record-list-footer sm:px-0">
                         <p class="text-xs sm:text-sm text-text-light/70 dark:text-text-dark/70">
                             Showing <span id="statVisible" class="font-semibold text-text-light dark:text-text-dark">{{ number_format($totalRecords) }}</span>
-                            of <span class="font-semibold text-text-light dark:text-text-dark">{{ number_format($totalRecords) }}</span> records
+                            of <span class="font-semibold text-text-light dark:text-text-dark">{{ number_format($totalRecords) }}</span> children
                         </p>
                     </div>
                 </div>
@@ -172,8 +199,9 @@
 
 @include('bns.partials.record-list-scripts', [
     'csvFilename' => 'vitamin-a-distribution-'.now()->format('Y-m-d').'.csv',
-    'csvHeaders' => ['Child Name', 'Current Age', 'Gender', 'Purok', 'Family Number', 'Date Given', 'Age When Given', 'Notes'],
-    'csvKeys' => ['child_name', 'age_label', 'gender', 'purok', 'family_number', 'given_on_label', 'age_in_months_label', 'notes'],
+    'csvTitle' => 'Vitamin A Distribution Records',
+    'csvHeaders' => ['Child Name', 'Sex', 'Age', 'Contact of Parent/Guardian', 'Dose Received', 'Date Received'],
+    'csvKeys' => ['child_name', 'sex', 'age_label', 'contact', 'dose_received', 'given_on_label'],
     'hasDateFilter' => true,
 ])
 </body>

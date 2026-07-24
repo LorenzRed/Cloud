@@ -44,6 +44,15 @@
     .page-content::-webkit-scrollbar-thumb:hover {
         background: #a8a8a8;
     }
+
+    .post-card {
+        min-height: 17.5rem;
+    }
+
+    .post-card-text {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
 </style>
 <script>
     tailwind.config = {
@@ -84,7 +93,7 @@
                 <header class="mb-6 flex flex-wrap items-center justify-between gap-3">
                     <div class="flex flex-col gap-1">
                         <h1 class="text-3xl font-bold">Posts</h1>
-                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Latest announcements from your barangay.</p>
+                        <p class="mt-1 text-sm text-black/70 dark:text-gray-400">Announcements you posted for your assigned purok(s).</p>
                     </div>
                 </header>
 
@@ -113,11 +122,12 @@
                     </div>
                 @endif
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 items-stretch">
                     @forelse ($posts as $post)
                         @php
                             $eventStartTime = null;
                             $eventEndTime = null;
+                            $isExpired = $post->isExpired();
 
                             if ($post->start_time) {
                                 try {
@@ -135,35 +145,43 @@
                                 }
                             }
                         @endphp
-                        <article class="overflow-hidden rounded-xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-                            <div class="p-4 md:p-5 flex flex-col">
-                                <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <article class="post-card h-full overflow-hidden rounded-xl border {{ $isExpired ? 'border-gray-300 dark:border-gray-600 opacity-95' : 'border-[#c5daf5] dark:border-gray-700' }} bg-white dark:bg-gray-800 shadow-sm">
+                            <div class="p-4 md:p-5 flex flex-col h-full min-h-0">
+                                <div class="mb-3 flex flex-wrap items-center justify-between gap-2 shrink-0">
                                     <div class="flex flex-wrap items-center gap-2">
-                                        <span class="inline-flex items-center rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-[#1f7f4e] dark:text-[#8cefb5]">
+                                        <span class="inline-flex items-center rounded-full bg-primary/15 px-2.5 py-1 text-xs font-semibold text-[#4A90E2] dark:text-[#93c5fd]">
                                             Announcement
                                         </span>
-
-                                        @if ($post->disabled_at)
-                                            <span class="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-[#9a5a00] dark:bg-orange-900/30 dark:text-orange-200">
-                                                Disabled from users
+                                        @if ($isExpired)
+                                            <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+                                                Expired
+                                            </span>
+                                        @elseif ($post->disabled_at)
+                                            <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                                                Disabled
                                             </span>
                                         @endif
                                     </div>
 
-                                    <span class="text-xs text-[#4e976b] dark:text-gray-400">
-                                        Remove {{ $post->expiresAt()?->format('M d, Y · h:i A') ?? ($post->event_date?->format('M d, Y') ?? 'TBA') }}
+                                    <span class="text-xs text-black/60 dark:text-gray-400 shrink-0">
+                                        {{ $isExpired ? 'Expired' : 'Expires' }} {{ $post->expiresAt()?->format('M d, Y · h:i A') ?? ($post->event_date?->format('M d, Y') ?? 'TBA') }}
                                     </span>
                                 </div>
-                                <h2 class="text-lg font-bold leading-tight text-[#0e1b13] dark:text-white">{{ $post->title }}</h2>
 
-                                @if ($post->description)
-                                    <p class="mt-2 text-sm text-[#376f50] dark:text-gray-300 line-clamp-3">{{ $post->description }}</p>
-                                @endif
+                                <h2 class="post-card-text text-lg font-bold leading-snug text-[#0e1b13] dark:text-white line-clamp-2 min-h-[2.75rem]">{{ $post->title }}</h2>
 
-                                <div class="mt-4 space-y-1.5 text-sm text-[#376f50] dark:text-gray-300">
+                                <div class="mt-2 flex-1 min-h-[5.25rem]">
+                                    @if ($post->description)
+                                        <p class="post-card-text text-sm text-black dark:text-gray-200 leading-relaxed line-clamp-4">{{ $post->description }}</p>
+                                    @else
+                                        <p class="text-sm text-black/40 dark:text-gray-500 italic">No message</p>
+                                    @endif
+                                </div>
+
+                                <div class="mt-auto pt-4 shrink-0 space-y-1.5 text-sm text-black/80 dark:text-gray-300">
                                     @if ($eventStartTime)
                                         <p class="flex items-center gap-2">
-                                            <span class="material-symbols-outlined text-base">schedule</span>
+                                            <span class="material-symbols-outlined text-base text-[#4A90E2]">schedule</span>
                                             <span>
                                                 {{ $eventStartTime }}
                                                 @if ($eventEndTime)
@@ -172,117 +190,97 @@
                                             </span>
                                         </p>
                                     @endif
-                                    @if ($post->location)
-                                        <p class="flex items-center gap-2">
-                                            <span class="material-symbols-outlined text-base">location_on</span>
-                                            <span>{{ $post->location }}</span>
-                                        </p>
-                                    @endif
 
-                                    <div class="mt-4 flex items-center justify-between">
-                                        <div class="flex items-center gap-2 text-xs text-[#4e976b] dark:text-gray-400">
-                                            <span class="material-symbols-outlined text-sm">edit_calendar</span>
-                                            <span>Posted {{ $post->created_at?->diffForHumans() }}</span>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2 text-xs text-black/60 dark:text-gray-400 min-w-0">
+                                            <span class="material-symbols-outlined text-sm text-[#4A90E2] shrink-0">edit_calendar</span>
+                                            <span class="truncate">Posted {{ $post->created_at?->diffForHumans() }}</span>
                                         </div>
 
-                                        <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-2 shrink-0">
                                             <button
                                                 type="button"
-                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-[#f6f8f7] text-[#1f7f4e] transition-colors hover:bg-[#e8f5ec]"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#c5daf5] bg-[#f4f8fc] text-[#4A90E2] transition-colors hover:bg-[#e8f1fb]"
                                                 data-open-edit-modal="{{ $post->id }}"
                                                 aria-label="Edit announcement"
                                             >
                                                 <span class="material-symbols-outlined text-[18px]">edit</span>
                                             </button>
 
-                                            <form method="POST" action="{{ route('bhw.posts.toggle-disable', $post) }}">
-                                                @csrf
-                                                <button
-                                                    type="submit"
-                                                    class="inline-flex h-8 w-8 items-center justify-center rounded-full border {{ $post->disabled_at ? 'border-[#1f7f4e] text-[#1f7f4e] hover:bg-[#e8f5ec]' : 'border-[#F5A623] text-[#F5A623] hover:bg-orange-50' }} transition-colors"
-                                                    aria-label="{{ $post->disabled_at ? 'Enable announcement' : 'Disable announcement' }}"
-                                                >
-                                                    <span class="material-symbols-outlined text-[18px]">{{ $post->disabled_at ? 'visibility' : 'visibility_off' }}</span>
-                                                </button>
-                                            </form>
-
-                                            <form method="POST" action="{{ route('bhw.posts.destroy', $post) }}" onsubmit="return confirm('Delete this announcement?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button
-                                                    type="submit"
-                                                    class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0021b] text-[#d0021b] transition-colors hover:bg-red-50"
-                                                    aria-label="Delete post"
-                                                >
-                                                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                                                </button>
-                                            </form>
+                                            <button
+                                                type="button"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0021b] text-[#d0021b] transition-colors hover:bg-red-50"
+                                                data-open-delete-modal="{{ $post->id }}"
+                                                data-delete-title="{{ e($post->title) }}"
+                                                aria-label="Delete post"
+                                            >
+                                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div id="editModal-{{ $post->id }}" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 px-3 py-4 sm:px-4 sm:py-6">
-                                <div class="w-[94vw] max-w-[720px] rounded-2xl bg-white dark:bg-gray-800 shadow-2xl overflow-hidden">
-                                    <div class="flex items-center justify-between gap-4 border-b border-[#d0e7d9] dark:border-gray-700 px-4 py-3">
-                                        <div>
-                                            <h3 class="text-lg font-bold text-[#0e1b13] dark:text-white">Edit Announcement</h3>
-                                            <p class="text-sm text-[#4e976b] dark:text-gray-400">Update the announcement details sent to residents.</p>
+                            <div id="editModal-{{ $post->id }}" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4" role="dialog" aria-modal="true" aria-labelledby="editModalTitle-{{ $post->id }}">
+                                <div class="w-full sm:max-w-lg max-h-[90dvh] overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-800 border border-[#c5daf5] dark:border-gray-700 shadow-2xl flex flex-col" data-edit-modal-panel>
+                                    <div class="flex items-start justify-between gap-3 border-b border-[#c5daf5] dark:border-gray-700 px-4 sm:px-5 py-4 shrink-0">
+                                        <div class="min-w-0 pr-2">
+                                            <h3 id="editModalTitle-{{ $post->id }}" class="text-lg font-bold text-[#0e1b13] dark:text-white">Edit Announcement</h3>
+                                            <p class="mt-0.5 text-sm text-black/70 dark:text-gray-400">Update details sent to residents.</p>
                                         </div>
-                                        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#d0e7d9] text-[#4e976b] transition-colors hover:bg-[#f6f8f7]" data-close-edit-modal="{{ $post->id }}" aria-label="Close edit modal">
+                                        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#c5daf5] dark:border-gray-700 text-black/70 hover:bg-[#f4f8fc] dark:hover:bg-gray-700 shrink-0" data-close-edit-modal="{{ $post->id }}" aria-label="Close edit modal">
                                             <span class="material-symbols-outlined text-[20px]">close</span>
                                         </button>
                                     </div>
 
-                                    <form method="POST" action="{{ route('bhw.posts.update', $post) }}" class="space-y-3 p-3 sm:p-4">
+                                    <form method="POST" action="{{ route('bhw.posts.update', $post) }}" class="flex flex-col min-h-0 flex-1">
                                         @csrf
                                         @method('PUT')
-                                        <div>
-                                            <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Title</label>
-                                            <input type="text" name="title" value="{{ old('title', $post->title) }}" required class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
-                                        </div>
-                                        <div>
-                                            <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">What to announce</label>
-                                            <textarea name="description" rows="4" class="w-full rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 py-2 text-sm">{{ old('description', $post->description) }}</textarea>
-                                        </div>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                        <div class="overflow-y-auto px-4 sm:px-5 py-4 space-y-3 flex-1" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));">
                                             <div>
-                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Remove on date</label>
-                                                <input type="date" name="event_date" value="{{ old('event_date', optional($post->event_date)->format('Y-m-d')) }}" required class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
+                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Title</label>
+                                                <input type="text" name="title" value="{{ old('title', $post->title) }}" required class="w-full h-11 rounded-xl bg-[#f4f8fc] dark:bg-gray-900 border border-[#c5daf5] dark:border-gray-700 px-3 text-sm">
                                             </div>
                                             <div>
-                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Remove at time</label>
-                                                @php
-                                                    $editEndTime = old('end_time');
-                                                    if ($editEndTime === null && $post->end_time) {
-                                                        try {
-                                                            $editEndTime = \Illuminate\Support\Carbon::createFromFormat('H:i:s', $post->end_time)->format('H:i');
-                                                        } catch (\Throwable $e) {
-                                                            $editEndTime = \Illuminate\Support\Carbon::parse($post->end_time)->format('H:i');
+                                                <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">What to announce</label>
+                                                <textarea name="description" rows="5" class="w-full rounded-xl bg-[#f4f8fc] dark:bg-gray-900 border border-[#c5daf5] dark:border-gray-700 px-3 py-2.5 text-sm resize-y">{{ old('description', $post->description) }}</textarea>
+                                            </div>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <div>
+                                                    <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Expire on date</label>
+                                                    <input type="date" name="event_date" value="{{ old('event_date', optional($post->event_date)->format('Y-m-d')) }}" required class="w-full h-11 rounded-xl bg-[#f4f8fc] dark:bg-gray-900 border border-[#c5daf5] dark:border-gray-700 px-3 text-sm">
+                                                </div>
+                                                <div>
+                                                    <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Expire at time</label>
+                                                    @php
+                                                        $editEndTime = old('end_time');
+                                                        if ($editEndTime === null && $post->end_time) {
+                                                            try {
+                                                                $editEndTime = \Illuminate\Support\Carbon::createFromFormat('H:i:s', $post->end_time)->format('H:i');
+                                                            } catch (\Throwable $e) {
+                                                                $editEndTime = \Illuminate\Support\Carbon::parse($post->end_time)->format('H:i');
+                                                            }
                                                         }
-                                                    }
-                                                @endphp
-                                                <input type="time" name="end_time" value="{{ $editEndTime }}" required class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
+                                                    @endphp
+                                                    <input type="time" name="end_time" value="{{ $editEndTime }}" required class="w-full h-11 rounded-xl bg-[#f4f8fc] dark:bg-gray-900 border border-[#c5daf5] dark:border-gray-700 px-3 text-sm">
+                                                </div>
                                             </div>
+                                            <input type="hidden" name="start_time" value="">
+                                            <input type="hidden" name="location" value="">
                                         </div>
-                                        <div>
-                                            <label class="mb-1 block text-sm font-medium text-[#0e1b13] dark:text-gray-200">Venue / Location <span class="font-normal text-[#4e976b]">(optional)</span></label>
-                                            <input type="text" name="location" value="{{ old('location', $post->location) }}" placeholder="Venue / location" class="w-full h-10 rounded-lg bg-[#f6f8f7] dark:bg-gray-900 border border-[#d0e7d9] dark:border-gray-700 px-3 text-sm">
-                                        </div>
-                                        <input type="hidden" name="start_time" value="">
-                                        <div class="flex flex-wrap gap-2 pt-1">
-                                            <button type="submit" class="h-10 px-4 rounded-lg bg-primary text-[#0e1b13] text-sm font-semibold">Save changes</button>
-                                            <button type="button" class="h-10 px-4 rounded-lg border border-[#d0e7d9] text-[#4e976b] text-sm font-semibold" data-close-edit-modal="{{ $post->id }}">Cancel</button>
+                                        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-[#c5daf5] dark:border-gray-700 px-4 sm:px-5 py-3 shrink-0" style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));">
+                                            <button type="button" class="h-11 w-full sm:w-auto px-4 rounded-xl border border-[#c5daf5] dark:border-gray-700 text-sm font-semibold text-black/70 dark:text-gray-300" data-close-edit-modal="{{ $post->id }}">Cancel</button>
+                                            <button type="submit" class="h-11 w-full sm:w-auto px-4 rounded-xl bg-[#4A90E2] text-white text-sm font-semibold hover:bg-[#3a7bc8]">Save changes</button>
                                         </div>
                                     </form>
                                 </div>
                             </div>
                         </article>
                     @empty
-                        <div class="md:col-span-2 rounded-xl border border-dashed border-[#d0e7d9] dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 p-10 text-center">
-                            <span class="material-symbols-outlined text-5xl text-[#4e976b] dark:text-gray-400">campaign</span>
+                        <div class="md:col-span-2 rounded-xl border border-dashed border-[#c5daf5] dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 p-10 text-center">
+                            <span class="material-symbols-outlined text-5xl text-[#4A90E2] dark:text-gray-400">campaign</span>
                             <p class="mt-3 text-base font-semibold">No announcements posted yet.</p>
-                            <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Use the Announcements page to post a new announcement.</p>
+                            <p class="mt-1 text-sm text-black/70 dark:text-gray-400">Use the Announcements page to post a new announcement.</p>
                         </div>
                     @endforelse
                 </div>
@@ -293,32 +291,125 @@
     @include('partials.bhw-mobile-nav')
 </div>
 
+<div id="deletePostModal" class="fixed inset-0 z-[60] hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4" role="dialog" aria-modal="true" aria-labelledby="deletePostModalTitle">
+    <div class="w-full sm:max-w-md overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white dark:bg-gray-800 border border-[#c5daf5] dark:border-gray-700 shadow-2xl">
+        <div class="flex items-start justify-between gap-3 border-b border-[#c5daf5] dark:border-gray-700 px-4 sm:px-5 py-4">
+            <div class="min-w-0 pr-2">
+                <h3 id="deletePostModalTitle" class="text-lg font-bold text-red-600 dark:text-red-300">
+                    <span class="material-symbols-outlined align-text-bottom mr-1">delete</span>
+                    Delete Announcement
+                </h3>
+                <p class="mt-0.5 text-sm text-black/70 dark:text-gray-400">This action cannot be undone.</p>
+            </div>
+            <button type="button" id="closeDeletePostModalBtn" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#c5daf5] dark:border-gray-700 text-black/70 hover:bg-[#f4f8fc] dark:hover:bg-gray-700 shrink-0" aria-label="Close">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+        <form id="deletePostForm" method="POST" action="" class="px-4 sm:px-5 py-4 space-y-4" style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));">
+            @csrf
+            @method('DELETE')
+            <p class="text-sm leading-6 text-black/80 dark:text-gray-300">
+                Are you sure you want to delete
+                <span id="deletePostTitle" class="font-semibold text-[#0e1b13] dark:text-white"></span>?
+            </p>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
+                <button type="button" id="cancelDeletePostModalBtn" class="h-11 w-full sm:w-auto px-4 rounded-xl border border-[#c5daf5] dark:border-gray-700 text-sm font-semibold text-black/70 dark:text-gray-300">Cancel</button>
+                <button type="submit" class="h-11 w-full sm:w-auto px-4 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     const editModalTriggers = document.querySelectorAll('[data-open-edit-modal]');
     const editModalClosers = document.querySelectorAll('[data-close-edit-modal]');
+    const deletePostModal = document.getElementById('deletePostModal');
+    const deletePostForm = document.getElementById('deletePostForm');
+    const deletePostTitle = document.getElementById('deletePostTitle');
+    const closeDeletePostModalBtn = document.getElementById('closeDeletePostModalBtn');
+    const cancelDeletePostModalBtn = document.getElementById('cancelDeletePostModalBtn');
+    const deleteDestroyBase = @json(url('/bhw/posts'));
+
+    function anyModalOpen() {
+        return Boolean(
+            document.querySelector('[id^="editModal-"]:not(.hidden)') ||
+            (deletePostModal && ! deletePostModal.classList.contains('hidden'))
+        );
+    }
+
+    function syncBodyScroll() {
+        document.body.classList.toggle('overflow-hidden', anyModalOpen());
+    }
+
+    function openEditModal(postId) {
+        const modal = document.getElementById(`editModal-${postId}`);
+        if (! modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        syncBodyScroll();
+    }
+
+    function closeEditModal(postId) {
+        const modal = document.getElementById(`editModal-${postId}`);
+        if (! modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        syncBodyScroll();
+    }
+
+    function openDeleteModal(postId, title) {
+        if (! deletePostModal || ! deletePostForm) return;
+        deletePostForm.action = `${deleteDestroyBase}/${postId}`;
+        if (deletePostTitle) {
+            deletePostTitle.textContent = title || 'this announcement';
+        }
+        deletePostModal.classList.remove('hidden');
+        deletePostModal.classList.add('flex');
+        syncBodyScroll();
+    }
+
+    function closeDeleteModal() {
+        if (! deletePostModal) return;
+        deletePostModal.classList.add('hidden');
+        deletePostModal.classList.remove('flex');
+        syncBodyScroll();
+    }
 
     editModalTriggers.forEach((trigger) => {
         trigger.addEventListener('click', () => {
-            const modalId = `editModal-${trigger.getAttribute('data-open-edit-modal')}`;
-            const modal = document.getElementById(modalId);
-
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
+            openEditModal(trigger.getAttribute('data-open-edit-modal'));
         });
     });
 
     editModalClosers.forEach((trigger) => {
         trigger.addEventListener('click', () => {
-            const modalId = `editModal-${trigger.getAttribute('data-close-edit-modal')}`;
-            const modal = document.getElementById(modalId);
+            closeEditModal(trigger.getAttribute('data-close-edit-modal'));
+        });
+    });
 
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
+    document.querySelectorAll('[id^="editModal-"]').forEach((modal) => {
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeEditModal(modal.id.replace('editModal-', ''));
             }
         });
+    });
+
+    document.querySelectorAll('[data-open-delete-modal]').forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+            openDeleteModal(
+                trigger.getAttribute('data-open-delete-modal'),
+                trigger.getAttribute('data-delete-title')
+            );
+        });
+    });
+
+    closeDeletePostModalBtn?.addEventListener('click', closeDeleteModal);
+    cancelDeletePostModalBtn?.addEventListener('click', closeDeleteModal);
+    deletePostModal?.addEventListener('click', (event) => {
+        if (event.target === deletePostModal) {
+            closeDeleteModal();
+        }
     });
 
     document.querySelectorAll('[data-auto-dismiss]').forEach((toast) => {

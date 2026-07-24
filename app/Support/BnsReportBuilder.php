@@ -6,6 +6,7 @@ use App\Models\BnsChildDewormingLog;
 use App\Models\BnsChildImmunization;
 use App\Models\BnsChildVitaminALog;
 use App\Models\BnsChildWeightLog;
+use App\Models\Barangay;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -60,6 +61,50 @@ class BnsReportBuilder
     {
         $barangayName = BnsChildMonitoring::barangayNameFor($bns) ?? 'Unassigned';
         $children = BnsChildMonitoring::childrenUnderFiveFor($bns);
+
+        return self::buildFromChildren($children, $barangayName, $fromDate, $toDate, $periodKey);
+    }
+
+    /**
+     * Barangay-wide child monitoring report for Barangay Captain.
+     *
+     * @return array<string, mixed>
+     */
+    public static function buildForCaptain(?Barangay $barangay, ?string $fromDate = null, ?string $toDate = null, string $periodKey = 'this_month'): array
+    {
+        if (! $barangay) {
+            $report = self::buildFromChildren(collect(), 'No barangay assigned yet', $fromDate, $toDate, $periodKey);
+            $report['barangay_name'] = '';
+            $report['managed_bns_count'] = 0;
+
+            return $report;
+        }
+
+        $barangayName = trim((string) $barangay->name);
+        $children = $barangayName !== ''
+            ? BnsChildMonitoring::childrenUnderFiveForBarangay($barangayName)
+            : collect();
+
+        $report = self::buildFromChildren($children, $barangayName !== '' ? $barangayName : 'Unassigned', $fromDate, $toDate, $periodKey);
+        $report['managed_bns_count'] = User::query()
+            ->where('role', User::ROLE_BNS)
+            ->where('barangay', $barangayName)
+            ->count();
+
+        return $report;
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $children
+     * @return array<string, mixed>
+     */
+    public static function buildFromChildren(
+        Collection $children,
+        string $barangayName,
+        ?string $fromDate = null,
+        ?string $toDate = null,
+        string $periodKey = 'this_month'
+    ): array {
         $childKeys = $children->pluck('id')->map(fn ($id) => (string) $id)->all();
 
         $from = filled($fromDate) ? Carbon::parse($fromDate)->startOfDay() : null;
@@ -71,40 +116,50 @@ class BnsReportBuilder
 
         $fullyImmunized = collect($healthSummaries)->filter(fn ($s) => $s['fully_immunized'] ?? false)->count();
         $withMissedDoses = collect($healthSummaries)->filter(fn ($s) => ($s['immunization_missed'] ?? 0) > 0)->count();
-        $withWeight = BnsChildWeightLog::query()
-            ->whereIn('child_key', $childKeys)
-            ->distinct('child_key')
-            ->count('child_key');
+        $withWeight = $childKeys === []
+            ? 0
+            : BnsChildWeightLog::query()
+                ->whereIn('child_key', $childKeys)
+                ->distinct('child_key')
+                ->count('child_key');
 
-        $immunizationQuery = BnsChildImmunization::query()->whereIn('child_key', $childKeys);
         $immunizationStats = [
-            'given' => (clone $immunizationQuery)->where('status', BnsChildImmunization::STATUS_GIVEN)->count(),
-            'missed' => (clone $immunizationQuery)->where('status', BnsChildImmunization::STATUS_MISSED)->count(),
-            'pending' => (clone $immunizationQuery)->where('status', BnsChildImmunization::STATUS_PENDING)->count(),
+            'given' => 0,
+            'missed' => 0,
+            'pending' => 0,
         ];
 
-        $weightInPeriod = self::countInPeriod(
+        if ($childKeys !== []) {
+            $immunizationQuery = BnsChildImmunization::query()->whereIn('child_key', $childKeys);
+            $immunizationStats = [
+                'given' => (clone $immunizationQuery)->where('status', BnsChildImmunization::STATUS_GIVEN)->count(),
+                'missed' => (clone $immunizationQuery)->where('status', BnsChildImmunization::STATUS_MISSED)->count(),
+                'pending' => (clone $immunizationQuery)->where('status', BnsChildImmunization::STATUS_PENDING)->count(),
+            ];
+        }
+
+        $weightInPeriod = $childKeys === [] ? 0 : self::countInPeriod(
             BnsChildWeightLog::query()->whereIn('child_key', $childKeys),
             'recorded_on',
             $from,
             $to
         );
 
-        $dewormingInPeriod = self::countInPeriod(
+        $dewormingInPeriod = $childKeys === [] ? 0 : self::countInPeriod(
             BnsChildDewormingLog::query()->whereIn('child_key', $childKeys),
             'given_on',
             $from,
             $to
         );
 
-        $vitaminAInPeriod = self::countInPeriod(
+        $vitaminAInPeriod = $childKeys === [] ? 0 : self::countInPeriod(
             BnsChildVitaminALog::query()->whereIn('child_key', $childKeys),
             'given_on',
             $from,
             $to
         );
 
-        $immunizationGivenInPeriod = self::countInPeriod(
+        $immunizationGivenInPeriod = $childKeys === [] ? 0 : self::countInPeriod(
             BnsChildImmunization::query()
                 ->whereIn('child_key', $childKeys)
                 ->where('status', BnsChildImmunization::STATUS_GIVEN),
@@ -113,18 +168,20 @@ class BnsReportBuilder
             $to
         );
 
-        $childrenWeighedInPeriod = self::distinctChildCountInPeriod(
+        $childrenWeighedInPeriod = $childKeys === [] ? 0 : self::distinctChildCountInPeriod(
             BnsChildWeightLog::query()->whereIn('child_key', $childKeys),
             'recorded_on',
             $from,
             $to
         );
 
-        $avgWeight = BnsChildWeightLog::query()
-            ->whereIn('child_key', $childKeys)
-            ->when($from, fn ($q) => $q->whereDate('recorded_on', '>=', $from))
-            ->when($to, fn ($q) => $q->whereDate('recorded_on', '<=', $to))
-            ->avg('weight_kg');
+        $avgWeight = $childKeys === []
+            ? null
+            : BnsChildWeightLog::query()
+                ->whereIn('child_key', $childKeys)
+                ->when($from, fn ($q) => $q->whereDate('recorded_on', '>=', $from))
+                ->when($to, fn ($q) => $q->whereDate('recorded_on', '<=', $to))
+                ->avg('weight_kg');
 
         $childrenByPurok = $children
             ->groupBy('purok')
@@ -142,13 +199,15 @@ class BnsReportBuilder
             $chartRangeStart = $chartRangeEnd->copy()->subMonths(5)->startOfMonth();
         }
 
-        $activityChart = match (true) {
-            in_array($periodKey, ['this_week', 'last_week'], true) && $from && $to
-                => self::dailyActivitySeries($childKeys, $from, $to),
-            in_array($periodKey, ['this_month', 'last_month'], true) && $from && $to
-                => self::weeklyActivitySeries($childKeys, $from, $to),
-            default => self::monthlyActivitySeries($childKeys, $chartRangeStart, $chartRangeEnd),
-        };
+        $activityChart = $childKeys === []
+            ? ['labels' => [], 'weight' => [], 'deworming' => [], 'vitaminA' => [], 'immunization' => []]
+            : match (true) {
+                in_array($periodKey, ['this_week', 'last_week'], true) && $from && $to
+                    => self::dailyActivitySeries($childKeys, $from, $to),
+                in_array($periodKey, ['this_month', 'last_month'], true) && $from && $to
+                    => self::weeklyActivitySeries($childKeys, $from, $to),
+                default => self::monthlyActivitySeries($childKeys, $chartRangeStart, $chartRangeEnd),
+            };
 
         $chartGranularity = match (true) {
             in_array($periodKey, ['this_week', 'last_week'], true) => 'daily',
@@ -156,7 +215,9 @@ class BnsReportBuilder
             default => 'monthly',
         };
 
-        $recentActivities = self::recentActivities($childKeys, $children, $from, $to);
+        $recentActivities = $childKeys === []
+            ? []
+            : self::recentActivities($childKeys, $children, $from, $to);
 
         return [
             'barangay_name' => $barangayName,

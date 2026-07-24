@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\InboxMessage;
 use App\Models\ResidentRequest;
 use App\Support\BhwResidentScope;
 use App\Support\ResidentBhwChat;
@@ -31,8 +32,7 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer(['sidebars.bhw', 'partials.bhw-mobile-nav'], function ($view) {
             $pendingRequestCount = 0;
-            $requestMessageUnreadCount = 0;
-            $residentMessageUnreadCount = 0;
+            $profileUnreadChatTotal = 0;
             $user = Auth::user();
 
             if ($user && $user->role === 'BHW') {
@@ -40,19 +40,19 @@ class AppServiceProvider extends ServiceProvider
                     ResidentRequest::query()->where('status', 'pending'),
                     $user
                 )->count();
-                $requestMessageUnreadCount = ResidentBhwChat::unreadCountForBhwByRequestStatus($user, 'pending');
-                $residentMessageUnreadCount = ResidentBhwChat::unreadCountForBhwByRequestStatus($user, 'accepted');
+                // Bottom/sidebar Profile badge = number of residents with unread (chats), not message total.
+                $profileUnreadChatTotal = ResidentBhwChat::unreadInboxForBhw($user)->count();
             }
 
             $view->with([
                 'pendingRequestCount' => $pendingRequestCount,
-                'requestMessageUnreadCount' => $requestMessageUnreadCount,
-                'residentMessageUnreadCount' => $residentMessageUnreadCount,
+                'profileUnreadChatTotal' => $profileUnreadChatTotal,
             ]);
         });
 
         View::composer(['sidebars.users', 'partials.users-mobile-nav'], function ($view) {
             $unreadBhwChatCount = 0;
+            $unreadAnnouncementCount = 0;
             $user = Auth::user();
 
             if ($user && $user->role === 'users') {
@@ -62,9 +62,22 @@ class AppServiceProvider extends ServiceProvider
                 if ($bhw) {
                     $unreadBhwChatCount = ResidentBhwChat::unreadCountForResident($user, $bhw);
                 }
+
+                $unreadAnnouncementCount = InboxMessage::query()
+                    ->where('user_id', $user->id)
+                    ->whereNull('read_at')
+                    ->where(function ($query) {
+                        $query
+                            ->where('title', 'Announcement')
+                            ->orWhere('title', 'like', '%Announcement%');
+                    })
+                    ->count();
             }
 
-            $view->with('unreadBhwChatCount', $unreadBhwChatCount);
+            $view->with([
+                'unreadBhwChatCount' => $unreadBhwChatCount,
+                'unreadAnnouncementCount' => $unreadAnnouncementCount,
+            ]);
         });
     }
 }

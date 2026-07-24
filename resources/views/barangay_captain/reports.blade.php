@@ -68,6 +68,8 @@
             <div class="w-full max-w-7xl mx-auto" id="reportRoot">
                 @php
                     $report = $report ?? [];
+                    $bnsReport = $bnsReport ?? [];
+                    $reportTab = ($reportTab ?? 'bhw') === 'bns' ? 'bns' : 'bhw';
                     $overview = $report['overview'] ?? [];
                     $periodActivity = $report['period_activity'] ?? [];
                     $healthConcerns = $report['health_concerns'] ?? [];
@@ -92,24 +94,48 @@
                     <div class="min-w-0">
                         <h1 class="text-2xl sm:text-3xl font-bold">Barangay Health Reports</h1>
                         <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">
-                            Whole-barangay health summary · Generated {{ $report['generated_at'] ?? now()->format('M d, Y') }}
+                            Whole-barangay health summary · Generated {{ $reportTab === 'bns' ? ($bnsReport['generated_at'] ?? now()->format('M d, Y')) : ($report['generated_at'] ?? now()->format('M d, Y')) }}
                             · <span class="font-semibold">{{ ucfirst(str_replace('_', ' ', $activePeriod)) }}</span>
-                            · {{ $report['period']['from_label'] ?? 'All time' }} – {{ $report['period']['to_label'] ?? 'Present' }}
+                            · {{ ($reportTab === 'bns' ? ($bnsReport['period']['from_label'] ?? null) : ($report['period']['from_label'] ?? null)) ?? 'All time' }}
+                            – {{ ($reportTab === 'bns' ? ($bnsReport['period']['to_label'] ?? null) : ($report['period']['to_label'] ?? null)) ?? 'Present' }}
                         </p>
-                        @if (($report['managed_bhw_count'] ?? null) !== null)
+                        @if ($reportTab === 'bhw' && ($report['managed_bhw_count'] ?? null) !== null)
                             <p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
                                 {{ number_format((int) $report['managed_bhw_count']) }} health worker(s)
+                            </p>
+                        @elseif ($reportTab === 'bns' && ($bnsReport['managed_bns_count'] ?? null) !== null)
+                            <p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-1">
+                                {{ number_format((int) $bnsReport['managed_bns_count']) }} BNS worker(s)
                             </p>
                         @endif
                     </div>
                 </header>
+
+                <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-2 mb-4 w-full">
+                    <div class="grid grid-cols-2 gap-2">
+                        <a
+                            href="{{ route('barangay-captain.reports', ['period' => $activePeriod, 'tab' => 'bhw']) }}"
+                            class="h-11 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors {{ $reportTab === 'bhw' ? 'bg-primary text-white shadow-sm' : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 hover:text-primary' }}"
+                        >
+                            <span class="material-symbols-outlined text-base">monitor_heart</span>
+                            Community health
+                        </a>
+                        <a
+                            href="{{ route('barangay-captain.reports', ['period' => $activePeriod, 'tab' => 'bns']) }}"
+                            class="h-11 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors {{ $reportTab === 'bns' ? 'bg-primary text-white shadow-sm' : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 hover:text-primary' }}"
+                        >
+                            <span class="material-symbols-outlined text-base">child_care</span>
+                            Child monitoring
+                        </a>
+                    </div>
+                </div>
 
                 <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 mb-6 w-full">
                     <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 mb-3">Quick inspect</p>
                     <div class="report-period-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full">
                         @foreach ($periodPresets as $preset)
                             <a
-                                href="{{ route('barangay-captain.reports', ['period' => $preset['key']]) }}"
+                                href="{{ route('barangay-captain.reports', ['period' => $preset['key'], 'tab' => $reportTab]) }}"
                                 class="h-10 w-full px-3 sm:px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors {{ $activePeriod === $preset['key'] ? 'bg-primary text-white shadow-sm' : 'bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark hover:bg-primary/10 hover:text-primary' }}"
                             >
                                 <span class="material-symbols-outlined text-base shrink-0">{{ $preset['icon'] }}</span>
@@ -119,6 +145,9 @@
                     </div>
                 </div>
 
+                @if ($reportTab === 'bns')
+                    @include('barangay_captain.partials.bns-report-content')
+                @else
                 <div id="reportContent" class="space-y-6">
                     <section>
                         <h2 class="text-lg font-bold mb-3 flex items-center gap-2">
@@ -246,7 +275,7 @@
                             <div class="grid grid-cols-3 gap-2 mt-4 text-center text-sm">
                                 <div><span class="block font-bold text-pink-500">{{ number_format((int) ($monitoring['pregnant'] ?? 0)) }}</span>Pregnant</div>
                                 <div><span class="block font-bold text-violet-500">{{ number_format((int) ($monitoring['senior'] ?? 0)) }}</span>Senior</div>
-                                <div><span class="block font-bold text-primary">{{ number_format((int) ($monitoring['general'] ?? 0)) }}</span>General</div>
+                                <div><span class="block font-bold text-primary">{{ number_format((int) ($monitoring['need_maintenance'] ?? 0)) }}</span>Need maintenance</div>
                             </div>
                         </section>
                     </div>
@@ -273,6 +302,7 @@
                                             <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Type</th>
                                             <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Name</th>
                                             <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Detail</th>
+                                            <th class="px-2 py-2 text-left text-xs font-semibold uppercase text-text-light/60">Purok</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -282,10 +312,11 @@
                                                 <td class="px-2 py-2 text-sm">{{ $activity['type'] }}</td>
                                                 <td class="px-2 py-2 text-sm font-medium">{{ $activity['name'] }}</td>
                                                 <td class="px-2 py-2 text-sm text-text-light/70">{{ $activity['detail'] }}</td>
+                                                <td class="px-2 py-2 text-sm text-text-light/70">{{ $activity['purok'] ?? '—' }}</td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="4" class="px-2 py-6 text-sm text-center text-text-light/60">No activities recorded for this period yet.</td>
+                                                <td colspan="5" class="px-2 py-6 text-sm text-center text-text-light/60">No activities recorded for this period yet.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -294,6 +325,7 @@
                         </section>
                     </div>
                 </div>
+                @endif
             </div>
         </div>
     </main>
@@ -303,8 +335,10 @@
 
 <script>
     const reportPayload = @json($report);
+    const bnsReportPayload = @json($bnsReport);
+    const reportTab = @json($reportTab);
 
-    function initCharts() {
+    function initBhwCharts() {
         if (typeof Chart === 'undefined') return;
 
         const activity = reportPayload.activity_chart || {};
@@ -410,7 +444,79 @@
         }
     }
 
-    initCharts();
+    function initBnsCharts() {
+        if (typeof Chart === 'undefined') return;
+
+        const monthly = bnsReportPayload.activity_chart || {};
+        const activityCanvas = document.getElementById('bnsActivityChart');
+        if (activityCanvas) {
+            new Chart(activityCanvas, {
+                type: 'bar',
+                data: {
+                    labels: monthly.labels || [],
+                    datasets: [
+                        { label: 'Weight', data: monthly.weight || [], backgroundColor: '#4A90E2' },
+                        { label: 'Deworming', data: monthly.deworming || [], backgroundColor: '#50E3C2' },
+                        { label: 'Vitamin A', data: monthly.vitaminA || [], backgroundColor: '#F5A623' },
+                        { label: 'Immunization', data: monthly.immunization || [], backgroundColor: '#7B68EE' },
+                    ],
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: false }, y: { beginAtZero: true, ticks: { precision: 0 } } } },
+            });
+        }
+
+        const imm = bnsReportPayload.immunization || {};
+        const immCanvas = document.getElementById('bnsImmunizationChart');
+        if (immCanvas) {
+            new Chart(immCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Given', 'Missed', 'Pending'],
+                    datasets: [{
+                        data: [imm.given || 0, imm.missed || 0, imm.pending || 0],
+                        backgroundColor: ['#50E3C2', '#D0021B', '#F5A623'],
+                    }],
+                },
+                options: { responsive: true, maintainAspectRatio: false },
+            });
+        }
+
+        const nutrition = bnsReportPayload.nutrition || {};
+        const nutritionChart = nutrition.chart || {};
+        const nutritionCanvas = document.getElementById('bnsNutritionChart');
+        if (nutritionCanvas) {
+            new Chart(nutritionCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: nutritionChart.labels || [],
+                    datasets: [{
+                        data: nutritionChart.values || [],
+                        backgroundColor: ['#D0021B', '#F5A623', '#50E3C2', '#FF8C42', '#9CA3AF'],
+                    }],
+                },
+                options: { responsive: true, maintainAspectRatio: false },
+            });
+        }
+
+        const purokData = bnsReportPayload.children_by_purok || [];
+        const purokCanvas = document.getElementById('bnsPurokChart');
+        if (purokCanvas && purokData.length) {
+            new Chart(purokCanvas, {
+                type: 'bar',
+                data: {
+                    labels: purokData.map((row) => row.purok),
+                    datasets: [{ label: 'Children', data: purokData.map((row) => row.count), backgroundColor: '#4A90E2' }],
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } },
+            });
+        }
+    }
+
+    if (reportTab === 'bns') {
+        initBnsCharts();
+    } else {
+        initBhwCharts();
+    }
 </script>
 </body>
 </html>

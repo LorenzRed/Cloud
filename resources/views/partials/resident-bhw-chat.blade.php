@@ -31,12 +31,13 @@
 <style>
     .rbhw-chat-scroll { scrollbar-width: thin; overflow-x: hidden; }
     .rbhw-chat-message-row { overflow: visible; }
-    .rbhw-message-lane { width: 100%; overflow: visible; }
+    .rbhw-message-lane { width: 100%; max-width: 100%; min-width: 0; overflow: visible; }
     .rbhw-message-bubble-wrap {
         position: relative;
         display: inline-block;
         width: fit-content;
         max-width: 100%;
+        min-width: 0;
         vertical-align: bottom;
         -webkit-touch-callout: none;
         user-select: none;
@@ -45,6 +46,25 @@
         display: inline-block;
         width: fit-content;
         max-width: 100%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        white-space: pre-wrap;
+    }
+    .rbhw-message-bubble-wrap .rbhw-chat-text {
+        margin: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        white-space: pre-wrap;
+    }
+    /* Composer: soft-wrap long lines so height grows instead of horizontal scroll */
+    #{{ $chatInputId }},
+    .rbhw-composer-input {
+        white-space: pre-wrap !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        overflow-x: hidden;
     }
     .rbhw-message-bubble-wrap .rbhw-chat-image-btn,
     .rbhw-message-bubble-wrap .rbhw-reaction-pill { user-select: none; }
@@ -492,7 +512,7 @@
         <button type="button" id="{{ $chatFormId }}GalleryBtn" class="rbhw-media-btn inline-flex h-12 w-12 items-center justify-center rounded-2xl border {{ $isUsersTheme ? 'border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-900/60 hover:border-primary hover:text-[#1f7f4e]' : 'border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark hover:border-primary hover:text-primary' }} shrink-0 transition" aria-label="Choose from gallery">
             <span class="material-symbols-outlined">photo_library</span>
         </button>
-        <textarea id="{{ $chatInputId }}" rows="1" maxlength="500" class="flex-1 min-h-[48px] max-h-32 rounded-2xl border {{ $isUsersTheme ? 'border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-900/60 focus:border-primary focus:ring-2 focus:ring-primary/30' : 'border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary/30 focus:border-primary' }} px-4 py-3 text-sm resize-none" placeholder="{{ $composerPlaceholder ?? 'Write a message...' }}"></textarea>
+        <textarea id="{{ $chatInputId }}" rows="1" maxlength="500" wrap="soft" class="rbhw-composer-input flex-1 min-h-[48px] max-h-32 rounded-2xl border {{ $isUsersTheme ? 'border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-900/60 focus:border-primary focus:ring-2 focus:ring-primary/30' : 'border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark focus:ring-2 focus:ring-primary/30 focus:border-primary' }} px-4 py-3 text-sm resize-none" placeholder="{{ $composerPlaceholder ?? 'Write a message...' }}"></textarea>
         <button type="submit" id="{{ $chatSendBtnId }}" class="inline-flex h-12 w-12 items-center justify-center rounded-2xl {{ $isUsersTheme ? 'bg-primary text-[#0e1b13] hover:opacity-90' : 'bg-primary text-white hover:opacity-90 shadow-md shadow-primary/25' }} disabled:opacity-50 shrink-0 transition">
             <span class="material-symbols-outlined">send</span>
         </button>
@@ -801,7 +821,7 @@
             }
             return escapeHtml(part.value);
         }).join('');
-        return `<p class="whitespace-pre-wrap break-words">${html}</p>`;
+        return `<p class="rbhw-chat-text whitespace-pre-wrap break-words">${html}</p>`;
     }
 
     function bubbleClassForEntry(baseClass, entry, outgoing) {
@@ -1014,10 +1034,85 @@
         }
     }
 
+    function getComposerMinHeight(el) {
+        if (!el) return 36;
+        const minHeight = parseFloat(window.getComputedStyle(el).minHeight);
+        return Number.isFinite(minHeight) && minHeight > 0 ? minHeight : 36;
+    }
+
     function autoResizeTextarea(el, maxHeight = 128) {
         if (!el) return;
+        const minHeight = getComposerMinHeight(el);
+        el.style.removeProperty('height');
         el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, maxHeight) + 'px';
+        const next = Math.min(Math.max(el.scrollHeight, minHeight), maxHeight);
+        el.style.setProperty('height', `${next}px`, 'important');
+        el.style.overflowY = next >= maxHeight ? 'auto' : 'hidden';
+    }
+
+    function resetComposerHeight() {
+        if (!chatInput) return;
+        const minHeight = getComposerMinHeight(chatInput);
+        chatInput.style.setProperty('height', `${minHeight}px`, 'important');
+        chatInput.style.overflowY = 'hidden';
+        chatInput.scrollTop = 0;
+    }
+
+    /**
+     * Keyboard closed: one-line composer, scrolled so the last draft line shows (222).
+     */
+    function collapseComposerPreview() {
+        if (!chatInput) return;
+        const minHeight = getComposerMinHeight(chatInput);
+        chatInput.style.setProperty('height', `${minHeight}px`, 'important');
+        // Must allow scroll so the last line can sit in the one-line window.
+        chatInput.style.overflowY = 'auto';
+        chatInput.scrollTop = chatInput.scrollHeight;
+        // Re-apply after layout — mobile browsers often reset scrollTop on resize.
+        window.requestAnimationFrame(() => {
+            chatInput.scrollTop = chatInput.scrollHeight;
+        });
+    }
+
+    /**
+     * Keyboard open: expand to full draft and show from the start (111).
+     */
+    function expandComposerEditing() {
+        if (!chatInput) return;
+        if (!(chatInput.value || '').trim()) {
+            resetComposerHeight();
+            return;
+        }
+        chatInput.style.removeProperty('height');
+        autoResizeTextarea(chatInput, 128);
+        chatInput.scrollTop = 0;
+    }
+
+    function clearComposerInput({ keepFocus = false } = {}) {
+        if (!chatInput) return;
+        chatInput.value = '';
+        resetComposerHeight();
+        if (keepFocus) {
+            chatInput.focus({ preventScroll: true });
+        }
+    }
+
+    function keepLatestMessageVisible() {
+        window.requestAnimationFrame(() => {
+            if (window.ChatKeyboard?.sync) {
+                window.ChatKeyboard.sync();
+            }
+            scrollChatToBottom();
+            window.ChatKeyboard?.scrollToBottom?.();
+            window.setTimeout(() => {
+                scrollChatToBottom();
+                window.ChatKeyboard?.scrollToBottom?.();
+            }, 80);
+            window.setTimeout(() => {
+                scrollChatToBottom();
+                window.ChatKeyboard?.scrollToBottom?.();
+            }, 280);
+        });
     }
 
     function clearSelectedFile() {
@@ -1340,7 +1435,7 @@
         editingMessageId = null;
         if (chatInput) {
             chatInput.value = '';
-            chatInput.style.height = 'auto';
+            resetComposerHeight();
         }
         updateComposerEditState();
         renderMessages();
@@ -1380,12 +1475,10 @@
             }
             clearEditExpiryTimer();
             editingMessageId = null;
-            if (chatInput) {
-                chatInput.value = '';
-                chatInput.style.height = 'auto';
-            }
+            clearComposerInput({ keepFocus: true });
             updateComposerEditState();
             renderMessages();
+            keepLatestMessageVisible();
             showToast('Message updated.');
         } catch {
             showToast('Unable to edit message right now.', 'error');
@@ -1393,7 +1486,9 @@
             chatSendBtn.disabled = false;
             chatInput.disabled = false;
             setMediaButtonsDisabled(false);
-            chatInput?.focus();
+            if (document.activeElement !== chatInput) {
+                chatInput?.focus({ preventScroll: true });
+            }
         }
     }
 
@@ -1518,9 +1613,86 @@
 
     renderMessages();
     updateComposerEditState();
-    window.addEventListener('load', () => scrollChatToBottom(), { once: true });
+    resetComposerHeight();
+    window.addEventListener('load', () => {
+        resetComposerHeight();
+        scrollChatToBottom();
+    }, { once: true });
 
-    chatInput?.addEventListener('input', () => autoResizeTextarea(chatInput));
+    chatInput?.addEventListener('input', () => {
+        // Only grow while the keyboard is open / input is focused.
+        autoResizeTextarea(chatInput);
+        chatInput.scrollTop = chatInput.scrollHeight;
+    });
+
+    chatInput?.addEventListener('focus', () => {
+        // Expand multi-line draft and show from the top (111...).
+        window.requestAnimationFrame(() => {
+            expandComposerEditing();
+            keepLatestMessageVisible();
+        });
+    });
+
+    chatInput?.addEventListener('blur', () => {
+        // Collapse to 1 line; if draft remains, show the last line (…222).
+        if ((chatInput.value || '').trim()) {
+            collapseComposerPreview();
+        } else {
+            resetComposerHeight();
+        }
+        keepLatestMessageVisible();
+        window.setTimeout(() => {
+            if ((chatInput.value || '').trim()) {
+                collapseComposerPreview();
+            } else {
+                resetComposerHeight();
+            }
+            keepLatestMessageVisible();
+        }, 150);
+    });
+
+    let lastViewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const onViewportChange = () => {
+        const currentHeight = window.visualViewport?.height ?? window.innerHeight;
+        const keyboardClosed = currentHeight > lastViewportHeight + 60;
+        const keyboardOpened = currentHeight < lastViewportHeight - 60;
+        lastViewportHeight = currentHeight;
+
+        const hasDraft = !!(chatInput?.value || '').trim();
+        const isFocused = document.activeElement === chatInput;
+
+        window.ChatKeyboard?.sync?.();
+
+        if (!isFocused) {
+            if (hasDraft) {
+                collapseComposerPreview();
+            } else {
+                resetComposerHeight();
+            }
+        } else if (keyboardOpened) {
+            expandComposerEditing();
+        }
+
+        keepLatestMessageVisible();
+        if (keyboardClosed && !isFocused) {
+            window.setTimeout(() => {
+                if ((chatInput?.value || '').trim()) {
+                    collapseComposerPreview();
+                } else {
+                    resetComposerHeight();
+                }
+                keepLatestMessageVisible();
+            }, 100);
+        }
+    };
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', onViewportChange);
+        window.visualViewport.addEventListener('scroll', onViewportChange);
+    } else {
+        window.addEventListener('resize', onViewportChange);
+    }
+
     chatEditCancelBtn?.addEventListener('click', cancelEditing);
     chatCameraBtn?.addEventListener('click', () => {
         if (editingMessageId !== null) return;
@@ -1747,9 +1919,9 @@
             if (!response.ok) { showToast(data?.message || (data?.errors?.message?.[0]) || 'Unable to send message.', 'error'); return; }
             chatHistory.push(normalizeMessage(data.message));
             renderMessages();
-            chatInput.value = '';
-            chatInput.style.height = 'auto';
+            clearComposerInput({ keepFocus: false });
             clearSelectedFile();
+            keepLatestMessageVisible();
             showToast('Message sent.');
         } catch {
             showToast('Unable to send message right now.', 'error');
@@ -1757,7 +1929,20 @@
             chatSendBtn.disabled = false;
             chatInput.disabled = false;
             setMediaButtonsDisabled(false);
-            chatInput.focus();
+            // Reset after re-enable so mobile browsers apply the collapsed height.
+            resetComposerHeight();
+            // On mobile, blur so the keyboard closes and the latest message is visible again.
+            if (window.matchMedia('(max-width: 1023px)').matches) {
+                chatInput?.blur();
+                keepLatestMessageVisible();
+                window.setTimeout(() => {
+                    resetComposerHeight();
+                    keepLatestMessageVisible();
+                }, 120);
+                window.setTimeout(keepLatestMessageVisible, 320);
+            } else {
+                chatInput?.focus({ preventScroll: true });
+            }
         }
     });
 })();

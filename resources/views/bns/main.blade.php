@@ -37,6 +37,8 @@
         .dash-legend-grid-mobile-span > *:last-child:nth-child(odd) {
             grid-column: span 2 / span 2;
         }
+    }
+
     .dash-chart-wrap {
         position: relative;
         height: 16rem;
@@ -74,6 +76,28 @@
         border-color: rgba(255,255,255,0.08);
         background: rgba(0,0,0,0.15);
     }
+
+    .mnt-mix-legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .mnt-mix-legend__item {
+        border-radius: 0.75rem;
+        border: 1px solid #EAEAEA;
+        background: rgba(244, 244, 244, 0.5);
+        padding: 0.625rem 0.75rem;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .dark .mnt-mix-legend__item {
+        border-color: #3D3D3D;
+        background: rgba(26, 26, 26, 0.5);
+    }
+
 </style>
 <script>
     tailwind.config = {
@@ -81,11 +105,22 @@
         theme: {
             extend: {
                 colors: {
-                    "primary": "#4A90E2", "secondary": "#50E3C2", "accent-orange": "#F5A623", "accent-red": "#D0021B",
-                    "background-light": "#F4F4F4", "background-dark": "#1A1A1A", "text-light": "#4A4A4A", "text-dark": "#E0E0E0",
-                    "card-light": "#FFFFFF", "card-dark": "#2C2C2C", "border-light": "#EAEAEA", "border-dark": "#3D3D3D",
+                    "primary": "#4A90E2",
+                    "secondary": "#50E3C2",
+                    "accent-orange": "#F5A623",
+                    "accent-red": "#D0021B",
+                    "background-light": "#F4F4F4",
+                    "background-dark": "#1A1A1A",
+                    "text-light": "#4A4A4A",
+                    "text-dark": "#E0E0E0",
+                    "card-light": "#FFFFFF",
+                    "card-dark": "#2C2C2C",
+                    "border-light": "#EAEAEA",
+                    "border-dark": "#3D3D3D",
                 },
-                fontFamily: { "display": ["Manrope", "sans-serif"] },
+                fontFamily: {
+                    "display": ["Manrope", "sans-serif"]
+                },
             },
         },
     }
@@ -93,24 +128,25 @@
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
 @include('partials.app-flash')
-    @include('sidebars.bns')
-    
+@include('sidebars.bns')
+
 <div id="bnsContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
     @include('partials.bns-mobile-topbar')
 
     <main class="flex-1 flex flex-col min-h-0 pt-3 sm:pt-4 px-4 sm:px-5 md:px-6 lg:px-8 lg:pt-6 pb-24 lg:pb-6 overflow-hidden">
         <div class="page-content">
             <div class="w-full max-w-7xl mx-auto space-y-6 pb-8">
-                    @php
-                        $nutritionStats = $nutritionStats ?? [];
+                @php
+                    $nutritionStats = $nutritionStats ?? [];
                     $dashboardCharts = $dashboardCharts ?? [];
                     $chartPeriods = $dashboardCharts['chart_periods'] ?? [];
                     $defaultChartPeriod = $dashboardCharts['default_period'] ?? 'month';
                     $nutritionSplit = $dashboardCharts['nutrition_split'] ?? ['labels' => [], 'values' => []];
+                    $barangayLabel = $assignedBarangay?->name ?? ($barangayName ?? Auth::user()->barangay);
 
                     $primaryKpis = [
                         ['label' => 'Children monitored', 'key' => 'total_children_0_5', 'icon' => 'child_care', 'tone' => 'bg-primary/10 text-primary'],
-                        ['label' => 'Households', 'key' => 'households_covered', 'icon' => 'home', 'tone' => 'bg-secondary/15 text-secondary'],
+                        ['label' => 'Households', 'key' => 'households_covered', 'icon' => 'home', 'tone' => 'bg-secondary/15 text-teal-700 dark:text-secondary'],
                         ['label' => 'Malnourished', 'key' => 'malnutrition_cases', 'icon' => 'warning', 'tone' => 'bg-accent-red/10 text-accent-red'],
                         ['label' => 'Normal nutrition', 'key' => 'normal_bmi_count', 'icon' => 'check_circle', 'tone' => 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'],
                     ];
@@ -121,37 +157,48 @@
                         ['label' => 'Severely malnourished', 'key' => 'severely_underweight_cases'],
                         ['label' => 'Overweight / obese', 'key' => 'overweight_cases'],
                         ['label' => 'No weight record', 'key' => 'no_weight_record'],
-                        ];
-                    @endphp
+                    ];
+
+                    $splitLegend = [
+                        ['label' => 'Malnourished', 'tone' => 'bg-accent-red'],
+                        ['label' => 'Normal', 'tone' => 'bg-secondary'],
+                        ['label' => 'Overweight', 'tone' => 'bg-accent-orange'],
+                        ['label' => 'No record', 'tone' => 'bg-gray-400'],
+                    ];
+                    $splitValuesByLabel = array_combine($nutritionSplit['labels'] ?? [], $nutritionSplit['values'] ?? []) ?: [];
+                @endphp
 
                 <header class="dash-hero rounded-2xl border border-border-light dark:border-border-dark p-5 md:p-6">
-                    <div class="flex flex-wrap justify-between items-start gap-4">
-                        <div class="min-w-0">
+                    <div class="flex flex-nowrap justify-between items-start gap-3">
+                        <div class="min-w-0 flex-1">
                             <p class="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Barangay Nutrition Scholar</p>
                             <h1 class="text-2xl sm:text-3xl font-bold leading-tight text-text-light dark:text-text-dark">Dashboard</h1>
-                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1.5 max-w-xl">
+                            <p class="hidden sm:block text-sm text-text-light/70 dark:text-text-dark/70 mt-1.5 max-w-xl">
                                 Overview of children 0–5, nutrition status, and program coverage in your barangay.
                             </p>
                         </div>
-                        <div class="flex flex-col items-end gap-2 shrink-0">
-                            @if (filled($barangayName ?? Auth::user()->barangay))
-                                <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-white/80 dark:bg-card-dark/80 border border-border-light dark:border-border-dark text-primary shadow-sm">
-                                    <span class="material-symbols-outlined text-base">location_city</span>
-                                    {{ $assignedBarangay?->name ?? ($barangayName ?? Auth::user()->barangay) }}
+                        <div class="flex flex-col items-end gap-2 shrink-0 max-w-[46%] sm:max-w-none">
+                            @if (filled($barangayLabel))
+                                <span class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold bg-white/80 dark:bg-card-dark/80 border border-border-light dark:border-border-dark text-primary shadow-sm max-w-full">
+                                    <span class="material-symbols-outlined text-base shrink-0">location_city</span>
+                                    <span class="truncate" title="{{ $barangayLabel }}">{{ $barangayLabel }}</span>
                                 </span>
                             @endif
-                            <p class="text-xs text-text-light/50 dark:text-text-dark/50">{{ now()->format('l, M d, Y') }}</p>
+                            <p class="text-[11px] sm:text-xs text-text-light/50 dark:text-text-dark/50 text-right">{{ now()->format('l, M d, Y') }}</p>
                         </div>
                     </div>
                 </header>
 
                 <section>
-                    <h2 class="text-sm font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-3">At a glance</h2>
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h2 class="text-sm font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">At a glance</h2>
+                        <a href="{{ route('bns.reports') }}" class="text-xs sm:text-sm font-semibold text-primary hover:underline shrink-0">View full reports ></a>
+                    </div>
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 dash-kpi-grid-mobile-span">
                         @foreach ($primaryKpis as $card)
                             <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 shadow-sm">
                                 <div class="flex items-start justify-between gap-2 mb-3">
-                                    <span class="inline-flex size-10 items-center justify-center rounded-xl {{ $card['tone'] }}">
+                                    <span class="inline-flex size-10 shrink-0 items-center justify-center rounded-xl {{ $card['tone'] }}">
                                         <span class="material-symbols-outlined text-xl">{{ $card['icon'] }}</span>
                                     </span>
                                 </div>
@@ -175,28 +222,7 @@
                 </section>
 
                 <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm">
-                        <div class="flex flex-col gap-3 mb-4">
-                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                <div class="min-w-0">
-                                    <h2 class="text-base font-bold">Nutrition status</h2>
-                                    <p id="nutritionStatusSubtitle" class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Latest assessment per child in selected period</p>
-                                </div>
-                                <div class="flex flex-wrap gap-1.5 shrink-0" role="group" aria-label="Nutrition period filter">
-                                    <button type="button" class="dash-period-btn text-xs font-semibold px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80" data-chart-period="week" aria-pressed="false">This week</button>
-                                    <button type="button" class="dash-period-btn text-xs font-semibold px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80" data-chart-period="month" aria-pressed="true">This month</button>
-                                    <button type="button" class="dash-period-btn text-xs font-semibold px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80" data-chart-period="year" aria-pressed="false">This year</button>
-                                </div>
-                            </div>
-                            <p id="nutritionRangeLabel" class="text-[11px] font-medium text-primary/80 dark:text-primary/90"></p>
-                        </div>
-                        <div class="dash-chart-wrap">
-                            <canvas id="nutritionStatusBarChart" aria-label="Nutrition status bar chart"></canvas>
-                        </div>
-                        <div id="nutritionLegendPills" class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4"></div>
-                        </div>
-
-                    <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm">
+                    <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm xl:col-span-2">
                         <div class="flex flex-col gap-3 mb-4">
                             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                 <div class="min-w-0">
@@ -215,39 +241,49 @@
                             <canvas id="monthlyWeightLineChart" aria-label="Average weight trend line chart"></canvas>
                         </div>
                         <p id="weightTrendFootnote" class="text-[11px] text-text-light/50 dark:text-text-dark/50 mt-3 text-center sm:text-left"></p>
-                        </div>
+                    </div>
 
-                    <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-5 shadow-sm xl:col-span-2">
-                        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
-                            <div>
-                                <h2 class="text-base font-bold">Population nutrition mix</h2>
-                                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Share of monitored children by nutrition category</p>
+                    <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm xl:col-span-2">
+                        <div class="flex flex-col gap-3 mb-4">
+                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                <div class="min-w-0">
+                                    <h2 class="text-base font-bold">Nutrition status</h2>
+                                    <p id="nutritionStatusSubtitle" class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Latest assessment per child in selected period</p>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5 shrink-0" role="group" aria-label="Nutrition period filter">
+                                    <button type="button" class="dash-period-btn text-xs font-semibold px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80" data-chart-period="week" aria-pressed="false">This week</button>
+                                    <button type="button" class="dash-period-btn text-xs font-semibold px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80" data-chart-period="month" aria-pressed="true">This month</button>
+                                    <button type="button" class="dash-period-btn text-xs font-semibold px-3 py-1.5 rounded-full border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80" data-chart-period="year" aria-pressed="false">This year</button>
+                                </div>
                             </div>
-                            <a href="{{ route('bns.reports') }}" class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
-                                View full reports
-                                <span class="material-symbols-outlined text-sm">open_in_new</span>
-                            </a>
+                            <p id="nutritionRangeLabel" class="text-[11px] font-medium text-primary/80 dark:text-primary/90"></p>
+                        </div>
+                        <div class="dash-chart-wrap">
+                            <canvas id="nutritionStatusBarChart" aria-label="Nutrition status bar chart"></canvas>
+                        </div>
+                        <div id="nutritionLegendPills" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mt-4"></div>
+                    </div>
+
+                    <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm xl:col-span-2">
+                        <div class="mb-4">
+                            <h2 class="text-base font-bold">Population nutrition mix</h2>
+                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Share of monitored children by nutrition category</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                             <div class="h-56 sm:h-64 max-w-xs mx-auto w-full">
-                                <canvas id="malnutritionPieChart"></canvas>
+                                <canvas id="malnutritionPieChart" aria-label="Population nutrition mix doughnut chart"></canvas>
                             </div>
-                            <div class="grid grid-cols-2 gap-3 dash-legend-grid-mobile-span">
-                                @foreach (array_combine($nutritionSplit['labels'] ?? [], $nutritionSplit['values'] ?? []) as $label => $value)
+                            <div class="mnt-mix-legend">
+                                @foreach ($splitLegend as $index => $item)
                                     @php
-                                        $legendTone = match ($label) {
-                                            'Malnourished' => 'bg-accent-red',
-                                            'Normal' => 'bg-secondary',
-                                            'Overweight' => 'bg-accent-orange',
-                                            default => 'bg-gray-400',
-                                        };
+                                        $value = (int) ($splitValuesByLabel[$item['label']] ?? ($nutritionSplit['values'][$index] ?? 0));
                                     @endphp
-                                    <div class="rounded-lg border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 px-3 py-2.5">
+                                    <div class="mnt-mix-legend__item">
                                         <div class="flex items-center gap-2 mb-1">
-                                            <span class="size-2.5 rounded-full {{ $legendTone }}"></span>
-                                            <span class="text-xs text-text-light/60 dark:text-text-dark/60">{{ $label }}</span>
+                                            <span class="size-2.5 rounded-full {{ $item['tone'] }}"></span>
+                                            <span class="text-xs text-text-light/60 dark:text-text-dark/60">{{ $item['label'] }}</span>
                                         </div>
-                                        <p class="text-lg font-bold tabular-nums">{{ number_format((int) $value) }}</p>
+                                        <p class="text-lg font-bold tabular-nums">{{ number_format($value) }}</p>
                                     </div>
                                 @endforeach
                             </div>
@@ -265,12 +301,6 @@
     const chartPeriods = @json($chartPeriods);
     const defaultChartPeriod = @json($defaultChartPeriod);
     const nutritionSplit = @json($nutritionSplit);
-
-    const periodLabels = {
-        week: 'This week',
-        month: 'This month',
-        year: 'This year',
-    };
 
     const weightSubtitleByPeriod = {
         week: 'Daily average weight from weigh-ins this week',
@@ -521,7 +551,7 @@
                             ticks: {
                                 font: { family: 'Manrope', size: window.innerWidth < 640 ? 10 : 11 },
                                 color: tickColor,
-                                maxRotation: window.innerWidth < 640 ? 0 : 0,
+                                maxRotation: 0,
                                 autoSkip: true,
                                 maxTicksLimit: window.innerWidth < 640 ? 5 : 12,
                             },

@@ -589,7 +589,6 @@
                             <tbody id="residentsTableBody">
                                 @forelse ($acceptedResidents as $resident)
                                     @php
-                                        $unreadCount = (int) ($unreadByResident[$resident->user_id] ?? 0);
                                         $familyNumber = trim((string) ($resident->family_number ?? $resident->user?->family_number ?? ''));
                                         $purokName = trim((string) ($resident->purok?->name ?? $resident->user?->purok?->name ?? ''));
                                         $gender = trim((string) ($resident->user?->gender ?? ''));
@@ -606,14 +605,8 @@
                                             ? \Carbon\Carbon::parse($resident->last_consultation_at)->format('M d, Y')
                                             : null;
                                         $registeredLabel = $resident->reviewed_at?->format('M d, Y') ?? 'N/A';
-                                    @endphp
-                                    @php
-                                        $mobileStatusClass = $unreadCount > 0
-                                            ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200'
-                                            : 'bg-background-light dark:bg-background-dark text-text-light/60 dark:text-text-dark/60';
-                                        $mobileStatusLabel = $unreadCount > 0
-                                            ? ($unreadCount > 9 ? '9+ new' : $unreadCount.' new')
-                                            : ($age > 0 ? $age.' yrs' : 'N/A');
+                                        $mobileStatusClass = 'bg-background-light dark:bg-background-dark text-text-light/60 dark:text-text-dark/60';
+                                        $mobileStatusLabel = $age > 0 ? $age.' yrs' : 'N/A';
                                     @endphp
                                     <tr
                                         class="resident-row border-b border-border-light dark:border-border-dark hover:bg-background-light dark:hover:bg-background-dark"
@@ -667,9 +660,6 @@
                                                 <div class="min-w-0 flex-1">
                                                     <div class="flex flex-wrap items-center gap-2">
                                                         <p class="font-semibold text-text-light dark:text-text-dark truncate">{{ $resident->full_name }}</p>
-                                                        @if ($unreadCount > 0)
-                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200 shrink-0">{{ $unreadCount }} new</span>
-                                                        @endif
                                                     </div>
                                                     <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5 truncate">{{ $gender !== '' ? $gender : '—' }} · {{ $purokName !== '' ? $purokName : 'No purok' }}</p>
                                                 </div>

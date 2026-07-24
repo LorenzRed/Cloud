@@ -6,6 +6,7 @@
         $isMonitoring = request()->routeIs('bns.monitoring');
         $isVitaminDistribution = request()->routeIs('bns.vitamin-distribution*');
         $isDeworming = request()->routeIs('bns.deworming*');
+        $isPosts = request()->routeIs('bns.posts*');
         $isReports = request()->routeIs('bns.reports');
         $isSettings = request()->routeIs('bns.settings*');
         $isProfile = request()->routeIs('bns.profile');
@@ -61,6 +62,10 @@
             <a class="{{ $isDeworming ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bns.deworming') }}">
                 <span class="{{ $isDeworming ? $activeIconClass : $inactiveIconClass }}" @if ($isDeworming) style="font-variation-settings: 'FILL' 1;" @endif>medication</span>
                 <p class="{{ $isDeworming ? $activeTextClass : $inactiveTextClass }}">Deworming</p>
+            </a>
+            <a class="{{ $isPosts ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bns.posts') }}">
+                <span class="{{ $isPosts ? $activeIconClass : $inactiveIconClass }}" @if ($isPosts) style="font-variation-settings: 'FILL' 1;" @endif>campaign</span>
+                <p class="{{ $isPosts ? $activeTextClass : $inactiveTextClass }}">Posts</p>
             </a>
             <a class="{{ $isReports ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bns.reports') }}">
                 <span class="{{ $isReports ? $activeIconClass : $inactiveIconClass }}" @if ($isReports) style="font-variation-settings: 'FILL' 1;" @endif>assessment</span>

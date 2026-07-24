@@ -167,6 +167,11 @@
                     $chartPeriods = $dashboardCharts['chart_periods'] ?? [];
                     $defaultChartPeriod = $dashboardCharts['default_period'] ?? 'month';
                     $monitoringMix = $monitoringMix ?? ['labels' => [], 'values' => [], 'colors' => []];
+                    $populationDistribution = $populationDistribution ?? [
+                        'age_labels' => ['0–17', '18–35', '36–59', '60+'],
+                        'age_by_gender' => ['all' => [0, 0, 0, 0], 'male' => [0, 0, 0, 0], 'female' => [0, 0, 0, 0]],
+                        'gender' => ['labels' => ['Male', 'Female'], 'values' => [0, 0], 'colors' => ['#4A90E2', '#EC4899']],
+                    ];
 
                     $primaryKpis = [
                         ['label' => 'Households assigned', 'key' => 'total_households_assigned', 'icon' => 'home', 'tone' => 'bg-primary/10 text-primary', 'coverage_selector' => true],
@@ -186,28 +191,31 @@
                 @endphp
 
                 <header class="dash-hero rounded-2xl border border-border-light dark:border-border-dark p-5 md:p-6">
-                    <div class="flex flex-wrap justify-between items-start gap-4">
-                        <div class="min-w-0">
+                    <div class="flex flex-nowrap justify-between items-start gap-3">
+                        <div class="min-w-0 flex-1">
                             <p class="text-xs font-semibold uppercase tracking-widest text-primary mb-1">Barangay Health Worker</p>
                             <h1 class="text-2xl sm:text-3xl font-bold leading-tight text-text-light dark:text-text-dark">Dashboard</h1>
-                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1.5 max-w-xl">
+                            <p class="hidden sm:block text-sm text-text-light/70 dark:text-text-dark/70 mt-1.5 max-w-xl">
                                 Overview of assigned residents, medicine transactions, and inferred health concerns in your purok.
                             </p>
                         </div>
-                        <div class="flex flex-col items-end gap-2 shrink-0">
+                        <div class="flex flex-col items-end gap-2 shrink-0 max-w-[46%] sm:max-w-none">
                             @if (filled($assignedPurokLabel ?? null))
-                                <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold bg-white/80 dark:bg-card-dark/80 border border-border-light dark:border-border-dark text-primary shadow-sm max-w-[16rem] sm:max-w-xs">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold bg-white/80 dark:bg-card-dark/80 border border-border-light dark:border-border-dark text-primary shadow-sm max-w-full">
                                     <span class="material-symbols-outlined text-base shrink-0">home_pin</span>
                                     <span class="truncate" title="{{ $assignedPurokLabel }}">{{ $assignedPurokLabel }}</span>
                                 </span>
                             @endif
-                            <p class="text-xs text-text-light/50 dark:text-text-dark/50">{{ now()->format('l, M d, Y') }}</p>
+                            <p class="text-[11px] sm:text-xs text-text-light/50 dark:text-text-dark/50 text-right">{{ now()->format('l, M d, Y') }}</p>
                         </div>
                     </div>
                 </header>
 
                 <section>
-                    <h2 class="text-sm font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60 mb-3">At a glance</h2>
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h2 class="text-sm font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">At a glance</h2>
+                        <a href="{{ route('bhw.reports') }}" class="text-xs sm:text-sm font-semibold text-primary hover:underline shrink-0">View full reports ></a>
+                    </div>
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 dash-kpi-grid-mobile-span">
                         @foreach ($primaryKpis as $card)
                             <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 md:p-5 shadow-sm {{ ($card['coverage_selector'] ?? false) ? 'dash-coverage-card' : '' }}">
@@ -314,15 +322,9 @@
                     </div>
 
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm xl:col-span-2">
-                        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
-                            <div>
-                                <h2 class="text-base font-bold">Household monitoring mix</h2>
-                                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Active pregnant, senior, and general monitoring cases</p>
-                            </div>
-                            <a href="{{ route('bhw.reports') }}" class="hidden sm:inline-flex text-xs font-semibold text-primary hover:underline items-center gap-1">
-                                View full reports
-                                <span class="material-symbols-outlined text-sm">open_in_new</span>
-                            </a>
+                        <div class="mb-4">
+                            <h2 class="text-base font-bold">Household monitoring mix</h2>
+                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Pregnant cases, household seniors, and seniors receiving BHW maintenance</p>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                             <div class="h-56 sm:h-64 max-w-xs mx-auto w-full">
@@ -332,7 +334,7 @@
                                 @foreach ([
                                     ['label' => 'Pregnant', 'key' => 'Pregnant', 'tone' => 'bg-pink-500', 'clickable' => true],
                                     ['label' => 'Senior', 'key' => 'Senior', 'tone' => 'bg-violet-500', 'clickable' => true],
-                                    ['label' => 'General', 'key' => 'General', 'tone' => 'bg-primary', 'clickable' => false],
+                                    ['label' => 'Need maintenance', 'key' => 'Need maintenance', 'tone' => 'bg-primary', 'clickable' => true],
                                 ] as $index => $item)
                                     @php
                                         $value = (int) (($monitoringMix['values'] ?? [])[$index] ?? 0);
@@ -340,7 +342,7 @@
                                     @if ($item['clickable'])
                                         <button
                                             type="button"
-                                            class="mnt-mix-legend__item {{ $item['key'] === 'General' ? 'mnt-mix-legend__item--wide' : '' }} text-left"
+                                            class="mnt-mix-legend__item {{ $item['key'] === 'Need maintenance' ? 'mnt-mix-legend__item--wide' : '' }} text-left"
                                             data-monitoring-type="{{ $item['key'] }}"
                                             aria-label="View {{ strtolower($item['label']) }} members"
                                         >
@@ -363,15 +365,10 @@
                                 @endforeach
                             </div>
                         </div>
-                        <a
-                            href="{{ route('bhw.reports') }}"
-                            class="sm:hidden mt-4 flex items-center justify-center gap-1.5 w-full rounded-xl border border-border-light dark:border-border-dark bg-background-light/80 dark:bg-background-dark/80 px-4 py-3 text-sm font-semibold text-primary"
-                        >
-                            View full reports
-                            <span class="material-symbols-outlined text-base">open_in_new</span>
-                        </a>
                     </div>
                 </section>
+
+                @include('partials.population-distribution-charts')
             </div>
         </div>
     </main>
@@ -734,7 +731,7 @@
                     onClick: (_event, elements) => {
                         if (!elements.length) return;
                         const label = monitoringMix.labels?.[elements[0].index];
-                        if (label === 'Pregnant' || label === 'Senior') {
+                        if (label === 'Pregnant' || label === 'Senior' || label === 'Need maintenance') {
                             openMonitoringMembersModal(label);
                         }
                     },
@@ -794,6 +791,7 @@
                 monitoringMembersList.innerHTML = members.map((member) => `
                     <div class="rounded-xl border border-border-light dark:border-border-dark bg-background-light/50 dark:bg-background-dark/50 px-3 py-3">
                         <p class="text-sm font-semibold break-words">${escapeHtml(member.name || '—')}</p>
+                        ${member.reason ? `<p class="text-xs font-medium text-primary mt-1">${escapeHtml(member.reason)}</p>` : ''}
                         <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Family no. <span class="font-semibold text-text-light dark:text-text-dark">${escapeHtml(member.family_number || 'Not assigned')}</span></p>
                         ${member.household && member.household !== '—' ? `<p class="text-xs text-text-light/50 dark:text-text-dark/50 mt-0.5 truncate">Household: ${escapeHtml(member.household)}</p>` : ''}
                     </div>
@@ -826,5 +824,6 @@
         }
     });
 </script>
+@include('partials.population-distribution-charts-script')
 </body>
 </html>

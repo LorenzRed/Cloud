@@ -11,7 +11,7 @@ Artisan::command('inspire', function () {
 
 Artisan::command('events:purge-expired', function () {
     $deleted = Event::purgeExpired();
-    $this->info("Deleted {$deleted} expired announcement record(s).");
-})->purpose('Delete announcements whose show-until date has passed');
+    $this->info("Expired announcements are kept in Posts (marked expired). Nothing deleted ({$deleted}).");
+})->purpose('No-op: expired announcements stay in Posts and are hidden from residents');
 
 Schedule::command('events:purge-expired')->everyMinute();
