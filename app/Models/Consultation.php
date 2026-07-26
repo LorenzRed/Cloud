@@ -6,6 +6,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int|null $resident_request_id
+ * @property int|null $user_id
+ * @property \Illuminate\Support\Carbon|null $scheduled_at
+ * @property string|null $medical_checkup
+ * @property string|null $note
+ * @property int|null $set_by
+ */
 class Consultation extends Model
 {
     use HasFactory;

@@ -540,6 +540,7 @@ Route::post('/logout', function (Request $request) {
     return redirect()->route('login')->with('status', 'You have been signed out.');
 })->middleware('auth')->name('logout');
 
+/** @disregard P6613 */
 Route::middleware(['auth', 'role.prefix'])->group(function () {
     Route::get('/profile-picture/{user}', function (User $user) {
         $viewer = Auth::user();
@@ -607,6 +608,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         ])->header('Cache-Control', 'private, no-store');
     })->name('users.session.csrf');
 
+    /** @disregard P6613 */
     Route::get('/users', function () {
         if (Auth::user()->role !== 'users') {
             return redirect()->route('dashboard');
@@ -664,12 +666,15 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 ];
             }))
             ->merge($upcomingImmunizations->map(static function (Event $event) {
+                /** @var Carbon|null $eventDate */
+                $eventDate = $event->event_date;
+
                 return [
                     'type' => 'immunization',
                     'title' => $event->title ?: 'Immunization consultation',
-                    'when_label' => $event->event_date?->format('M d, Y'),
+                    'when_label' => $eventDate?->format('M d, Y'),
                     'note' => $event->description,
-                    'sort_at' => $event->event_date?->copy()->startOfDay(),
+                    'sort_at' => $eventDate?->copy()->startOfDay(),
                 ];
             }))
             ->sortBy('sort_at')
@@ -1361,7 +1366,9 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             ->orderByDesc('updated_at')
             ->get();
 
+        /** @var \Illuminate\Support\Collection<int, HouseholdMonitoringCase> $monitoringCases */
         foreach ($monitoringCases as $monitoringCase) {
+            /** @var HouseholdMonitoringCase $monitoringCase */
             HouseholdMonitoringVisit::backfillCarriedVitalsForCase(
                 (int) $monitoringCase->id,
                 $monitoringCase->visits
@@ -1466,6 +1473,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         ]);
     })->name('users.verification');
 
+    /** @disregard P6613 */
     Route::post('/users/verification', function (Request $request) {
         if (Auth::user()->role !== 'users') {
             return redirect()->route('dashboard');
@@ -2327,6 +2335,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             : redirect()->route('dashboard');
     })->name('lgu.officials');
 
+    /** @disregard P6613 */
     $buildCaptainDashboardPayload = function (?Barangay $assignedBarangay, ?\Illuminate\Support\Collection $residentsOverride = null): array {
         if (! $assignedBarangay) {
             return [
@@ -2441,11 +2450,13 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                     $recordType = trim((string) $record->record_type) !== '' ? $record->record_type : 'Medical update';
                     $recordValue = trim((string) $record->record_value) !== '' ? $record->record_value : 'No value provided';
                     $note = trim((string) ($record->note ?? ''));
+                    /** @var Carbon|null $recordCreatedAt */
+                    $recordCreatedAt = $record->created_at;
 
                     return [
                         'title' => $residentName.' - '.$recordType,
                         'summary' => $note !== '' ? $recordValue.' ('.$note.')' : $recordValue,
-                        'created_at' => optional($record->created_at)->format('M d, Y h:i A'),
+                        'created_at' => $recordCreatedAt?->format('M d, Y h:i A'),
                     ];
                 })
                 ->all()
@@ -2618,7 +2629,10 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             return response()->json(['error' => 'No assigned barangay'], 404);
         }
 
-        $targetPurokIds = Auth::user()->assignedPuroks()
+        /** @var User $user */
+        $user = Auth::user();
+
+        $targetPurokIds = $user->assignedPuroks()
             ->pluck('puroks.id')
             ->map(fn ($id) => (int) $id)
             ->values()
@@ -2664,7 +2678,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             return back()->withErrors(['title' => 'Please enter a valid title.'])->withInput();
         }
 
-        $expiresAt = \Illuminate\Support\Carbon::parse($data['event_date'].' '.$data['end_time']);
+        $expiresAt = Carbon::parse($data['event_date'].' '.$data['end_time']);
         if ($expiresAt->lte(now())) {
             if ($request->expectsJson()) {
                 return response()->json([
@@ -2786,7 +2800,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             return back()->withErrors(['title' => 'Please enter a valid title.'])->withInput();
         }
 
-        $expiresAt = \Illuminate\Support\Carbon::parse($data['event_date'].' '.$data['end_time']);
+        $expiresAt = Carbon::parse($data['event_date'].' '.$data['end_time']);
         if ($expiresAt->lte(now())) {
             return back()
                 ->withErrors(['end_time' => 'Remove date and time must be in the future.'])
@@ -5318,7 +5332,10 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             $rules['last_period_date'] = ['nullable', 'date'];
 
             if ($monitoringCase->first_period_date) {
-                $rules['last_period_date'][] = 'after_or_equal:'.$monitoringCase->first_period_date->toDateString();
+                $firstPeriodDate = $monitoringCase->first_period_date;
+
+                /** @var Carbon $firstPeriodDate */
+                $rules['last_period_date'][] = 'after_or_equal:'.$firstPeriodDate->toDateString();
             }
         }
 
@@ -5767,6 +5784,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         ]);
     })->name('bhw.unread-chats');
 
+    /** @disregard P6613 */
     Route::get('/bhw/all-records', function (Request $request) {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');
@@ -5873,6 +5891,8 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         if (in_array($type, ['all', 'transactions'], true)) {
             $records = $records->merge($transactions->map(function (ResidentTransaction $tx) {
                 $medEntries = $tx->medicationEntries();
+                /** @var Carbon|null $transactionDate */
+                $transactionDate = $tx->transaction_date;
                 $meds = collect($medEntries)
                     ->map(fn (array $entry) => $entry['label'].' '.$entry['pcs'].' pcs')
                     ->implode(', ');
@@ -5888,7 +5908,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 $details = [
                     ['label' => 'Household', 'value' => $household],
                     ['label' => 'Recipient', 'value' => $tx->recipientLabel()],
-                    ['label' => 'Date', 'value' => $tx->transaction_date?->format('M d, Y') ?: '—'],
+                    ['label' => 'Date', 'value' => $transactionDate?->format('M d, Y') ?: '—'],
                     ['label' => 'Age', 'value' => $tx->age !== null ? (string) $tx->age : '—'],
                     ['label' => 'Gender', 'value' => $gender !== '' ? $gender : '—'],
                     ['label' => 'Purok', 'value' => $purok !== '' ? $purok : '—'],
@@ -5898,7 +5918,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 ];
 
                 return [
-                    'sort_at' => optional($tx->transaction_date)->timestamp ?? 0,
+                    'sort_at' => $transactionDate?->timestamp ?? 0,
                     'type' => 'transaction',
                     'type_label' => 'Transaction',
                     'icon' => 'medication',
@@ -5906,7 +5926,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                     'title' => $tx->recipientLabel(),
                     'subtitle' => $household.($purok !== '' ? ' · '.$purok : ''),
                     'detail' => $detail,
-                    'date_label' => $tx->transaction_date?->format('M d, Y') ?: '—',
+                    'date_label' => $transactionDate?->format('M d, Y') ?: '—',
                     'time_label' => null,
                     'preview_chips' => collect($medEntries)
                         ->take(4)
@@ -5936,6 +5956,14 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 $caseVisits = $visitsByCase->get($visit->household_monitoring_case_id, collect());
                 $resolved = $visit->resolvedVitals($caseVisits);
                 $visitLabel = $resolved['visit_label'];
+                /** @var Carbon|null $visitDate */
+                $visitDate = $visit->visit_date;
+                /** @var Carbon|null $completedAt */
+                $completedAt = $case?->completed_at;
+                /** @var Carbon|null $firstPeriodDate */
+                $firstPeriodDate = $case?->first_period_date;
+                /** @var Carbon|null $lastPeriodDate */
+                $lastPeriodDate = $case?->last_period_date;
 
                 $previewChips = collect([
                     filled($resolved['anti_tetanus']) ? ['label' => 'Anti-TT', 'value' => (string) $resolved['anti_tetanus']] : null,
@@ -5953,7 +5981,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
 
                 $status = $case?->is_active
                     ? 'Active'
-                    : ($case?->completed_at ? 'Completed '.$case->completed_at->format('M d, Y') : 'Inactive');
+                    : ($completedAt ? 'Completed '.$completedAt->format('M d, Y') : 'Inactive');
                 $isCompleted = ! (bool) ($case?->is_active ?? true);
 
                 $details = [
@@ -5961,7 +5989,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                     ['label' => 'Household', 'value' => $household],
                     ['label' => 'Member', 'value' => $memberName],
                     ['label' => 'Monitoring type', 'value' => $typeLabel],
-                    ['label' => 'Visit date', 'value' => $visit->visit_date?->format('M d, Y') ?: '—'],
+                    ['label' => 'Visit date', 'value' => $visitDate?->format('M d, Y') ?: '—'],
                     ['label' => 'Case status', 'value' => $status],
                     ['label' => 'Purok', 'value' => $purok !== '' ? $purok : '—'],
                     ['label' => 'Blood pressure', 'value' => filled($resolved['blood_pressure']) ? (string) $resolved['blood_pressure'] : '—'],
@@ -5975,8 +6003,8 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
 
                 if ($case?->isPregnant()) {
                     array_splice($details, 6, 0, [
-                        ['label' => 'First period', 'value' => $case->first_period_date?->format('M d, Y') ?: '—'],
-                        ['label' => 'Last period', 'value' => $case->last_period_date?->format('M d, Y') ?: '—'],
+                        ['label' => 'First period', 'value' => $firstPeriodDate?->format('M d, Y') ?: '—'],
+                        ['label' => 'Last period', 'value' => $lastPeriodDate?->format('M d, Y') ?: '—'],
                     ]);
                 }
 
@@ -5985,7 +6013,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 }
 
                 return [
-                    'sort_at' => optional($visit->visit_date)->timestamp ?? 0,
+                    'sort_at' => $visitDate?->timestamp ?? 0,
                     'type' => 'maintenance',
                     'type_label' => 'Maintenance',
                     'icon' => $isCompleted ? 'task_alt' : 'monitor_heart',
@@ -5996,7 +6024,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                     'title' => $memberName,
                     'subtitle' => $visitLabel.' · '.$typeLabel.' · '.$household.($purok !== '' ? ' · '.$purok : ''),
                     'detail' => $detail,
-                    'date_label' => $visit->visit_date?->format('M d, Y') ?: '—',
+                    'date_label' => $visitDate?->format('M d, Y') ?: '—',
                     'time_label' => null,
                     'preview_chips' => $previewChips,
                     'details' => $details,

@@ -6,6 +6,21 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int|null $barangay_id
+ * @property array<int, int|string>|null $target_purok_ids
+ * @property int|null $created_by
+ * @property string|null $title
+ * @property string|null $description
+ * @property Carbon|null $event_date
+ * @property string|null $start_time
+ * @property string|null $end_time
+ * @property string|null $location
+ * @property string|null $category
+ * @property string|null $image_url
+ * @property Carbon|null $disabled_at
+ */
 class Event extends Model
 {
     public const CATEGORY_ANNOUNCEMENT = 'announcement';

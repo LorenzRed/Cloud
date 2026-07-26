@@ -6,6 +6,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int|null $resident_request_id
+ * @property int|null $user_id
+ * @property int|null $recorded_by
+ * @property string|null $member_type
+ * @property string|null $member_name
+ * @property string|null $member_source
+ * @property int|null $member_index
+ * @property string|null $issue_notes
+ * @property \Illuminate\Support\Carbon|null $first_period_date
+ * @property \Illuminate\Support\Carbon|null $last_period_date
+ * @property bool $is_active
+ * @property \Illuminate\Support\Carbon|null $completed_at
+ */
 class HouseholdMonitoringCase extends Model
 {
     public const TYPE_PREGNANT = 'pregnant';

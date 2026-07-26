@@ -6,6 +6,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int|null $resident_user_id
+ * @property int|null $bhw_user_id
+ * @property int|null $sender_id
+ * @property string|null $message
+ * @property string|null $attachment_path
+ * @property \Illuminate\Support\Carbon|null $read_at
+ * @property \Illuminate\Support\Carbon|null $edited_at
+ * @property \Illuminate\Support\Carbon|null $unsent_at
+ * @property \Illuminate\Support\Carbon|null $hidden_for_sender_at
+ */
 class ResidentBhwMessage extends Model
 {
     protected $fillable = [

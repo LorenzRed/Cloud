@@ -5,6 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int|null $household_monitoring_case_id
+ * @property int|null $recorded_by
+ * @property \Illuminate\Support\Carbon|null $visit_date
+ * @property string|null $weight_kg
+ * @property string|null $height_cm
+ * @property string|null $bmi_value
+ * @property string|null $muac_cm
+ * @property string|null $anti_tetanus
+ * @property string|null $blood_pressure
+ * @property string|null $maintenance_medicines
+ * @property string|null $notes
+ */
 class HouseholdMonitoringVisit extends Model
 {
     protected $fillable = [

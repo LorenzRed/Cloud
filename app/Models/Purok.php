@@ -6,6 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * @property int $id
+ * @property int|null $barangay_id
+ * @property string|null $name
+ * @property int|null $created_by
+ * @property array<string, mixed>|null $boundary_geojson
+ */
 class Purok extends Model
 {
     protected $fillable = [
