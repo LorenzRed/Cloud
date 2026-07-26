@@ -2,6 +2,8 @@
 
 use App\Mail\PasswordResetOtpMail;
 use App\Models\Barangay;
+use App\Support\AuthHardening;
+use App\Support\AuthRateLimit;
 use App\Support\BhwDashboardBuilder;
 use App\Support\AllRecordsBuilder;
 use App\Support\BhwReportBuilder;
@@ -15,9 +17,12 @@ use App\Support\BnsChildMonitoring;
 use App\Support\BnsHealthRecordList;
 use App\Support\GeoBoundary;
 use App\Support\PersonAge;
+use App\Support\PrivateStorage;
 use App\Support\PurokLocator;
+use App\Support\RegisterEmailOtp;
 use App\Support\ResidentBhwChat;
 use App\Support\SafeInput;
+use App\Support\VerificationIdAccess;
 use App\Models\Consultation;
 use App\Models\Event;
 use App\Models\HouseholdMonitoringCase;
@@ -68,19 +73,11 @@ Route::middleware('guest')->group(function () {
             'email' => ['required', 'string', 'email', 'max:255'],
         ]);
 
+        $startedAt = microtime(true);
         $normalized = mb_strtolower(trim($validated['email']));
+        $throttleKey = 'forgot-password-otp:'.$normalized.'|'.$request->ip();
+        $ipThrottleKey = 'forgot-password-otp-ip:'.$request->ip();
 
-        $user = User::query()
-            ->whereRaw('LOWER(email) = ?', [$normalized])
-            ->first();
-
-        if ($user === null) {
-            return back()
-                ->withInput($request->only('email'))
-                ->withErrors(['email' => __('passwords.user')]);
-        }
-
-        $throttleKey = 'forgot-password-otp:'.$normalized;
         if (RateLimiter::tooManyAttempts($throttleKey, 3)) {
             $seconds = RateLimiter::availableIn($throttleKey);
 
@@ -89,10 +86,29 @@ Route::middleware('guest')->group(function () {
                 ->withErrors(['email' => 'Too many attempts. Try again in '.$seconds.' seconds.']);
         }
 
+        if (RateLimiter::tooManyAttempts($ipThrottleKey, 10)) {
+            $seconds = RateLimiter::availableIn($ipThrottleKey);
+
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => 'Too many attempts from this network. Try again in '.$seconds.' seconds.']);
+        }
+
         RateLimiter::hit($throttleKey, 60);
+        RateLimiter::hit($ipThrottleKey, 900);
 
-        $otp = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
+        $user = User::query()
+            ->whereRaw('LOWER(email) = ?', [$normalized])
+            ->first();
 
+        // Always continue the same way so attackers cannot tell if the email exists.
+        $request->session()->put('password_reset_email', $normalized);
+        $request->session()->forget('password_reset_verified');
+
+        $genericStatus = 'If that email is registered, we sent a 6-digit code. Enter it below to continue.';
+
+        if ($user !== null) {
+            $otp = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
         $cacheKey = 'password_reset_otp:'.hash('sha256', mb_strtolower($user->email));
         Cache::put($cacheKey, Hash::make($otp), now()->addMinutes(15));
 
@@ -101,19 +117,18 @@ Route::middleware('guest')->group(function () {
         } catch (Throwable $e) {
             report($e);
             Cache::forget($cacheKey);
-            RateLimiter::clear($throttleKey);
-
-            return back()
-                ->withInput($request->only('email'))
-                ->withErrors([
-                    'email' => 'We could not send the code. Check your mail settings or try again later.',
-                ]);
+                // Keep the same user-facing response (do not reveal mail/config failure details).
+            }
         }
 
-        $request->session()->put('password_reset_email', $user->email);
+        // Reduce timing oracle between existing vs missing emails.
+        $elapsed = microtime(true) - $startedAt;
+        $minSeconds = 0.45;
+        if ($elapsed < $minSeconds) {
+            usleep((int) (($minSeconds - $elapsed) * 1_000_000));
+        }
 
-        return redirect()->route('password.reset')
-            ->with('status', 'We sent a 6-digit code to your email. Enter it below with your new password.');
+        return redirect()->route('password.reset')->with('status', $genericStatus);
     })->name('password.email');
 
     Route::get('/reset-password', function (Request $request) {
@@ -123,14 +138,19 @@ Route::middleware('guest')->group(function () {
                 ->with('error', 'Request a reset code first.');
         }
 
-        return view('auth.reset-password', ['email' => $email]);
+        $otpVerified = is_string($request->session()->get('password_reset_verified'))
+            && mb_strtolower((string) $request->session()->get('password_reset_verified')) === mb_strtolower($email);
+
+        return view('auth.reset-password', [
+            'email' => $email,
+            'otpVerified' => $otpVerified,
+        ]);
     })->name('password.reset');
 
-    Route::post('/reset-password', function (Request $request) {
+    Route::post('/reset-password/verify-otp', function (Request $request) {
         $request->validate([
             'email' => ['required', 'string', 'email', 'max:255'],
             'otp' => ['required', 'digits:6'],
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
         ]);
 
         $sessionEmail = $request->session()->get('password_reset_email');
@@ -138,19 +158,147 @@ Route::middleware('guest')->group(function () {
             return back()->withErrors(['email' => 'Invalid session. Start over from forgot password.']);
         }
 
+        $email = mb_strtolower(trim((string) $request->input('email')));
+        $otpThrottleKey = 'password-reset-otp-verify:'.$email.'|'.$request->ip();
+
+        if (RateLimiter::tooManyAttempts($otpThrottleKey, 5)) {
+            $seconds = RateLimiter::availableIn($otpThrottleKey);
+            $cacheKey = 'password_reset_otp:'.hash('sha256', $email);
+            Cache::forget($cacheKey);
+            $request->session()->forget(['password_reset_email', 'password_reset_verified']);
+
+            return redirect()->route('password.request')
+                ->withErrors([
+                    'email' => 'Too many invalid codes. Request a new code. Try again in '.$seconds.' seconds.',
+                ]);
+        }
+
         $user = User::query()
-            ->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($request->input('email')))])
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
+
+        $cacheKey = 'password_reset_otp:'.hash('sha256', $email);
+        $hash = $user ? Cache::get('password_reset_otp:'.hash('sha256', mb_strtolower($user->email))) : null;
+
+        if ($user === null || ! $hash || ! Hash::check($request->input('otp'), $hash)) {
+            RateLimiter::hit($otpThrottleKey, 900);
+
+            if (RateLimiter::tooManyAttempts($otpThrottleKey, 5)) {
+                Cache::forget($cacheKey);
+                $request->session()->forget(['password_reset_email', 'password_reset_verified']);
+
+                return redirect()->route('password.request')
+                    ->withErrors(['email' => 'Too many invalid codes. Request a new code.']);
+            }
+
+            $remaining = max(0, 5 - RateLimiter::attempts($otpThrottleKey));
+
+            return back()->withErrors([
+                'otp' => 'Invalid or expired code. '.$remaining.' attempt'.($remaining === 1 ? '' : 's').' left.',
+            ]);
+        }
+
+        Cache::forget($cacheKey);
+        RateLimiter::clear($otpThrottleKey);
+        $request->session()->put('password_reset_verified', $email);
+
+        return redirect()->route('password.reset')
+            ->with('status', 'Code verified. Choose a new password.');
+    })->name('password.verify');
+
+    Route::post('/reset-password/resend', function (Request $request) {
+        $sessionEmail = $request->session()->get('password_reset_email');
+        if (! $sessionEmail) {
+            return redirect()->route('password.request')
+                ->with('error', 'Request a reset code first.');
+        }
+
+        if (
+            is_string($request->session()->get('password_reset_verified'))
+            && mb_strtolower((string) $request->session()->get('password_reset_verified')) === mb_strtolower($sessionEmail)
+        ) {
+            return redirect()->route('password.reset');
+        }
+
+        $startedAt = microtime(true);
+        $normalized = mb_strtolower(trim($sessionEmail));
+        $throttleKey = 'forgot-password-otp:'.$normalized.'|'.$request->ip();
+        $ipThrottleKey = 'forgot-password-otp-ip:'.$request->ip();
+
+        if (RateLimiter::tooManyAttempts($throttleKey, 3)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            return back()->withErrors(['email' => 'Too many attempts. Try again in '.$seconds.' seconds.']);
+        }
+
+        if (RateLimiter::tooManyAttempts($ipThrottleKey, 10)) {
+            $seconds = RateLimiter::availableIn($ipThrottleKey);
+
+            return back()->withErrors(['email' => 'Too many attempts from this network. Try again in '.$seconds.' seconds.']);
+        }
+
+        RateLimiter::hit($throttleKey, 60);
+        RateLimiter::hit($ipThrottleKey, 900);
+
+        $user = User::query()
+            ->whereRaw('LOWER(email) = ?', [$normalized])
+            ->first();
+
+        $request->session()->forget('password_reset_verified');
+
+        $genericStatus = 'If that email is registered, we sent a new 6-digit code.';
+
+        if ($user !== null) {
+            $otp = str_pad((string) random_int(0, 999_999), 6, '0', STR_PAD_LEFT);
+        $cacheKey = 'password_reset_otp:'.hash('sha256', mb_strtolower($user->email));
+            Cache::put($cacheKey, Hash::make($otp), now()->addMinutes(15));
+
+            try {
+                Mail::to($user->email)->send(new PasswordResetOtpMail($otp, $user->email));
+            } catch (Throwable $e) {
+                report($e);
+                Cache::forget($cacheKey);
+            }
+        }
+
+        $elapsed = microtime(true) - $startedAt;
+        $minSeconds = 0.45;
+        if ($elapsed < $minSeconds) {
+            usleep((int) (($minSeconds - $elapsed) * 1_000_000));
+        }
+
+        return redirect()->route('password.reset')->with('status', $genericStatus);
+    })->name('password.resend');
+
+    Route::post('/reset-password', function (Request $request) {
+        $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+        ]);
+
+        $sessionEmail = $request->session()->get('password_reset_email');
+        $verifiedEmail = $request->session()->get('password_reset_verified');
+        $email = mb_strtolower(trim((string) $request->input('email')));
+
+        if (
+            ! $sessionEmail
+            || ! $verifiedEmail
+            || mb_strtolower($sessionEmail) !== $email
+            || mb_strtolower((string) $verifiedEmail) !== $email
+        ) {
+            return redirect()->route('password.request')
+                ->withErrors(['email' => 'Verify the code from your email first.']);
+        }
+
+        $user = User::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
             ->first();
 
         if ($user === null) {
-            return back()->withErrors(['email' => __('passwords.user')]);
-        }
+            $request->session()->forget(['password_reset_email', 'password_reset_verified']);
 
-        $cacheKey = 'password_reset_otp:'.hash('sha256', mb_strtolower($user->email));
-        $hash = Cache::get($cacheKey);
-
-        if (! $hash || ! Hash::check($request->input('otp'), $hash)) {
-            return back()->withErrors(['otp' => 'Invalid or expired code. Request a new code from forgot password.']);
+            return redirect()->route('password.request')
+                ->withErrors(['email' => 'Unable to reset password. Request a new code.']);
         }
 
         $user->forceFill([
@@ -158,8 +306,12 @@ Route::middleware('guest')->group(function () {
             'remember_token' => Str::random(60),
         ])->save();
 
-        Cache::forget($cacheKey);
-        $request->session()->forget('password_reset_email');
+        RateLimiter::clear('password-reset-otp-verify:'.$email.'|'.$request->ip());
+        RateLimiter::clear('forgot-password-otp:'.$email.'|'.$request->ip());
+        RateLimiter::clear('forgot-password-otp-ip:'.$request->ip());
+        $request->session()->forget(['password_reset_email', 'password_reset_verified']);
+
+        AuthHardening::revokeAllAccess($user);
 
         event(new PasswordReset($user));
 
@@ -173,11 +325,22 @@ Route::middleware('guest')->group(function () {
         ]);
 
         $email = mb_strtolower(trim((string) $credentials['email']));
+        $ip = (string) $request->ip();
+        $blocked = AuthRateLimit::loginBlocked($email, $ip);
+
+        if ($blocked['blocked']) {
+            return back()
+                ->withErrors(['email' => $blocked['message']])
+                ->onlyInput('email');
+        }
+
         $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
 
         if (! $user) {
+            AuthRateLimit::hitLoginFailure($email, $ip);
+
             return back()->withErrors([
-                'email' => 'This email does not exist.',
+                'email' => 'These credentials do not match our records.',
             ])->onlyInput('email');
         }
 
@@ -185,41 +348,186 @@ Route::middleware('guest')->group(function () {
             ['email' => $user->email, 'password' => $credentials['password']],
             $request->boolean('remember')
         )) {
+            AuthRateLimit::hitLoginFailure($email, $ip);
+
             return back()->withErrors([
-                'password' => 'Password is wrong.',
+                'email' => 'These credentials do not match our records.',
             ])->onlyInput('email');
         }
 
+        AuthRateLimit::clearLoginFailures($email, $ip);
         $request->session()->regenerate();
 
         return redirect()->route('dashboard')->with('status', 'You are signed in.');
     })->name('login.perform');
 
     Route::post('/register', function (Request $request) {
-        $request->merge([
-            'email' => mb_strtolower(trim((string) $request->input('email', ''))),
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
         ]);
 
-        $data = $request->validate([
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+        $normalized = mb_strtolower(trim($validated['email']));
+        $result = RegisterEmailOtp::send($normalized, $request->ip());
+
+        if (! $result['ok']) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors([$result['field'] => $result['error']]);
+        }
+
+        $request->session()->put('register_email', $normalized);
+        $request->session()->forget('register_email_verified');
+
+        return redirect()->route('register.complete')->with(
+            'status',
+            'We sent a 6-digit code to your email. Enter it below to continue.'
+        );
+    })->name('register.email');
+
+    Route::get('/register/complete', function (Request $request) {
+        $email = $request->session()->get('register_email');
+        if (! $email) {
+            return redirect()->route('register')
+                ->with('error', 'Verify your email first.');
+        }
+
+        $emailVerified = is_string($request->session()->get('register_email_verified'))
+            && mb_strtolower((string) $request->session()->get('register_email_verified')) === mb_strtolower($email);
+
+        return view('auth.register-complete', [
+            'email' => $email,
+            'emailVerified' => $emailVerified,
+            'resendCooldownSeconds' => $emailVerified ? 0 : RegisterEmailOtp::cooldownRemaining($email),
+            'resendDailyLockedSeconds' => $emailVerified ? 0 : RegisterEmailOtp::dailyRemaining($email),
+            'resendSendsLeft' => $emailVerified ? 0 : RegisterEmailOtp::sendsLeft($email),
+        ]);
+    })->name('register.complete');
+
+    Route::post('/register/resend-otp', function (Request $request) {
+        $sessionEmail = $request->session()->get('register_email');
+        if (! $sessionEmail) {
+            return redirect()->route('register')
+                ->with('error', 'Verify your email first.');
+        }
+
+        if (
+            is_string($request->session()->get('register_email_verified'))
+            && mb_strtolower((string) $request->session()->get('register_email_verified')) === mb_strtolower($sessionEmail)
+        ) {
+            return redirect()->route('register.complete');
+        }
+
+        $result = RegisterEmailOtp::send($sessionEmail, $request->ip());
+
+        if (! $result['ok']) {
+            return back()->withErrors([$result['field'] => $result['error']]);
+        }
+
+        return redirect()->route('register.complete')->with(
+            'status',
+            'We sent a new 6-digit code to your email.'
+        );
+    })->name('register.resend');
+
+    Route::post('/register/verify-otp', function (Request $request) {
+        $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+            'otp' => ['required', 'digits:6'],
+        ]);
+
+        $sessionEmail = $request->session()->get('register_email');
+        if (! $sessionEmail || mb_strtolower($sessionEmail) !== mb_strtolower($request->input('email'))) {
+            return back()->withErrors(['email' => 'Invalid session. Start over from register.']);
+        }
+
+        $email = mb_strtolower(trim((string) $request->input('email')));
+        $otpThrottleKey = 'register-otp-verify:'.$email.'|'.$request->ip();
+
+        if (RateLimiter::tooManyAttempts($otpThrottleKey, 5)) {
+            $seconds = RateLimiter::availableIn($otpThrottleKey);
+            Cache::forget(RegisterEmailOtp::otpCacheKey($email));
+            $request->session()->forget(['register_email', 'register_email_verified']);
+
+            return redirect()->route('register')
+                ->withErrors([
+                    'email' => 'Too many invalid codes. Request a new code. Try again in '.$seconds.' seconds.',
+                ]);
+        }
+
+        $emailTaken = User::query()->whereRaw('LOWER(email) = ?', [$email])->exists();
+        $cacheKey = RegisterEmailOtp::otpCacheKey($email);
+        $hash = Cache::get($cacheKey);
+
+        if ($emailTaken || ! $hash || ! Hash::check($request->input('otp'), $hash)) {
+            RateLimiter::hit($otpThrottleKey, 900);
+
+            if (RateLimiter::tooManyAttempts($otpThrottleKey, 5)) {
+                Cache::forget($cacheKey);
+                $request->session()->forget(['register_email', 'register_email_verified']);
+
+                return redirect()->route('register')
+                    ->withErrors(['email' => 'Too many invalid codes. Request a new code.']);
+            }
+
+            $remaining = max(0, 5 - RateLimiter::attempts($otpThrottleKey));
+
+            return back()->withErrors([
+                'otp' => 'Invalid or expired code. '.$remaining.' attempt'.($remaining === 1 ? '' : 's').' left.',
+            ]);
+        }
+
+        Cache::forget($cacheKey);
+        RateLimiter::clear($otpThrottleKey);
+        $request->session()->put('register_email_verified', $email);
+
+        return redirect()->route('register.complete')
+            ->with('status', 'Email verified. Choose a password to finish creating your account.');
+    })->name('register.verify');
+
+    Route::post('/register/complete', function (Request $request) {
+        $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+            'terms_accepted' => ['accepted'],
         ], [
-            'email.unique' => 'This email already exists.',
+            'terms_accepted.accepted' => 'You must agree to the terms and conditions to register.',
         ]);
 
-        $user = User::create([
-            'name' => strstr($data['email'], '@', true) ?: $data['email'],
-            'email' => mb_strtolower(trim($data['email'])),
-            'role' => 'users',
+        $sessionEmail = $request->session()->get('register_email');
+        $verifiedEmail = $request->session()->get('register_email_verified');
+        $email = mb_strtolower(trim((string) $request->input('email')));
+
+        if (
+            ! $sessionEmail
+            || ! $verifiedEmail
+            || mb_strtolower($sessionEmail) !== $email
+            || mb_strtolower((string) $verifiedEmail) !== $email
+        ) {
+            return redirect()->route('register')
+                ->withErrors(['email' => 'Verify your email first.']);
+        }
+
+        if (User::query()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
+            $request->session()->forget(['register_email', 'register_email_verified']);
+
+            return redirect()->route('register')
+                ->withErrors(['email' => 'This email is already registered. Try logging in instead.']);
+        }
+
+        RegisterEmailOtp::clearSendLimits($email);
+        $request->session()->forget(['register_email', 'register_email_verified']);
+
+        $user = User::createWithRole([
+            'name' => strstr($email, '@', true) ?: $email,
+            'email' => $email,
+            'email_verified_at' => now(),
+            'role' => User::ROLE_USERS,
             'municipality' => 'Victoria',
             'province' => 'Oriental Mindoro',
-            'password' => $data['password'],
+            'password' => $request->input('password'),
         ]);
 
-        Auth::login($user);
-        $request->session()->regenerate();
-
-        return redirect()->route('dashboard')->with('status', 'Welcome! Your account has been created.');
+        return redirect()->route('login')->with('status', 'Account created. Please log in.');
     })->name('register.perform');
 });
 
@@ -232,24 +540,33 @@ Route::post('/logout', function (Request $request) {
     return redirect()->route('login')->with('status', 'You have been signed out.');
 })->middleware('auth')->name('logout');
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'role.prefix'])->group(function () {
     Route::get('/profile-picture/{user}', function (User $user) {
+        $viewer = Auth::user();
+        $canView = (int) $viewer->id === (int) $user->id
+            || in_array($viewer->role, [
+                User::ROLE_BHW,
+                User::ROLE_BHW_HEAD,
+                User::ROLE_BNS,
+                User::ROLE_BRG_CAPTAIN,
+                User::ROLE_LGU,
+            ], true);
+
+        if (! $canView) {
+            abort(403);
+        }
+
         $path = $user->profile_picture_path;
 
-        if (! $path || ! Storage::disk('public')->exists($path)) {
+        if (! $path || ! PrivateStorage::exists($path)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('public')->path($path));
+        return PrivateStorage::download($path);
     })->name('profile.picture');
 
     Route::get('/verification-id/{residentRequest}/{side}', function (ResidentRequest $residentRequest, string $side) {
-        $viewer = Auth::user();
-        $canView = in_array($viewer->role, ['BrgCaptain', 'BNS', 'LGU'], true)
-            || ($viewer->role === 'BHW' && BhwResidentScope::canAccess($viewer, $residentRequest))
-            || $residentRequest->user_id === $viewer->id;
-
-        if (! $canView) {
+        if (! VerificationIdAccess::canView(Auth::user(), $residentRequest)) {
             abort(403);
         }
 
@@ -259,11 +576,11 @@ Route::middleware('auth')->group(function () {
             default => null,
         };
 
-        if (! $path || ! Storage::disk('public')->exists($path)) {
+        if (! $path || ! PrivateStorage::exists($path)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('public')->path($path));
+        return PrivateStorage::download($path);
     })->whereIn('side', ['front', 'back'])->name('verification.id.photo');
 
     Route::get('/dashboard', function () {
@@ -384,7 +701,7 @@ Route::middleware('auth')->group(function () {
                 ->limit(2)
                 ->get()
             : collect();
-
+        
         $events = $verificationStatus === 'accepted' && $barangay
             ? Event::query()
                 ->where('barangay_id', $barangay->id)
@@ -400,13 +717,13 @@ Route::middleware('auth')->group(function () {
 
         $announcements = $verificationStatus === 'accepted' && $barangay
             ? Event::query()
-                ->visibleToResidents()
+                ->activeAnnouncements()
                 ->where('barangay_id', $barangay->id)
                 ->visibleToPurok($residentRequest?->purok_id ? (int) $residentRequest->purok_id : null)
                 ->whereNull('disabled_at')
                 ->orderByDesc('event_date')
                 ->orderByDesc('end_time')
-                ->limit(10)
+            ->limit(10)
                 ->get()
             : collect();
 
@@ -460,11 +777,11 @@ Route::middleware('auth')->group(function () {
         $announcements = $barangay
             ? Event::query()
                 ->visibleToResidents()
-                ->where('barangay_id', $barangay->id)
+                    ->where('barangay_id', $barangay->id)
                 ->visibleToPurok($residentRequest->purok_id ? (int) $residentRequest->purok_id : null)
-                ->whereNull('disabled_at')
+                    ->whereNull('disabled_at')
                 ->orderByDesc('created_at')
-                ->orderByDesc('event_date')
+                    ->orderByDesc('event_date')
                 ->orderByDesc('end_time')
                 ->get()
             : collect();
@@ -938,7 +1255,7 @@ Route::middleware('auth')->group(function () {
         $user = User::query()->findOrFail(Auth::id());
 
         $validator = Validator::make($request->all(), [
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ], [
             'password.required' => 'Please enter a new password.',
             'password.confirmed' => 'The new password confirmation does not match.',
@@ -954,8 +1271,11 @@ Route::middleware('auth')->group(function () {
             'password' => $request->input('password'),
         ]);
 
+        AuthHardening::revokeOtherAccess($user, $request->session()->getId());
+        $request->session()->regenerate();
+
         return redirect()->route('users.profile.details')
-            ->with('status', 'Password updated successfully.');
+            ->with('status', 'Password updated successfully. Other devices were signed out.');
     })->name('users.profile.password');
 
     Route::post('/users/profile/avatar', function (Request $request) {
@@ -976,11 +1296,11 @@ Route::middleware('auth')->group(function () {
         $profilePicturePath = $user->profile_picture_path;
 
         if ($request->hasFile('profile_picture')) {
-            if ($profilePicturePath && Storage::disk('public')->exists($profilePicturePath)) {
-                Storage::disk('public')->delete($profilePicturePath);
+            if ($profilePicturePath) {
+                PrivateStorage::delete($profilePicturePath);
             }
 
-            $profilePicturePath = $request->file('profile_picture')->store('profile-pictures', 'public');
+            $profilePicturePath = PrivateStorage::store($request->file('profile_picture'), 'profile-pictures');
             $user->update(['profile_picture_path' => $profilePicturePath]);
         }
 
@@ -1177,7 +1497,7 @@ Route::middleware('auth')->group(function () {
             'spouse_last_name' => ['nullable', 'string', 'max:255', $optionalNamePattern],
             'spouse_middle_initial' => ['nullable', 'string', 'max:1', 'regex:/^[A-Za-z]?$/'],
             'spouse_birthdate_display' => ['nullable', 'date', 'before:today'],
-            'spouse_parent_role' => ['nullable', Rule::in(ResidentRequest::PARENT_ROLES)],
+            'spouse_parent_role' => ['nullable', Rule::in(ResidentRequest::SPOUSE_PARENT_ROLES)],
             'spouse_gender_display' => ['nullable', 'in:Male,Female'],
             'spouse_place_of_birth' => ['nullable', 'string', 'max:255', $optionalPlainTextPattern],
             'spouse_educational_attainment' => ['nullable', 'string', Rule::in(ResidentRequest::EDUCATIONAL_ATTAINMENTS)],
@@ -1198,6 +1518,7 @@ Route::middleware('auth')->group(function () {
             'seniors.*.relationship' => ['required', Rule::in(ResidentRequest::HOUSEHOLD_SENIOR_RELATIONSHIPS)],
             'seniors.*.place_of_birth' => ['required', 'string', 'max:255', $plainTextPattern],
             'seniors.*.educational_attainment' => ['required', Rule::in(ResidentRequest::EDUCATIONAL_ATTAINMENTS)],
+            'seniors.*.civil_status' => ['required', 'string', Rule::in(User::CIVIL_STATUSES)],
             'seniors.*.occupation' => ['nullable', 'string', 'max:255', $optionalPlainTextPattern],
             'location_consent' => [Rule::requiredIf(fn () => $request->input('location_mode') === 'map'), 'accepted'],
             'privacy_consent' => ['accepted'],
@@ -1213,9 +1534,9 @@ Route::middleware('auth')->group(function () {
             'middle_initial.regex' => 'Middle initial must be a single letter.',
             'birthdate_display.required' => 'Please enter your birthdate.',
             'birthdate_display.before' => 'Birthdate must be a valid past date.',
-            'parent_role.required' => 'Please select whether you are the father or mother registering for your family.',
-            'parent_role.in' => 'Only a father or mother may register for the family account.',
-            'gender_display.required' => 'Please select your parent role.',
+            'parent_role.required' => 'Please select your guardian role (self, father, mother, grandfather, or grandmother).',
+            'parent_role.in' => 'Please select a valid guardian role.',
+            'gender_display.required' => 'Please select your gender.',
             'civil_status.required' => 'Please select your marital status.',
             'civil_status.in' => 'Please select a valid marital status.',
             'place_of_birth.required' => 'Please enter your place of birth.',
@@ -1225,7 +1546,7 @@ Route::middleware('auth')->group(function () {
             'children.*.school.regex' => 'School name may only use letters, numbers, spaces, and comma as a special character.',
             'children.*.occupation.regex' => 'Occupation may only use letters, numbers, spaces, and comma as a special character.',
             'children.*.full_name.regex' => 'Child full name may only use letters, spaces, comma, and period as special characters.',
-            'seniors.*.full_name.regex' => 'Senior full name may only use letters, spaces, comma, and period as special characters.',
+            'seniors.*.full_name.regex' => 'Other family member full name may only use letters, spaces, comma, and period as special characters.',
             'seniors.*.place_of_birth.regex' => 'Place of birth may only use letters, numbers, spaces, and comma as a special character.',
             'seniors.*.occupation.regex' => 'Occupation may only use letters, numbers, spaces, and comma as a special character.',
             'educational_attainment.required' => 'Please select your educational attainment.',
@@ -1256,14 +1577,20 @@ Route::middleware('auth')->group(function () {
         $middleInitial = strtoupper(trim((string) ($data['middle_initial'] ?? '')));
         $middleSegment = $middleInitial !== '' ? $middleInitial.'.' : null;
         $parentRole = (string) ($data['parent_role'] ?? '');
-        $expectedGender = $parentRole === ResidentRequest::PARENT_ROLE_FATHER ? 'Male' : 'Female';
+        $expectedGender = ResidentRequest::genderFromParentRole($parentRole);
         $normalizedGender = filled($data['gender_display'] ?? null)
             ? ucfirst(strtolower(trim((string) $data['gender_display'])))
-            : $expectedGender;
+            : ($expectedGender ?? '');
 
-        if ($normalizedGender !== $expectedGender) {
+        if ($parentRole === ResidentRequest::PARENT_ROLE_SELF) {
+            if (! in_array($normalizedGender, ['Male', 'Female'], true)) {
+                return back()->withErrors([
+                    'gender_display' => 'Please select your gender when guardian role is Self.',
+                ])->withInput();
+            }
+        } elseif ($expectedGender === null || $normalizedGender !== $expectedGender) {
             return back()->withErrors([
-                'parent_role' => 'Parent role must match the registrant (Father = Male, Mother = Female).',
+                'parent_role' => 'Guardian role must match the registrant (Father/Grandfather = Male, Mother/Grandmother = Female).',
             ])->withInput();
         }
 
@@ -1282,7 +1609,7 @@ Route::middleware('auth')->group(function () {
         $spouseParentRole = trim((string) ($data['spouse_parent_role'] ?? ''));
         $spouseGender = filled($data['spouse_gender_display'] ?? null)
             ? ucfirst(strtolower(trim((string) $data['spouse_gender_display'])))
-            : ($spouseParentRole === ResidentRequest::PARENT_ROLE_FATHER ? 'Male' : ($spouseParentRole === ResidentRequest::PARENT_ROLE_MOTHER ? 'Female' : ''));
+            : (ResidentRequest::genderFromParentRole($spouseParentRole) ?? '');
         $spousePlaceOfBirth = trim((string) ($data['spouse_place_of_birth'] ?? ''));
         $spouseEducationalAttainment = trim((string) ($data['spouse_educational_attainment'] ?? ''));
         $spouseFullName = trim(implode(' ', array_filter([
@@ -1314,21 +1641,21 @@ Route::middleware('auth')->group(function () {
                 ])->withInput();
             }
 
-            if ($spouseParentRole === '' || ! in_array($spouseParentRole, ResidentRequest::PARENT_ROLES, true)) {
+            if ($spouseParentRole === '' || ! in_array($spouseParentRole, ResidentRequest::SPOUSE_PARENT_ROLES, true)) {
                 return back()->withErrors([
-                    'spouse_parent_role' => 'Please select your spouse\'s parent role.',
+                    'spouse_parent_role' => 'Please select your spouse\'s guardian role.',
                 ])->withInput();
             }
 
             if ($spouseParentRole === $parentRole) {
                 return back()->withErrors([
-                    'spouse_parent_role' => 'Your spouse\'s parent role must be different from yours.',
+                    'spouse_parent_role' => 'Your spouse\'s guardian role must be different from yours.',
                 ])->withInput();
             }
 
             if ($spouseGender === '') {
                 return back()->withErrors([
-                    'spouse_gender_display' => 'Please select your spouse\'s parent role.',
+                    'spouse_gender_display' => 'Please select your spouse\'s guardian role.',
                 ])->withInput();
             }
 
@@ -1463,19 +1790,26 @@ Route::middleware('auth')->group(function () {
             $seniorBirthdate = (string) $senior['birthdate'];
             $seniorAge = PersonAge::ageInYears($seniorBirthdate);
 
-            if ($seniorAge === null || $seniorAge < 60) {
+            if ($seniorAge === null) {
                 return back()->withErrors([
-                    'seniors' => 'Each elderly household member must be at least 60 years old.',
+                    'seniors' => 'Please enter a valid birthdate for each other family member living in the house.',
                 ])->withInput();
             }
 
             $occupation = trim((string) ($senior['occupation'] ?? ''));
-            $placeOfBirth = trim((string) ($senior['place_of_birth'] ?? ''));
-            $educationalAttainment = trim((string) ($senior['educational_attainment'] ?? ''));
+            $seniorPlaceOfBirth = trim((string) ($senior['place_of_birth'] ?? ''));
+            $seniorEducationalAttainment = trim((string) ($senior['educational_attainment'] ?? ''));
+            $seniorCivilStatus = trim((string) ($senior['civil_status'] ?? ''));
 
-            if ($placeOfBirth === '' || $educationalAttainment === '') {
+            if ($seniorPlaceOfBirth === '' || $seniorEducationalAttainment === '' || $seniorCivilStatus === '') {
                 return back()->withErrors([
-                    'seniors' => 'Please complete place of birth and educational attainment for each elderly household member.',
+                    'seniors' => 'Please complete place of birth, marital status, and educational attainment for each other family member living in the house.',
+                ])->withInput();
+            }
+
+            if (! in_array($seniorCivilStatus, User::CIVIL_STATUSES, true)) {
+                return back()->withErrors([
+                    'seniors' => 'Please select a valid marital status for each other family member.',
                 ])->withInput();
             }
 
@@ -1485,9 +1819,12 @@ Route::middleware('auth')->group(function () {
                 'age_in_years' => $seniorAge,
                 'gender' => ucfirst(strtolower(trim((string) $senior['gender']))),
                 'relationship' => (string) $senior['relationship'],
-                'place_of_birth' => $placeOfBirth,
-                'educational_attainment' => $educationalAttainment,
+                'place_of_birth' => $seniorPlaceOfBirth,
+                'educational_attainment' => $seniorEducationalAttainment,
+                'civil_status' => $seniorCivilStatus,
                 'occupation' => $occupation !== '' ? $occupation : null,
+                'is_elderly' => $seniorAge >= 60,
+                'source' => 'other',
             ];
         }
 
@@ -1500,6 +1837,42 @@ Route::middleware('auth')->group(function () {
             $middleSegment,
             trim((string) $data['last_name']),
         ])));
+
+        if ($calculatedAge !== null && $calculatedAge >= 60) {
+            $householdSeniors[] = [
+                'full_name' => $fullName,
+                'birthdate' => $birthdate?->toDateString(),
+                'age_in_years' => $calculatedAge,
+                'gender' => $normalizedGender,
+                'relationship' => $parentRole,
+                'place_of_birth' => $placeOfBirth,
+                'educational_attainment' => $educationalAttainment,
+                'civil_status' => $civilStatus,
+                'occupation' => null,
+                'is_elderly' => true,
+                'source' => 'guardian',
+            ];
+        }
+
+        if ($spouseFullName !== '' && $spouseBirthdate !== '') {
+            $spouseAge = PersonAge::ageInYears($spouseBirthdate);
+            if ($spouseAge !== null && $spouseAge >= 60) {
+                $householdSeniors[] = [
+                    'full_name' => $spouseFullName,
+                    'birthdate' => $spouseBirthdate,
+                    'age_in_years' => $spouseAge,
+                    'gender' => $spouseGender,
+                    'relationship' => $spouseParentRole !== '' ? $spouseParentRole : 'Spouse',
+                    'place_of_birth' => $spousePlaceOfBirth,
+                    'educational_attainment' => $spouseEducationalAttainment,
+                    'civil_status' => $civilStatus,
+                    'occupation' => null,
+                    'is_elderly' => true,
+                    'source' => 'spouse',
+                ];
+            }
+        }
+
         $locationMode = (string) ($data['location_mode'] ?? 'map');
         $submittedBarangay = trim((string) $data['barangay']);
         $submittedPurokName = trim((string) ($data['purok'] ?? ''));
@@ -1539,113 +1912,113 @@ Route::middleware('auth')->group(function () {
 
             $submittedBarangay = $barangayModel->name;
         } else {
-            if ($coordinateString !== '' && preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/', $coordinateString, $matches)) {
-                $geoPoint = [
-                    'lat' => (float) $matches[1],
-                    'lng' => (float) $matches[2],
-                ];
+        if ($coordinateString !== '' && preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/', $coordinateString, $matches)) {
+            $geoPoint = [
+                'lat' => (float) $matches[1],
+                'lng' => (float) $matches[2],
+            ];
+        }
+
+        $pointInRing = static function (float $lat, float $lng, array $ring): bool {
+            $inside = false;
+            $vertexCount = count($ring);
+
+            if ($vertexCount < 3) {
+                return false;
             }
 
-            $pointInRing = static function (float $lat, float $lng, array $ring): bool {
-                $inside = false;
-                $vertexCount = count($ring);
+            for ($i = 0, $j = $vertexCount - 1; $i < $vertexCount; $j = $i++) {
+                $current = $ring[$i] ?? [];
+                $previous = $ring[$j] ?? [];
 
-                if ($vertexCount < 3) {
-                    return false;
+                $xi = (float) ($current[0] ?? 0);
+                $yi = (float) ($current[1] ?? 0);
+                $xj = (float) ($previous[0] ?? 0);
+                $yj = (float) ($previous[1] ?? 0);
+
+                $intersects = (($yi > $lat) !== ($yj > $lat))
+                    && ($lng < (($xj - $xi) * ($lat - $yi) / (($yj - $yi) !== 0.0 ? ($yj - $yi) : 0.0000001)) + $xi);
+
+                if ($intersects) {
+                    $inside = ! $inside;
                 }
+            }
 
-                for ($i = 0, $j = $vertexCount - 1; $i < $vertexCount; $j = $i++) {
-                    $current = $ring[$i] ?? [];
-                    $previous = $ring[$j] ?? [];
+            return $inside;
+        };
 
-                    $xi = (float) ($current[0] ?? 0);
-                    $yi = (float) ($current[1] ?? 0);
-                    $xj = (float) ($previous[0] ?? 0);
-                    $yj = (float) ($previous[1] ?? 0);
+        $geometryContainsPoint = null;
+        $geometryContainsPoint = static function (array $geometry, float $lat, float $lng) use (&$geometryContainsPoint, $pointInRing): bool {
+            $geometryType = $geometry['type'] ?? '';
+            $coordinates = $geometry['coordinates'] ?? [];
 
-                    $intersects = (($yi > $lat) !== ($yj > $lat))
-                        && ($lng < (($xj - $xi) * ($lat - $yi) / (($yj - $yi) !== 0.0 ? ($yj - $yi) : 0.0000001)) + $xi);
-
-                    if ($intersects) {
-                        $inside = ! $inside;
-                    }
-                }
-
-                return $inside;
-            };
-
-            $geometryContainsPoint = null;
-            $geometryContainsPoint = static function (array $geometry, float $lat, float $lng) use (&$geometryContainsPoint, $pointInRing): bool {
-                $geometryType = $geometry['type'] ?? '';
-                $coordinates = $geometry['coordinates'] ?? [];
-
-                if ($geometryType === 'FeatureCollection') {
-                    foreach ($geometry['features'] ?? [] as $feature) {
-                        if ($geometryContainsPoint($feature, $lat, $lng)) {
-                            return true;
-                        }
-                    }
-
-                    return false;
-                }
-
-                if ($geometryType === 'Feature') {
-                    return $geometryContainsPoint($geometry['geometry'] ?? [], $lat, $lng);
-                }
-
-                if ($geometryType === 'Polygon') {
-                    $rings = is_array($coordinates) ? $coordinates : [];
-                    $outerRing = $rings[0] ?? [];
-
-                    if (! $pointInRing($lat, $lng, $outerRing)) {
-                        return false;
-                    }
-
-                    foreach (array_slice($rings, 1) as $hole) {
-                        if ($pointInRing($lat, $lng, $hole)) {
-                            return false;
-                        }
-                    }
-
-                    return true;
-                }
-
-                if ($geometryType === 'MultiPolygon') {
-                    foreach ($coordinates as $polygon) {
-                        if ($geometryContainsPoint(['type' => 'Polygon', 'coordinates' => $polygon], $lat, $lng)) {
-                            return true;
-                        }
+            if ($geometryType === 'FeatureCollection') {
+                foreach ($geometry['features'] ?? [] as $feature) {
+                    if ($geometryContainsPoint($feature, $lat, $lng)) {
+                        return true;
                     }
                 }
 
                 return false;
-            };
+            }
 
-            $hasBarangayBoundaries = Barangay::query()->whereNotNull('boundary_geojson')->exists();
+            if ($geometryType === 'Feature') {
+                return $geometryContainsPoint($geometry['geometry'] ?? [], $lat, $lng);
+            }
 
-            if ($geoPoint) {
-                $matchedBarangay = Barangay::query()
-                    ->whereNotNull('boundary_geojson')
-                    ->get(['name', 'boundary_geojson'])
-                    ->first(function (Barangay $barangay) use ($geometryContainsPoint, $geoPoint) {
-                        return is_array($barangay->boundary_geojson)
-                            && $geometryContainsPoint($barangay->boundary_geojson, $geoPoint['lat'], $geoPoint['lng']);
-                    });
+            if ($geometryType === 'Polygon') {
+                $rings = is_array($coordinates) ? $coordinates : [];
+                $outerRing = $rings[0] ?? [];
 
-                if ($matchedBarangay) {
-                    $submittedBarangay = $matchedBarangay->name;
-                } elseif ($hasBarangayBoundaries) {
-                    return back()->withErrors([
-                        'barangay' => 'Your location is outside the barangay boundary. Please choose a point inside the highlighted area.',
-                    ])->withInput();
+                if (! $pointInRing($lat, $lng, $outerRing)) {
+                    return false;
+                }
+
+                foreach (array_slice($rings, 1) as $hole) {
+                    if ($pointInRing($lat, $lng, $hole)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            if ($geometryType === 'MultiPolygon') {
+                foreach ($coordinates as $polygon) {
+                    if ($geometryContainsPoint(['type' => 'Polygon', 'coordinates' => $polygon], $lat, $lng)) {
+                        return true;
+                    }
                 }
             }
 
-            if ($geoPoint && $submittedBarangay === '') {
+            return false;
+        };
+
+        $hasBarangayBoundaries = Barangay::query()->whereNotNull('boundary_geojson')->exists();
+
+        if ($geoPoint) {
+            $matchedBarangay = Barangay::query()
+                ->whereNotNull('boundary_geojson')
+                ->get(['name', 'boundary_geojson'])
+                ->first(function (Barangay $barangay) use ($geometryContainsPoint, $geoPoint) {
+                    return is_array($barangay->boundary_geojson)
+                        && $geometryContainsPoint($barangay->boundary_geojson, $geoPoint['lat'], $geoPoint['lng']);
+                });
+
+            if ($matchedBarangay) {
+                $submittedBarangay = $matchedBarangay->name;
+            } elseif ($hasBarangayBoundaries) {
                 return back()->withErrors([
-                    'barangay' => 'Your location could not be matched to a barangay boundary. Please track a valid location.',
+                    'barangay' => 'Your location is outside the barangay boundary. Please choose a point inside the highlighted area.',
                 ])->withInput();
             }
+        }
+
+        if ($geoPoint && $submittedBarangay === '') {
+            return back()->withErrors([
+                'barangay' => 'Your location could not be matched to a barangay boundary. Please track a valid location.',
+            ])->withInput();
+        }
 
             if ($geoPoint) {
                 $barangayModel = Barangay::query()
@@ -1675,15 +2048,13 @@ Route::middleware('auth')->group(function () {
         foreach (['id_front_path', 'id_back_path'] as $pathColumn) {
             $oldPath = $existingRequest?->{$pathColumn};
 
-            if ($oldPath && Storage::disk('public')->exists($oldPath)) {
-                Storage::disk('public')->delete($oldPath);
-            }
+            PrivateStorage::delete($oldPath);
         }
 
         $storageFolder = 'verification-ids/'.Auth::id();
-        $idFrontPath = $request->file('id_photo_front')->store($storageFolder, 'public');
+        $idFrontPath = PrivateStorage::store($request->file('id_photo_front'), $storageFolder);
         $idBackPath = $request->hasFile('id_photo_back')
-            ? $request->file('id_photo_back')->store($storageFolder, 'public')
+            ? PrivateStorage::store($request->file('id_photo_back'), $storageFolder)
             : null;
         $idOtherLabel = $data['id_type'] === ResidentRequest::ID_TYPE_OTHER
             ? trim((string) ($data['id_other_label'] ?? ''))
@@ -1820,7 +2191,7 @@ Route::middleware('auth')->group(function () {
 
         $data = $request->validate([
             'captain_email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'captain_password' => ['required', 'string', 'min:8', 'confirmed'],
+            'captain_password' => ['required', 'confirmed', PasswordRule::defaults()],
             'captain_barangay_id' => ['nullable', 'integer', 'exists:barangays,id'],
         ]);
 
@@ -1831,19 +2202,19 @@ Route::middleware('auth')->group(function () {
             ? Barangay::query()->findOrFail($data['captain_barangay_id'])
             : null;
 
-        $captain = User::query()->create([
+        $captain = User::createWithRole([
             'name' => $captainName,
             'full_name' => $captainName,
             'email' => $email,
-            'role' => 'BrgCaptain',
+            'role' => User::ROLE_BRG_CAPTAIN,
             'barangay' => $barangay?->name,
             'password' => $data['captain_password'],
         ]);
 
         if ($barangay) {
-            $barangay->update([
-                'captain_user_id' => $captain->id,
-            ]);
+        $barangay->update([
+            'captain_user_id' => $captain->id,
+        ]);
         }
 
         $status = $barangay
@@ -2655,7 +3026,7 @@ Route::middleware('auth')->group(function () {
 
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
             'worker_role' => ['required', 'in:BHW,BHWHead'],
         ]);
 
@@ -2665,7 +3036,7 @@ Route::middleware('auth')->group(function () {
             ? 'BHW Head created successfully.'
             : 'BHW worker created successfully.';
 
-        User::query()->create([
+        User::createWithRole([
             'name' => $name,
             'full_name' => null,
             'email' => mb_strtolower(trim($data['email'])),
@@ -2826,7 +3197,7 @@ Route::middleware('auth')->group(function () {
 
         $data = $request->validate([
             'worker_id' => ['required', 'integer', 'exists:users,id'],
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ], [
             'password.required' => 'Please enter a new password.',
             'password.confirmed' => 'The new password confirmation does not match.',
@@ -2892,12 +3263,12 @@ Route::middleware('auth')->group(function () {
 
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ]);
 
         $name = strstr($data['email'], '@', true) ?: $data['email'];
 
-        User::query()->create([
+        User::createWithRole([
             'name' => $name,
             'full_name' => null,
             'email' => mb_strtolower(trim($data['email'])),
@@ -2974,7 +3345,7 @@ Route::middleware('auth')->group(function () {
 
         $data = $request->validate([
             'worker_id' => ['required', 'integer', 'exists:users,id'],
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ], [
             'password.required' => 'Please enter a new password.',
             'password.confirmed' => 'The new password confirmation does not match.',
@@ -3144,11 +3515,11 @@ Route::middleware('auth')->group(function () {
         $profilePicturePath = $user->profile_picture_path;
 
         if ($request->hasFile('profile_picture')) {
-            if ($profilePicturePath && Storage::disk('public')->exists($profilePicturePath)) {
-                Storage::disk('public')->delete($profilePicturePath);
+            if ($profilePicturePath) {
+                PrivateStorage::delete($profilePicturePath);
             }
 
-            $profilePicturePath = $request->file('profile_picture')->store('profile-pictures', 'public');
+            $profilePicturePath = PrivateStorage::store($request->file('profile_picture'), 'profile-pictures');
             $user->update(['profile_picture_path' => $profilePicturePath]);
         }
 
@@ -3194,7 +3565,7 @@ Route::middleware('auth')->group(function () {
         $user = User::query()->findOrFail(Auth::id());
 
         $validator = Validator::make($request->all(), [
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ], [
             'password.required' => 'Please enter a new password.',
             'password.confirmed' => 'The new password confirmation does not match.',
@@ -3210,8 +3581,11 @@ Route::middleware('auth')->group(function () {
             'password' => $request->input('password'),
         ]);
 
+        AuthHardening::revokeOtherAccess($user, $request->session()->getId());
+        $request->session()->regenerate();
+
         return redirect()->route('barangay-captain.settings')
-            ->with('status', 'Password updated successfully.');
+            ->with('status', 'Password updated successfully. Other devices were signed out.');
     })->name('barangay-captain.settings.password');
 
     Route::get('/bns', function () {
@@ -3518,11 +3892,11 @@ Route::middleware('auth')->group(function () {
         $profilePicturePath = $user->profile_picture_path;
 
         if ($request->hasFile('profile_picture')) {
-            if ($profilePicturePath && Storage::disk('public')->exists($profilePicturePath)) {
-                Storage::disk('public')->delete($profilePicturePath);
+            if ($profilePicturePath) {
+                PrivateStorage::delete($profilePicturePath);
             }
 
-            $profilePicturePath = $request->file('profile_picture')->store('profile-pictures', 'public');
+            $profilePicturePath = PrivateStorage::store($request->file('profile_picture'), 'profile-pictures');
             $user->update(['profile_picture_path' => $profilePicturePath]);
         }
 
@@ -3568,7 +3942,7 @@ Route::middleware('auth')->group(function () {
         $user = User::query()->findOrFail(Auth::id());
 
         $validator = Validator::make($request->all(), [
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ], [
             'password.required' => 'Please enter a new password.',
             'password.confirmed' => 'The new password confirmation does not match.',
@@ -3584,8 +3958,11 @@ Route::middleware('auth')->group(function () {
             'password' => $request->input('password'),
         ]);
 
+        AuthHardening::revokeOtherAccess($user, $request->session()->getId());
+        $request->session()->regenerate();
+
         return redirect()->route('bns.settings')
-            ->with('status', 'Password updated successfully.');
+            ->with('status', 'Password updated successfully. Other devices were signed out.');
     })->name('bns.settings.password');
 
     $resolveBhwHeadBarangay = function (User $head): ?Barangay {
@@ -3636,7 +4013,7 @@ Route::middleware('auth')->group(function () {
                 ->with(['bhwWorkers' => fn ($query) => $query->select('users.id', 'users.name', 'users.full_name', 'users.email')])
                 ->where('barangay_id', $assignedBarangay->id)
                 ->orderBy('name')
-                ->get();
+            ->get();
 
             $manageablePuroks = $puroks
                 ->reject(fn (Purok $purok) => $purok->name === PurokLocator::NON_NAME)
@@ -3665,12 +4042,12 @@ Route::middleware('auth')->group(function () {
 
         $data = $request->validate([
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ]);
 
         $name = strstr($data['email'], '@', true) ?: $data['email'];
 
-        User::query()->create([
+        User::createWithRole([
             'name' => $name,
             'full_name' => null,
             'email' => mb_strtolower(trim($data['email'])),
@@ -3793,7 +4170,7 @@ Route::middleware('auth')->group(function () {
 
         $data = $request->validate([
             'worker_id' => ['required', 'integer', 'exists:users,id'],
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ], [
             'password.required' => 'Please enter a new password.',
             'password.confirmed' => 'The new password confirmation does not match.',
@@ -4278,11 +4655,11 @@ Route::middleware('auth')->group(function () {
         $profilePicturePath = $user->profile_picture_path;
 
         if ($request->hasFile('profile_picture')) {
-            if ($profilePicturePath && Storage::disk('public')->exists($profilePicturePath)) {
-                Storage::disk('public')->delete($profilePicturePath);
+            if ($profilePicturePath) {
+                PrivateStorage::delete($profilePicturePath);
             }
 
-            $profilePicturePath = $request->file('profile_picture')->store('profile-pictures', 'public');
+            $profilePicturePath = PrivateStorage::store($request->file('profile_picture'), 'profile-pictures');
             $user->update(['profile_picture_path' => $profilePicturePath]);
         }
 
@@ -4389,7 +4766,7 @@ Route::middleware('auth')->group(function () {
         $user = User::query()->findOrFail(Auth::id());
 
         $validator = Validator::make($request->all(), [
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ], [
             'password.required' => 'Please enter a new password.',
             'password.confirmed' => 'The new password confirmation does not match.',
@@ -4405,8 +4782,11 @@ Route::middleware('auth')->group(function () {
             'password' => $request->input('password'),
         ]);
 
+        AuthHardening::revokeOtherAccess($user, $request->session()->getId());
+        $request->session()->regenerate();
+
         return redirect()->route('bhw-head.settings')
-            ->with('status', 'Password updated successfully.');
+            ->with('status', 'Password updated successfully. Other devices were signed out.');
     })->name('bhw-head.settings.password');
 
     Route::get('/bhw', function () {
@@ -4580,7 +4960,7 @@ Route::middleware('auth')->group(function () {
             'spouse_last_name' => ['nullable', 'string', 'max:100'],
             'spouse_middle_initial' => ['nullable', 'string', 'max:5'],
             'spouse_birthdate' => ['nullable', 'date', 'before_or_equal:today'],
-            'spouse_parent_role' => ['nullable', 'string', Rule::in(ResidentRequest::PARENT_ROLES)],
+            'spouse_parent_role' => ['nullable', 'string', Rule::in(ResidentRequest::SPOUSE_PARENT_ROLES)],
             'spouse_place_of_birth' => ['nullable', 'string', 'max:255'],
             'spouse_educational_attainment' => ['nullable', 'string', 'max:100'],
         ]);
@@ -5010,8 +5390,8 @@ Route::middleware('auth')->group(function () {
         HouseholdMonitoringVisit::backfillCarriedVitalsForCase((int) $monitoringCase->id);
 
         if ($residentRequest->user_id) {
-            InboxMessage::query()->create([
-                'user_id' => $residentRequest->user_id,
+        InboxMessage::query()->create([
+            'user_id' => $residentRequest->user_id,
                 'title' => 'Maintenance received',
                 'message' => $visit->notificationSummary($monitoringCase),
             ]);
@@ -5148,6 +5528,8 @@ Route::middleware('auth')->group(function () {
             'message' => 'Your resident verification request has been approved. You may now access your resident portal features.',
         ]);
 
+        ResidentRequest::purgeExpiredVerificationIds();
+
         return redirect()->route('bhw.requests')->with('status', 'Request accepted and family number assigned.');
     })->name('bhw.requests.accept');
 
@@ -5170,6 +5552,8 @@ Route::middleware('auth')->group(function () {
             'title' => 'Resident Request Rejected',
             'message' => 'Your resident verification request was rejected. Please review your details and submit a new request.',
         ]);
+
+        ResidentRequest::purgeExpiredVerificationIds();
 
         return redirect()->route('bhw.requests')->with('status', 'Request rejected.');
     })->name('bhw.requests.reject');
@@ -5286,11 +5670,11 @@ Route::middleware('auth')->group(function () {
             abort(403);
         }
 
-        if (! $residentBhwMessage->attachment_path || ! Storage::disk('public')->exists($residentBhwMessage->attachment_path)) {
+        if (! $residentBhwMessage->attachment_path || ! PrivateStorage::exists($residentBhwMessage->attachment_path)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('public')->path($residentBhwMessage->attachment_path));
+        return PrivateStorage::download($residentBhwMessage->attachment_path);
     })->name('resident-bhw.message.attachment');
 
     Route::get('/bhw/reports', function (Request $request) {
@@ -5662,11 +6046,11 @@ Route::middleware('auth')->group(function () {
         $profilePicturePath = $user->profile_picture_path;
 
         if ($request->hasFile('profile_picture')) {
-            if ($profilePicturePath && Storage::disk('public')->exists($profilePicturePath)) {
-                Storage::disk('public')->delete($profilePicturePath);
+            if ($profilePicturePath) {
+                PrivateStorage::delete($profilePicturePath);
             }
 
-            $profilePicturePath = $request->file('profile_picture')->store('profile-pictures', 'public');
+            $profilePicturePath = PrivateStorage::store($request->file('profile_picture'), 'profile-pictures');
             $user->update(['profile_picture_path' => $profilePicturePath]);
         }
 
@@ -5712,7 +6096,7 @@ Route::middleware('auth')->group(function () {
         $user = User::query()->findOrFail(Auth::id());
 
         $validator = Validator::make($request->all(), [
-            'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ], [
             'password.required' => 'Please enter a new password.',
             'password.confirmed' => 'The new password confirmation does not match.',
@@ -5728,7 +6112,10 @@ Route::middleware('auth')->group(function () {
             'password' => $request->input('password'),
         ]);
 
+        AuthHardening::revokeOtherAccess($user, $request->session()->getId());
+        $request->session()->regenerate();
+
         return redirect()->route('bhw.settings')
-            ->with('status', 'Password updated successfully.');
+            ->with('status', 'Password updated successfully. Other devices were signed out.');
     })->name('bhw.settings.password');
 });

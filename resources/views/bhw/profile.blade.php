@@ -153,8 +153,8 @@
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.5rem;
-        width: 100%;
-    }
+            width: 100%;
+        }
 
     .family-action-row--two {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1852,8 +1852,8 @@
     ));
 
     $spouseRoleLabel = match ($parentRoleLabel) {
-        'Father' => 'Wife',
-        'Mother' => 'Husband',
+        'Father', 'Grandfather' => 'Wife',
+        'Mother', 'Grandmother' => 'Husband',
         default => 'Spouse',
     };
 
@@ -2041,8 +2041,8 @@
         $spouseGenderCode = $normalizeMemberGenderCode((string) ($spouseDetails['gender'] ?? ''));
         if ($spouseGenderCode === '') {
             $spouseGenderCode = match (trim((string) ($spouseDetails['parent_role'] ?? ''))) {
-                'Father' => 'M',
-                'Mother' => 'F',
+                'Father', 'Grandfather' => 'M',
+                'Mother', 'Grandmother' => 'F',
                 default => '',
             };
         }
@@ -2165,9 +2165,7 @@
         ->values()
         ->filter(fn ($row) => is_array($row) && trim((string) ($row['full_name'] ?? $row['name'] ?? '')) !== '')
         ->values();
-    $editableSeniors = collect($resident->household_seniors ?? [])
-        ->values()
-        ->filter(fn ($row) => is_array($row) && trim((string) ($row['full_name'] ?? $row['name'] ?? '')) !== '')
+    $editableSeniors = collect($resident->otherFamilyMembers())
         ->values();
     $familyPeopleCount = 1
         + ($spouseName !== '' ? 1 : 0)
@@ -2309,7 +2307,7 @@
                                                     <div class="household-member-row">
                                                         <span class="material-symbols-outlined text-text-light/50 dark:text-text-dark/50 text-lg shrink-0">elderly</span>
                                                         <div class="min-w-0">
-                                                            <p class="summary-card-label">Elderly in household</p>
+                                                            <p class="summary-card-label">Other family in the house</p>
                                                             <p class="text-sm font-semibold mt-0.5 break-words text-text-light dark:text-text-dark">{{ $senior['full_name'] }}</p>
                                                             @if ($senior['meta'] !== '')
                                                                 <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 break-words leading-relaxed">{{ $senior['meta'] }}</p>
@@ -2344,33 +2342,33 @@
                                                 </button>
                                                 <button type="button" id="openAddSeniorBtn" class="family-action-btn bg-primary text-white font-bold hover:opacity-90">
                                                     <span class="material-symbols-outlined text-base shrink-0">elderly</span>
-                                                    <span>Add Elderly</span>
-                                                </button>
+                                                    <span>Add other family</span>
+                                        </button>
                                             </div>
-                                        </div>
+                                    </div>
 
                                         @if (session('status') && (request('tab') === 'family' || old('household_action')))
                                             <div class="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
-                                                {{ session('status') }}
-                                            </div>
-                                        @endif
+                                            {{ session('status') }}
+                                        </div>
+                                    @endif
 
                                         @if ($errors->any() && old('household_action'))
                                             <div class="mt-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200">
-                                                <ul class="list-disc pl-5 space-y-1">
-                                                    @foreach ($errors->all() as $error)
-                                                        <li>{{ $error }}</li>
-                                                    @endforeach
-                                                </ul>
-                                            </div>
-                                        @endif
+                                            <ul class="list-disc pl-5 space-y-1">
+                                                @foreach ($errors->all() as $error)
+                                                    <li>{{ $error }}</li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
+                                    @endif
                                     </div>
 
                                     <div class="profile-tab-scroll space-y-4">
                                         <div class="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
                                             <p class="font-semibold text-text-light dark:text-text-dark">Household count: <span class="text-primary">{{ $familyPeopleCount }}</span> {{ $familyPeopleCount === 1 ? 'person' : 'people' }}</p>
                                             <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Includes the resident, spouse, children, and elderly members listed below.</p>
-                                        </div>
+                                                </div>
 
                                         <div class="family-member-card rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
                                             <div class="flex items-start justify-between gap-3 w-full">
@@ -2420,8 +2418,8 @@
                                                             data-member-label="spouse"
                                                         >
                                                             <span class="material-symbols-outlined text-base">person_remove</span>
-                                                        </button>
-                                                    </div>
+                                                </button>
+                                            </div>
                                                 </div>
                                             </div>
                                         @endif
@@ -2487,30 +2485,31 @@
                                             <div class="family-member-card rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
                                                 <div class="flex items-start justify-between gap-3 w-full">
                                                     <div class="min-w-0 flex-1 pr-1">
-                                                        <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Elderly</p>
+                                                        <p class="text-xs font-semibold uppercase tracking-wide text-text-light/60 dark:text-text-dark/60">Other family</p>
                                                         <p class="family-member-card__name font-semibold mt-1 text-text-light dark:text-text-dark">{{ $seniorName }}</p>
                                                         @if ($seniorMeta !== '')
                                                             <p class="family-member-card__meta text-xs text-text-light/60 dark:text-text-dark/60 mt-1">{{ $seniorMeta }}</p>
                                                         @endif
                                                     </div>
                                                     <div class="flex items-center gap-2 shrink-0">
-                                                        <button type="button" class="open-edit-senior-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-border-light dark:border-border-dark hover:bg-card-light dark:hover:bg-card-dark" title="Edit elderly member" aria-label="Edit elderly member"
+                                                        <button type="button" class="open-edit-senior-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-border-light dark:border-border-dark hover:bg-card-light dark:hover:bg-card-dark" title="Edit other family member" aria-label="Edit other family member"
                                                             data-index="{{ $seniorIndex }}"
                                                             data-full-name="{{ $seniorName }}"
                                                             data-birthdate="{{ $seniorRow['birthdate'] ?? '' }}"
                                                             data-gender="{{ $seniorRow['gender'] ?? '' }}"
                                                             data-relationship="{{ $seniorRow['relationship'] ?? '' }}"
                                                             data-place-of-birth="{{ $seniorRow['place_of_birth'] ?? '' }}"
+                                                            data-civil-status="{{ $seniorRow['civil_status'] ?? '' }}"
                                                             data-educational-attainment="{{ $seniorRow['educational_attainment'] ?? '' }}"
                                                             data-occupation="{{ $seniorRow['occupation'] ?? '' }}"
                                                         >
                                                             <span class="material-symbols-outlined text-base">edit</span>
                                                         </button>
-                                                        <button type="button" class="open-remove-member-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300" title="Remove elderly member" aria-label="Remove elderly member"
+                                                        <button type="button" class="open-remove-member-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300" title="Remove other family member" aria-label="Remove other family member"
                                                             data-action="remove_senior"
                                                             data-index="{{ $seniorIndex }}"
                                                             data-member-name="{{ $seniorName }}"
-                                                            data-member-label="elderly member"
+                                                            data-member-label="other family member"
                                                         >
                                                             <span class="material-symbols-outlined text-base">person_remove</span>
                                                         </button>
@@ -2519,7 +2518,7 @@
                                             </div>
                                         @empty
                                             <div class="rounded-xl border border-dashed border-border-light dark:border-border-dark px-4 py-6 text-center text-sm text-text-light/60 dark:text-text-dark/60">
-                                                No elderly members listed. Use <span class="font-semibold">Add Elderly</span> when a senior joins the household, or remove them here if they pass away.
+                                                No other family members listed. Use <span class="font-semibold">Add other family</span> when a relative joins the household, or remove them here if they leave.
                                             </div>
                                         @endforelse
                                     </div>
@@ -2536,10 +2535,10 @@
                                             </div>
                                             <div class="transaction-modal-body">
                                                 <form method="POST" action="{{ route('bhw.residents.household.update', $resident) }}" class="tx-form" id="familyChildForm">
-                                                    @csrf
+                                            @csrf
                                                     <input type="hidden" name="household_action" id="family_child_action" value="add_child" />
                                                     <input type="hidden" name="member_index" id="family_child_index" value="" />
-                                                    <div>
+                                            <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_child_full_name">Full Name</label>
                                                         <input id="family_child_full_name" name="full_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
@@ -2564,7 +2563,7 @@
                                                                 <option value="">Select</option>
                                                                 @foreach (\App\Models\ResidentRequest::CHILD_RELATIONSHIPS as $rel)
                                                                     <option value="{{ $rel }}">{{ $rel }}</option>
-                                                                @endforeach
+                                                    @endforeach
                                                             </select>
                                                         </div>
                                                         <div>
@@ -2601,15 +2600,15 @@
                                                     </div>
                                                 </form>
                                             </div>
-                                        </div>
-                                    </div>
+                                                </div>
+                                            </div>
 
                                     {{-- Senior modal --}}
                                     <div id="familySeniorModal" class="hidden fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/50 px-0 py-0 lg:px-5 lg:py-4">
                                         <div class="transaction-modal-panel max-w-lg w-full">
                                             <div class="transaction-modal-header flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-5 py-4 shrink-0">
                                                 <div class="min-w-0">
-                                                    <h5 id="familySeniorModalTitle" class="text-lg font-bold">Add Elderly</h5>
+                                                    <h5 id="familySeniorModalTitle" class="text-lg font-bold">Add other family</h5>
                                                     <p class="tx-modal-subtitle text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Must be at least 60 years old. Remove here if the member passes away.</p>
                                                 </div>
                                                 <button type="button" class="close-family-senior-modal inline-flex items-center justify-center w-9 h-9 rounded-lg border border-border-light dark:border-border-dark" aria-label="Close"><span class="material-symbols-outlined text-base">close</span></button>
@@ -2619,7 +2618,7 @@
                                                     @csrf
                                                     <input type="hidden" name="household_action" id="family_senior_action" value="add_senior" />
                                                     <input type="hidden" name="member_index" id="family_senior_index" value="" />
-                                                    <div>
+                                            <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_senior_full_name">Full Name</label>
                                                         <input id="family_senior_full_name" name="full_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
@@ -2651,6 +2650,15 @@
                                                         <input id="family_senior_pob" name="place_of_birth" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
                                                     <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_senior_civil">Marital Status</label>
+                                                        <select id="family_senior_civil" name="civil_status" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
+                                                            <option value="">Select</option>
+                                                            @foreach (\App\Models\User::CIVIL_STATUSES as $status)
+                                                                <option value="{{ $status }}">{{ $status }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_senior_edu">Educational Attainment</label>
                                                         <select id="family_senior_edu" name="educational_attainment" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
                                                             <option value="">Select</option>
@@ -2665,12 +2673,12 @@
                                                     </div>
                                                     <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
                                                         <button type="button" class="close-family-senior-modal h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
-                                                        <button type="submit" class="h-11 px-5 rounded-xl bg-primary text-white text-sm font-bold">Save Elderly</button>
+                                                        <button type="submit" class="h-11 px-5 rounded-xl bg-primary text-white text-sm font-bold">Save family member</button>
                                                     </div>
                                                 </form>
                                             </div>
                                         </div>
-                                    </div>
+                                            </div>
 
                                     {{-- Spouse modal --}}
                                     <div id="familySpouseModal" class="hidden fixed inset-0 z-50 flex items-end lg:items-center justify-center bg-black/50 px-0 py-0 lg:px-5 lg:py-4">
@@ -2687,7 +2695,7 @@
                                                     @csrf
                                                     <input type="hidden" name="household_action" value="set_spouse" />
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                        <div>
+                                            <div>
                                                             <label class="block text-sm font-semibold mb-1.5" for="family_spouse_first">First Name</label>
                                                             <input id="family_spouse_first" name="spouse_first_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                         </div>
@@ -2707,10 +2715,10 @@
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <label class="block text-sm font-semibold mb-1.5" for="family_spouse_role">Parent Role</label>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_spouse_role">Guardian Role</label>
                                                         <select id="family_spouse_role" name="spouse_parent_role" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
                                                             <option value="">Select</option>
-                                                            @foreach (\App\Models\ResidentRequest::PARENT_ROLES as $role)
+                                                            @foreach (\App\Models\ResidentRequest::SPOUSE_PARENT_ROLES as $role)
                                                                 <option value="{{ $role }}">{{ $role }}</option>
                                                             @endforeach
                                                         </select>
@@ -2735,7 +2743,7 @@
                                                 </form>
                                             </div>
                                         </div>
-                                    </div>
+                                            </div>
 
                                     {{-- Remove confirm --}}
                                     <div id="familyRemoveModal" class="hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
@@ -2848,7 +2856,7 @@
                                                     <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Record details for this dispensing entry.</p>
                                             </div>
                                                 <div class="tx-details-row">
-                                            <div>
+                                                <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="age">Age</label>
                                                         @php
                                                             $defaultSelectedMemberAge = $householdMemberOptions
@@ -2856,7 +2864,7 @@
                                                                 ?? $residentAge;
                                                         @endphp
                                                         <input id="age" name="age" value="{{ old('age', $defaultSelectedMemberAge) }}" class="w-full h-11 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" placeholder="e.g., 58" type="number" min="0" max="150" required />
-                                            </div>
+                                                </div>
                                                 <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="transaction_date">Date</label>
                                                         <input id="transaction_date" name="transaction_date" value="{{ old('transaction_date', now()->toDateString()) }}" class="w-full h-11 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" type="date" required />
@@ -2872,7 +2880,7 @@
                                                 <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="philhealth_number">PhilHealth Number</label>
                                                         <input id="philhealth_number" name="philhealth_number" value="{{ old('philhealth_number') }}" class="w-full h-11 rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3" placeholder="PhilHealth number" type="text" required />
-                                                </div>
+                                            </div>
                                             </div>
                                             </section>
 
@@ -3263,14 +3271,14 @@
                                                     <section class="tx-recipient-section">
                                                         <div class="tx-recipient-row">
                                                             <label class="tx-recipient-row__label text-text-light dark:text-text-dark" for="add_visit_date">Visit Date</label>
-                                                            <input
+                                                    <input
                                                                 id="add_visit_date"
                                                                 name="visit_date"
                                                                 value="{{ old('form_intent') === 'monitoring_visit' ? old('visit_date', now()->toDateString()) : now()->toDateString() }}"
                                                                 class="tx-recipient-row__select w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3"
                                                                 type="date"
-                                                                required
-                                                            />
+                                                        required
+                                                    />
                                                         </div>
                                                     </section>
 
@@ -3388,7 +3396,7 @@
                                                     </div>
                                                 </form>
                                             </div>
-                                        </div>
+                                            </div>
                                     </div>
 
                                     <div id="completeMonitoringModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 py-6">
@@ -3433,10 +3441,10 @@
                                                 <p class="mt-0.5 text-xs sm:text-sm text-text-light/60 dark:text-text-dark/60">Appointments scheduled for this resident</p>
                                             </div>
                                             <button type="button" id="toggleConsultationForm" class="inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-wide whitespace-nowrap shrink-0">
-                                                <span class="material-symbols-outlined text-base">event</span>
-                                                <span>Add Appointment</span>
-                                            </button>
-                                        </div>
+                                            <span class="material-symbols-outlined text-base">event</span>
+                                            <span>Add Appointment</span>
+                                        </button>
+                                    </div>
 
                                         @if (session('status') && request('tab') === 'consultations')
                                             <div class="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
@@ -3566,9 +3574,9 @@
                                                             {{ $consultAt?->format('g:i A') ?: '—' }}
                                                         </span>
                                                     </div>
-                                                    @if ($consultation->note)
+                                                @if ($consultation->note)
                                                         <p class="consult-card__note">{{ $consultation->note }}</p>
-                                                    @endif
+                                                @endif
                                                     <div class="consult-card__meta">
                                                         <span class="consult-meta-chip">
                                                             <span class="material-symbols-outlined">calendar_month</span>
@@ -3578,7 +3586,7 @@
                                                             <span class="material-symbols-outlined">{{ $isPast ? 'event_available' : 'upcoming' }}</span>
                                                             {{ $isPast ? 'Past' : 'Upcoming' }}
                                                         </span>
-                                                    </div>
+                                            </div>
                                                 </div>
                                             </article>
                                         @empty
@@ -4053,8 +4061,8 @@
 
     function resetAddVisitModalViewport() {
         if (! addVisitModalWrapper) {
-            return;
-        }
+                return;
+            }
 
         addVisitModalWrapper.style.top = '';
         addVisitModalWrapper.style.height = '';
@@ -4222,8 +4230,8 @@
         const bmiInput = document.querySelector(`[data-visit-bmi="${caseId}"]`);
 
         if (!heightInput || !weightInput || !bmiInput) {
-            return;
-        }
+                return;
+            }
 
         const heightCm = parseFloat(heightInput.value);
         const weightKg = parseFloat(weightInput.value);
@@ -4323,7 +4331,7 @@
         document.getElementById('familySeniorForm')?.reset();
         document.getElementById('family_senior_action').value = 'add_senior';
         document.getElementById('family_senior_index').value = '';
-        document.getElementById('familySeniorModalTitle').textContent = 'Add Elderly';
+        document.getElementById('familySeniorModalTitle').textContent = 'Add other family';
     }
 
     function resetFamilySpouseForm() {
@@ -4382,12 +4390,13 @@
             resetFamilySeniorForm();
             document.getElementById('family_senior_action').value = 'update_senior';
             document.getElementById('family_senior_index').value = button.dataset.index || '';
-            document.getElementById('familySeniorModalTitle').textContent = 'Edit Elderly';
+            document.getElementById('familySeniorModalTitle').textContent = 'Edit other family';
             document.getElementById('family_senior_full_name').value = button.dataset.fullName || '';
             document.getElementById('family_senior_birthdate').value = button.dataset.birthdate || '';
             document.getElementById('family_senior_gender').value = button.dataset.gender || '';
             document.getElementById('family_senior_relationship').value = button.dataset.relationship || '';
             document.getElementById('family_senior_pob').value = button.dataset.placeOfBirth || '';
+            document.getElementById('family_senior_civil').value = button.dataset.civilStatus || '';
             document.getElementById('family_senior_edu').value = button.dataset.educationalAttainment || '';
             document.getElementById('family_senior_occupation').value = button.dataset.occupation || '';
             openFamilyModal(familySeniorModal);

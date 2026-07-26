@@ -75,7 +75,7 @@
                         <div class="auth-panel bg-form-bg-light dark:bg-form-bg-dark p-6 sm:p-8 rounded-xl shadow-lg w-full">
                             <header class="auth-panel__header flex flex-col gap-0.5 sm:gap-1 mb-4 sm:mb-6">
                                 <h2 class="auth-panel__title text-text-light dark:text-text-dark font-heading sm:text-3xl">Forgot password</h2>
-                                <p class="auth-panel__subtitle sm:text-sm text-gray-500 dark:text-gray-400">Enter the email for your account. If it exists, we will send a verification code.</p>
+                                <p class="auth-panel__subtitle sm:text-sm text-gray-500 dark:text-gray-400">Enter the email for your account. If it exists, we will send a verification code, then you can set a new password.</p>
                             </header>
 
                             <form id="forgotForm" class="auth-form sm:space-y-5" method="POST" action="{{ route('password.email') }}" novalidate>

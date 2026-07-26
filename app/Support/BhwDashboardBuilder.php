@@ -300,6 +300,10 @@ class BhwDashboardBuilder
                     continue;
                 }
 
+                if (! ResidentRequest::memberIsElderly($senior)) {
+                    continue;
+                }
+
                 $name = trim((string) ($senior['full_name'] ?? $senior['name'] ?? ''));
                 if ($name === '') {
                     continue;
@@ -670,8 +674,8 @@ class BhwDashboardBuilder
             $headGender = self::normalizeGender(
                 $resident->user?->gender
                 ?? match ($resident->parent_role) {
-                    ResidentRequest::PARENT_ROLE_FATHER => 'Male',
-                    ResidentRequest::PARENT_ROLE_MOTHER => 'Female',
+                    ResidentRequest::PARENT_ROLE_FATHER, ResidentRequest::PARENT_ROLE_GRANDFATHER => 'Male',
+                    ResidentRequest::PARENT_ROLE_MOTHER, ResidentRequest::PARENT_ROLE_GRANDMOTHER => 'Female',
                     default => null,
                 }
             );

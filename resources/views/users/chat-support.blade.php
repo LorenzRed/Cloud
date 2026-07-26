@@ -390,7 +390,7 @@
             $chatSupportBackUrl = $previousUrl;
         }
     }
-@endphp
+    @endphp
     @include('sidebars.users')
 
 <div id="usersContent" data-chat-keyboard-shell class="flex h-[100dvh] h-[100svh] lg:h-screen flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] transition-all duration-200 overflow-hidden">

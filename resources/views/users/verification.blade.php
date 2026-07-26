@@ -193,7 +193,7 @@
         }
 
         #seniorsSection {
-            background: linear-gradient(180deg, rgba(255, 251, 235, 0.72) 0%, #ffffff 100%);
+            background: linear-gradient(180deg, rgba(236, 253, 245, 0.85) 0%, #ffffff 100%);
         }
 
         #seniorMemberModal .verification-modal-panel {
@@ -228,8 +228,8 @@
         }
 
         #seniorMemberModal .child-form-input:focus {
-            border-color: #d97706;
-            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
+            border-color: #34d399;
+            box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.25);
         }
 
         @media (max-width: 639px) {
@@ -267,9 +267,9 @@
             justify-content: center;
             font-size: 0.875rem;
             font-weight: 700;
-            color: #b45309;
-            background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
-            border: 1px solid #fcd34d;
+            color: #047857;
+            background: linear-gradient(135deg, #d1fae5 0%, #ecfdf5 100%);
+            border: 1px solid #a7f3d0;
             flex-shrink: 0;
         }
 
@@ -547,7 +547,7 @@
         $defaultSpouseMiddleInitial = old('spouse_middle_initial', $storedSpouseDetails['middle_initial'] ?? ($spouseMiddleToken ? strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $spouseMiddleToken), 0, 1)) : ''));
         $defaultSpouseBirthdate = old('spouse_birthdate_display', $storedSpouseDetails['birthdate'] ?? '');
         $defaultSpouseParentRole = old('spouse_parent_role', $storedSpouseDetails['parent_role'] ?? '');
-        if (! in_array($defaultSpouseParentRole, \App\Models\ResidentRequest::PARENT_ROLES, true)) {
+        if (! in_array($defaultSpouseParentRole, \App\Models\ResidentRequest::SPOUSE_PARENT_ROLES, true)) {
             $defaultSpouseParentRole = '';
         }
         $defaultSpouseGender = old('spouse_gender_display', $storedSpouseDetails['gender'] ?? '');
@@ -559,10 +559,14 @@
             $defaultSpouseParentRole = 'Mother';
         } elseif ($defaultSpouseParentRole === '' && $storedParentRole === 'Mother') {
             $defaultSpouseParentRole = 'Father';
+        } elseif ($defaultSpouseParentRole === '' && $storedParentRole === 'Grandfather') {
+            $defaultSpouseParentRole = 'Grandmother';
+        } elseif ($defaultSpouseParentRole === '' && $storedParentRole === 'Grandmother') {
+            $defaultSpouseParentRole = 'Grandfather';
         }
-        if ($defaultSpouseGender === '' && $defaultSpouseParentRole === 'Father') {
+        if ($defaultSpouseGender === '' && in_array($defaultSpouseParentRole, ['Father', 'Grandfather'], true)) {
             $defaultSpouseGender = 'Male';
-        } elseif ($defaultSpouseGender === '' && $defaultSpouseParentRole === 'Mother') {
+        } elseif ($defaultSpouseGender === '' && in_array($defaultSpouseParentRole, ['Mother', 'Grandmother'], true)) {
             $defaultSpouseGender = 'Female';
         }
         $defaultSpousePlaceOfBirth = old('spouse_place_of_birth', $storedSpouseDetails['place_of_birth'] ?? '');
@@ -570,6 +574,7 @@
         $showSpouseSection = in_array($storedCivilStatus, $spouseSectionStatuses, true);
         $civilStatusOptions = \App\Models\User::CIVIL_STATUSES;
         $parentRoleOptions = \App\Models\ResidentRequest::PARENT_ROLES;
+        $spouseParentRoleOptions = \App\Models\ResidentRequest::SPOUSE_PARENT_ROLES;
         $storedChildren = collect(old('children', $residentRequest?->household_children ?? []))
             ->filter(fn ($child) => is_array($child))
             ->map(function ($child) {
@@ -594,8 +599,9 @@
             ->filter(fn ($child) => $child['full_name'] !== '' || $child['birthdate'] !== '')
             ->values()
             ->all();
-        $storedSeniors = collect(old('seniors', $residentRequest?->household_seniors ?? []))
+        $storedSeniors = collect(old('seniors', $residentRequest?->otherFamilyMembers() ?? $residentRequest?->household_seniors ?? []))
             ->filter(fn ($senior) => is_array($senior))
+            ->reject(fn ($senior) => in_array(trim((string) ($senior['source'] ?? 'other')), ['guardian', 'spouse'], true))
             ->map(function ($senior) {
                 $fullName = trim((string) ($senior['full_name'] ?? $senior['name'] ?? ''));
 
@@ -609,7 +615,9 @@
                     'relationship' => (string) ($senior['relationship'] ?? ''),
                     'place_of_birth' => (string) ($senior['place_of_birth'] ?? ''),
                     'educational_attainment' => (string) ($senior['educational_attainment'] ?? ''),
+                    'civil_status' => (string) ($senior['civil_status'] ?? ''),
                     'occupation' => (string) ($senior['occupation'] ?? ''),
+                    'is_elderly' => \App\Models\ResidentRequest::memberIsElderly($senior),
                 ];
             })
             ->filter(fn ($senior) => $senior['full_name'] !== '' || $senior['birthdate'] !== '')
@@ -618,6 +626,7 @@
         $childRelationshipOptions = \App\Models\ResidentRequest::CHILD_RELATIONSHIPS;
         $seniorRelationshipOptions = \App\Models\ResidentRequest::HOUSEHOLD_SENIOR_RELATIONSHIPS;
         $educationalAttainmentOptions = \App\Models\ResidentRequest::EDUCATIONAL_ATTAINMENTS;
+        $civilStatusOptions = \App\Models\User::CIVIL_STATUSES;
         $selectedIdType = old('id_type', $residentRequest?->id_type ?? '');
         $idTypes = \App\Models\ResidentRequest::ID_TYPES;
         $defaultBirthdate = old('birthdate_display', optional(Auth::user()->date_of_birth)->format('Y-m-d') ?: '');
@@ -634,7 +643,7 @@
                 </div>
             @endif
             <h1 class="text-xl sm:text-2xl font-bold text-gray-900">{{ ($isRejectedResubmit ?? false) ? 'Resubmit Verification' : 'Resident Verification' }}</h1>
-            <p class="text-sm text-gray-600 mt-2">One account represents your whole household. Complete the <span class="font-semibold">Representative</span>, then your <span class="font-semibold">husband or wife</span> (if applicable), children, and any <span class="font-semibold">elderly family members</span> living with you.</p>
+            <p class="text-sm text-gray-600 mt-2">One account represents your whole household. Complete the <span class="font-semibold">Guardian</span>, then your <span class="font-semibold">husband or wife</span> (if applicable), children, and any <span class="font-semibold">other family living in the house</span>.</p>
 
             @if ($errors->any())
                 <div class="mt-4 rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
@@ -660,8 +669,8 @@
 
                 <div id="representativeSection" class="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/60 to-white p-4 sm:p-5 space-y-4">
                     <div>
-                        <h2 class="text-sm font-bold text-blue-900">Representative</h2>
-                        <p class="text-xs text-gray-600 mt-0.5">Parent (father or mother) registering for the family account.</p>
+                        <h2 class="text-sm font-bold text-blue-900">Guardian</h2>
+                        <p class="text-xs text-gray-600 mt-0.5">One representative of the family must be a father, mother, grandfather, or grandmother registering for the family account.</p>
                     </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
@@ -690,13 +699,25 @@
                         <p id="birthdateClientError" class="hidden mt-1.5 text-xs font-medium text-red-600" role="alert" aria-live="polite"></p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1" for="parent_role">Parent Role</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="parent_role">Guardian Role</label>
                         <select id="parent_role" name="parent_role" required @disabled($requestSent ?? false)
                             class="w-full h-11 rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Select parent role</option>
+                            <option value="">Select guardian role</option>
                             @foreach ($parentRoleOptions as $roleOption)
                                 <option value="{{ $roleOption }}" @selected($storedParentRole === $roleOption)>{{ $roleOption }}</option>
                             @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <div id="selfGenderField" class="grid grid-cols-1 sm:grid-cols-2 gap-4 @if($storedParentRole !== \App\Models\ResidentRequest::PARENT_ROLE_SELF) hidden @endif">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1" for="gender_select">Gender</label>
+                        <select id="gender_select" @disabled($requestSent ?? false)
+                            class="w-full h-11 rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select gender</option>
+                            <option value="Male" @selected($storedGender === 'Male')>Male</option>
+                            <option value="Female" @selected($storedGender === 'Female')>Female</option>
                         </select>
                     </div>
                 </div>
@@ -734,7 +755,7 @@
                 <div id="spouseSection" class="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50/60 to-white p-4 sm:p-5 space-y-4 @if(!$showSpouseSection) hidden @endif">
                     <div>
                         <h2 class="text-sm font-bold text-blue-900" id="spouseSectionTitle">Husband / Wife</h2>
-                        <p class="text-xs text-gray-600 mt-0.5" id="spouseSectionHint">Your spouse's details, same fields as the representative.</p>
+                        <p class="text-xs text-gray-600 mt-0.5" id="spouseSectionHint">Your spouse's details, same fields as the guardian.</p>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
@@ -763,11 +784,11 @@
                             <p id="spouseBirthdateClientError" class="hidden mt-1.5 text-xs font-medium text-red-600" role="alert" aria-live="polite"></p>
                         </div>
                     <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1" for="spouse_parent_role">Parent Role</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1" for="spouse_parent_role">Guardian Role</label>
                             <select id="spouse_parent_role" name="spouse_parent_role" @disabled($requestSent ?? false)
                                 class="w-full h-11 rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                                <option value="">Select parent role</option>
-                                @foreach ($parentRoleOptions as $roleOption)
+                                <option value="">Select guardian role</option>
+                                @foreach ($spouseParentRoleOptions as $roleOption)
                                     <option value="{{ $roleOption }}" @selected($defaultSpouseParentRole === $roleOption)>{{ $roleOption }}</option>
                                 @endforeach
                         </select>
@@ -833,31 +854,31 @@
                     <div id="childrenHiddenFields" class="sr-only" aria-hidden="true"></div>
                 </div>
 
-                <div id="seniorsSection" class="rounded-xl border border-amber-100 p-4 sm:p-5 space-y-4">
+                <div id="seniorsSection" class="rounded-xl border border-emerald-100 p-4 sm:p-5 space-y-4">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-2 min-w-0">
-                                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-600 text-white shadow-sm shadow-amber-600/20">
-                                    <span class="material-symbols-outlined text-[20px] leading-none">elderly</span>
+                                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20">
+                                    <span class="material-symbols-outlined text-[20px] leading-none">groups</span>
                                 </span>
                                 <div class="min-w-0 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                    <h2 class="text-sm font-bold text-amber-900 shrink-0">Elderly in household</h2>
-                                    <span id="seniorsCountBadge" class="hidden inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 shrink-0">0 added</span>
-                                    <span class="text-xs text-gray-600">Add lolo or lola if they still live with you (60+).</span>
+                                    <h2 class="text-sm font-bold text-emerald-900 shrink-0">Other family live in the house</h2>
+                                    <span id="seniorsCountBadge" class="hidden inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800 shrink-0">0 added</span>
+                                    <span class="text-xs text-gray-600">Add other relatives who live with you.</span>
                                 </div>
                             </div>
                         </div>
                         <button type="button" id="openSeniorModalBtn" @disabled($requestSent ?? false)
-                            class="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-amber-600/20 transition">
+                            class="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-emerald-500/20 transition">
                             <span class="material-symbols-outlined text-[18px]">add</span>
-                            Add elderly
+                            Add other family
                         </button>
                     </div>
 
                     <div id="seniorsEmptyHint" class="child-empty-state">
-                        <span class="material-symbols-outlined text-4xl text-amber-300">elderly</span>
-                        <p class="mt-2 text-sm font-semibold text-gray-800">No elderly members added</p>
-                        <p class="mt-1 text-xs text-gray-500">Optional — add grandfather or grandmother for senior citizen monitoring.</p>
+                        <span class="material-symbols-outlined text-4xl text-emerald-300">groups</span>
+                        <p class="mt-2 text-sm font-semibold text-gray-800">No other family members added</p>
+                        <p class="mt-1 text-xs text-gray-500">Optional — add relatives who live in your house (siblings, grandparents, aunts/uncles, and more).</p>
                     </div>
 
                     <div id="seniorsSummaryList" class="grid grid-cols-1 lg:grid-cols-2 gap-3"></div>
@@ -1087,17 +1108,17 @@
 
     <div id="seniorMemberModal" class="hidden fixed inset-0 z-[91] bg-black/50 verification-modal-overlay">
         <div class="verification-modal-panel w-full max-w-lg bg-white border border-gray-200 overflow-hidden">
-            <div class="px-4 sm:px-5 py-4 border-b border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 flex items-center justify-between gap-3 shrink-0">
+            <div class="px-4 sm:px-5 py-4 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-green-50 flex items-center justify-between gap-3 shrink-0">
                 <div class="min-w-0 flex items-center gap-3">
-                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-600 text-white shadow-sm shadow-amber-600/20 shrink-0">
-                        <span class="material-symbols-outlined text-[20px]">elderly</span>
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm shadow-emerald-500/20 shrink-0">
+                        <span class="material-symbols-outlined text-[20px]">groups</span>
                     </span>
                     <div class="min-w-0">
-                        <h3 id="seniorMemberModalTitle" class="text-base font-bold text-gray-900">Add Elderly Member</h3>
-                        <p class="text-xs text-gray-600 mt-0.5">Grandfather or grandmother living in your home</p>
+                        <h3 id="seniorMemberModalTitle" class="text-base font-bold text-gray-900">Add other family</h3>
+                        <p class="text-xs text-gray-600 mt-0.5">Other relatives living in your home</p>
                     </div>
                 </div>
-                <button id="seniorMemberCloseBtn" type="button" class="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl hover:bg-white/80" aria-label="Close elderly form">
+                <button id="seniorMemberCloseBtn" type="button" class="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-xl hover:bg-white/80" aria-label="Close other family form">
                     <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
             </div>
@@ -1112,7 +1133,7 @@
                     <div class="child-form-field">
                         <label class="child-form-label" for="seniorBirthdate">Birthdate</label>
                         <input id="seniorBirthdate" type="date" class="child-form-input" />
-                        <p id="seniorAgeHint" class="hidden text-xs text-amber-700 font-medium"></p>
+                        <p id="seniorAgeHint" class="hidden text-xs text-emerald-700 font-medium"></p>
                     </div>
                     <div class="child-form-field">
                         <label class="child-form-label" for="seniorGender">Gender</label>
@@ -1140,6 +1161,16 @@
                 </div>
 
                 <div class="child-form-field">
+                    <label class="child-form-label" for="seniorCivilStatus">Marital Status</label>
+                    <select id="seniorCivilStatus" class="child-form-input">
+                        <option value="">Select marital status</option>
+                        @foreach ($civilStatusOptions as $statusOption)
+                            <option value="{{ $statusOption }}">{{ $statusOption }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="child-form-field">
                     <label class="child-form-label" for="seniorEducationalAttainment">Educational Attainment</label>
                     <select id="seniorEducationalAttainment" class="child-form-input">
                         <option value="">Select educational attainment</option>
@@ -1151,20 +1182,20 @@
 
                 <div class="child-form-field">
                     <label class="child-form-label" for="seniorOccupation">Occupation <span class="font-normal text-gray-500">(optional)</span></label>
-                    <input id="seniorOccupation" type="text" placeholder="e.g., Retired, Farmer" class="child-form-input" />
+                    <input id="seniorOccupation" type="text" placeholder="e.g., Farmer, Teacher, Student" class="child-form-input" />
                 </div>
 
-                <p class="text-[11px] text-gray-500 leading-snug">Only add <span class="font-semibold text-amber-700">grandfather or grandmother</span> who still live in your home and are at least 60 years old.</p>
+                <p class="text-[11px] text-gray-500 leading-snug">Add relatives who live in your house. Do not add children here — use the children section instead.</p>
 
                 <div class="senior-modal-footer-mobile sm:hidden pt-1 space-y-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]">
-                    <button type="button" class="senior-member-save-btn w-full h-11 px-4 rounded-full bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 shadow-md shadow-amber-600/20">Save elderly member</button>
+                    <button type="button" class="senior-member-save-btn w-full h-11 px-4 rounded-full bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 shadow-md shadow-emerald-500/20">Save family member</button>
                     <button type="button" class="senior-member-cancel-btn w-full h-11 px-4 rounded-full border border-gray-300 bg-white text-sm font-semibold">Cancel</button>
                 </div>
             </div>
 
             <div class="senior-modal-footer hidden sm:flex px-4 sm:px-5 py-4 border-t border-gray-100 flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-white/95 backdrop-blur">
                 <button type="button" class="senior-member-cancel-btn w-full sm:w-auto h-11 px-5 rounded-full border border-gray-300 bg-white text-sm font-semibold hover:bg-gray-50">Cancel</button>
-                <button type="button" class="senior-member-save-btn w-full sm:w-auto h-11 px-5 rounded-full bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 shadow-md shadow-amber-600/20">Save elderly member</button>
+                <button type="button" class="senior-member-save-btn w-full sm:w-auto h-11 px-5 rounded-full bg-emerald-500 text-white text-sm font-semibold hover:bg-emerald-600 shadow-md shadow-emerald-500/20">Save family member</button>
             </div>
         </div>
     </div>
@@ -1422,6 +1453,8 @@
         const placeOfBirthInput = document.getElementById('place_of_birth');
         const educationalAttainmentSelect = document.getElementById('educational_attainment');
         const genderInput = document.getElementById('gender_display');
+        const genderSelect = document.getElementById('gender_select');
+        const selfGenderField = document.getElementById('selfGenderField');
         const spouseSectionStatuses = @json($spouseSectionStatuses);
         const requiredSpouseStatuses = @json($requiredSpouseStatuses);
         const spouseSection = document.getElementById('spouseSection');
@@ -1478,9 +1511,11 @@
         const seniorGenderSelect = document.getElementById('seniorGender');
         const seniorRelationshipSelect = document.getElementById('seniorRelationship');
         const seniorPlaceOfBirthInput = document.getElementById('seniorPlaceOfBirth');
+        const seniorCivilStatusSelect = document.getElementById('seniorCivilStatus');
         const seniorEducationalAttainmentSelect = document.getElementById('seniorEducationalAttainment');
         const seniorOccupationInput = document.getElementById('seniorOccupation');
-        const SENIOR_MIN_AGE = 60;
+        const OTHER_FAMILY_MALE_ROLES = ['Brother', 'Grandfather', 'Uncle', 'Nephew', 'Father-in-law', 'Brother-in-law'];
+        const OTHER_FAMILY_FEMALE_ROLES = ['Sister', 'Grandmother', 'Aunt', 'Niece', 'Mother-in-law', 'Sister-in-law'];
         const CONTACT_MAX_DIGITS = 11;
         const PERSON_NAME_PATTERN = /^[A-Za-z,]+(?: [A-Za-z,]+)*$/;
         const CHILD_FULL_NAME_PATTERN = /^[A-Za-z,.]+(?: [A-Za-z,.]+)*$/;
@@ -2091,7 +2126,32 @@
             }
 
             const role = (parentRoleSelect.value || '').trim();
-            genderInput.value = role === 'Father' ? 'Male' : (role === 'Mother' ? 'Female' : '');
+            const isSelf = role === 'Self';
+
+            if (selfGenderField) {
+                selfGenderField.classList.toggle('hidden', !isSelf);
+            }
+
+            if (isSelf) {
+                const selected = (genderSelect?.value || '').trim();
+                if (selected === 'Male' || selected === 'Female') {
+                    genderInput.value = selected;
+                } else if (genderInput.value === 'Male' || genderInput.value === 'Female') {
+                    if (genderSelect && !genderSelect.value) {
+                        genderSelect.value = genderInput.value;
+                    }
+                } else {
+                    genderInput.value = '';
+                }
+            } else {
+                genderInput.value = (role === 'Father' || role === 'Grandfather')
+                    ? 'Male'
+                    : ((role === 'Mother' || role === 'Grandmother') ? 'Female' : '');
+                if (genderSelect) {
+                    genderSelect.value = genderInput.value;
+                }
+            }
+
             updateSpouseSectionCopy();
             suggestSpouseParentRole();
         }
@@ -2102,7 +2162,9 @@
             }
 
             const role = (spouseParentRoleSelect.value || '').trim();
-            spouseGenderInput.value = role === 'Father' ? 'Male' : (role === 'Mother' ? 'Female' : '');
+            spouseGenderInput.value = (role === 'Father' || role === 'Grandfather')
+                ? 'Male'
+                : ((role === 'Mother' || role === 'Grandmother') ? 'Female' : '');
         }
 
         function showsSpouseSection() {
@@ -2129,11 +2191,20 @@
 
         function spouseRoleLabel() {
             const parentRole = (parentRoleSelect?.value || '').trim();
-            if (parentRole === 'Father') {
+            if (parentRole === 'Father' || parentRole === 'Grandfather') {
                 return 'Wife';
             }
-            if (parentRole === 'Mother') {
+            if (parentRole === 'Mother' || parentRole === 'Grandmother') {
                 return 'Husband';
+            }
+            if (parentRole === 'Self') {
+                const gender = (genderInput?.value || genderSelect?.value || '').trim();
+                if (gender === 'Male') {
+                    return 'Wife';
+                }
+                if (gender === 'Female') {
+                    return 'Husband';
+                }
             }
             return 'Husband / Wife';
         }
@@ -2165,7 +2236,7 @@
                 if (status === 'Separated') {
                     spouseSectionHint.textContent = `Optional: add your ${label.toLowerCase()}'s details if you want them on record.`;
                 } else {
-                    spouseSectionHint.textContent = `Enter your ${label.toLowerCase()}'s details (same fields as the representative).`;
+                    spouseSectionHint.textContent = `Enter your ${label.toLowerCase()}'s details (same fields as the guardian).`;
                 }
             }
         }
@@ -2181,6 +2252,10 @@
                 spouseParentRoleSelect.value = 'Mother';
             } else if (parentRole === 'Mother') {
                 spouseParentRoleSelect.value = 'Father';
+            } else if (parentRole === 'Grandfather') {
+                spouseParentRoleSelect.value = 'Grandmother';
+            } else if (parentRole === 'Grandmother') {
+                spouseParentRoleSelect.value = 'Grandfather';
             }
 
             syncSpouseGenderFromParentRole();
@@ -2266,19 +2341,19 @@
             }
 
             if (!parentRole) {
-                showNotice('Required Field', `Please select your ${label}'s parent role.`);
+                showNotice('Required Field', `Please select your ${label}'s guardian role.`);
                 spouseParentRoleSelect?.focus();
                 return false;
             }
 
             if (repParentRole && parentRole === repParentRole) {
-                showNotice('Invalid Parent Role', `Your ${label}'s parent role must be different from yours.`);
+                showNotice('Invalid Guardian Role', `Your ${label}'s guardian role must be different from yours.`);
                 spouseParentRoleSelect?.focus();
                 return false;
             }
 
             if (!(spouseGenderInput?.value || '').trim()) {
-                showNotice('Required Field', `Please select your ${label}'s parent role.`);
+                showNotice('Required Field', `Please select your ${label}'s guardian role.`);
                 spouseParentRoleSelect?.focus();
                 return false;
             }
@@ -2970,6 +3045,12 @@
         }
 
         parentRoleSelect?.addEventListener('change', syncGenderFromParentRole);
+        genderSelect?.addEventListener('change', () => {
+            if ((parentRoleSelect?.value || '').trim() === 'Self' && genderInput) {
+                genderInput.value = (genderSelect.value || '').trim();
+                updateSpouseSectionCopy();
+            }
+        });
         spouseParentRoleSelect?.addEventListener('change', syncSpouseGenderFromParentRole);
         civilStatusSelect?.addEventListener('change', syncSpouseSectionVisibility);
         openChildModalBtn?.addEventListener('click', () => openChildMemberModal());
@@ -3095,27 +3176,34 @@
                 return;
             }
 
-            if (years < SENIOR_MIN_AGE) {
-                seniorAgeHint.textContent = `Age: ${years} years — must be at least ${SENIOR_MIN_AGE} for senior citizen monitoring.`;
-                seniorAgeHint.classList.remove('hidden');
-                seniorAgeHint.classList.add('text-red-700');
+            seniorAgeHint.textContent = `Age: ${years} year${years === 1 ? '' : 's'}`;
+            seniorAgeHint.classList.remove('hidden', 'text-red-700');
+        }
+
+        function syncSeniorGenderFromRelationship() {
+            if (!seniorGenderSelect || !seniorRelationshipSelect) {
                 return;
             }
 
-            seniorAgeHint.textContent = `Age: ${years} years — eligible for senior citizen monitoring.`;
-            seniorAgeHint.classList.remove('hidden', 'text-red-700');
+            const relationship = (seniorRelationshipSelect.value || '').trim();
+            if (OTHER_FAMILY_MALE_ROLES.includes(relationship)) {
+                seniorGenderSelect.value = 'Male';
+            } else if (OTHER_FAMILY_FEMALE_ROLES.includes(relationship)) {
+                seniorGenderSelect.value = 'Female';
+            }
         }
 
         function resetSeniorModalForm() {
             editingSeniorIndex = null;
             if (seniorMemberModalTitle) {
-                seniorMemberModalTitle.textContent = 'Add Elderly Member';
+                seniorMemberModalTitle.textContent = 'Add other family';
             }
             if (seniorFullNameInput) seniorFullNameInput.value = '';
             if (seniorBirthdateInput) seniorBirthdateInput.value = '';
             if (seniorGenderSelect) seniorGenderSelect.value = '';
             if (seniorRelationshipSelect) seniorRelationshipSelect.value = '';
             if (seniorPlaceOfBirthInput) seniorPlaceOfBirthInput.value = '';
+            if (seniorCivilStatusSelect) seniorCivilStatusSelect.value = '';
             if (seniorEducationalAttainmentSelect) seniorEducationalAttainmentSelect.value = '';
             if (seniorOccupationInput) seniorOccupationInput.value = '';
             if (seniorAgeHint) {
@@ -3136,13 +3224,14 @@
                 const senior = householdSeniors[index];
                 editingSeniorIndex = index;
                 if (seniorMemberModalTitle) {
-                    seniorMemberModalTitle.textContent = 'Edit Elderly Member';
+                    seniorMemberModalTitle.textContent = 'Edit other family';
                 }
                 if (seniorFullNameInput) seniorFullNameInput.value = formatChildFullName(senior.full_name || '');
                 if (seniorBirthdateInput) seniorBirthdateInput.value = senior.birthdate || '';
                 if (seniorGenderSelect) seniorGenderSelect.value = senior.gender || '';
                 if (seniorRelationshipSelect) seniorRelationshipSelect.value = senior.relationship || '';
                 if (seniorPlaceOfBirthInput) seniorPlaceOfBirthInput.value = formatTextField(senior.place_of_birth || '');
+                if (seniorCivilStatusSelect) seniorCivilStatusSelect.value = senior.civil_status || '';
                 if (seniorEducationalAttainmentSelect) seniorEducationalAttainmentSelect.value = senior.educational_attainment || '';
                 if (seniorOccupationInput) seniorOccupationInput.value = formatTextField(senior.occupation || '');
                 updateSeniorAgeHint();
@@ -3192,27 +3281,36 @@
                 const ageLabel = formatChildAgeLabel(senior.birthdate);
                 const profileLine = [senior.place_of_birth, senior.educational_attainment].filter(Boolean).join(' · ') || 'No profile details';
                 const occupationLine = senior.occupation ? senior.occupation : '';
-                const initials = childInitialsFromName(senior.full_name || 'Senior');
+                const initials = childInitialsFromName(senior.full_name || 'Member');
+                const years = getChildAgeInYears(senior.birthdate);
+                const isElderly = senior.is_elderly === true || (years !== null && years >= 60);
+                const seniorCitizenChip = isElderly
+                    ? '<span class="child-chip child-chip-violet">Elderly</span>'
+                    : '';
+                const civilStatusChip = senior.civil_status
+                    ? `<span class="child-chip child-chip-neutral">${escapeHtml(senior.civil_status)}</span>`
+                    : '';
 
                 card.innerHTML = `
                     <div class="senior-summary-avatar" aria-hidden="true">${escapeHtml(initials)}</div>
                     <div class="min-w-0 flex-1">
                         <div class="flex items-start justify-between gap-2">
-                            <p class="text-sm sm:text-[0.9375rem] font-bold text-gray-900 truncate">${escapeHtml(senior.full_name || 'Senior')}</p>
+                            <p class="text-sm sm:text-[0.9375rem] font-bold text-gray-900 truncate">${escapeHtml(senior.full_name || 'Family member')}</p>
                             <div class="child-summary-actions">
-                                <button type="button" class="child-action-btn edit-senior-btn text-amber-700 hover:bg-amber-50" data-senior-index="${index}" aria-label="Edit elderly member">
+                                <button type="button" class="child-action-btn edit-senior-btn text-emerald-700 hover:bg-emerald-50" data-senior-index="${index}" aria-label="Edit other family member">
                                     <span class="material-symbols-outlined text-[18px]">edit</span>
                                 </button>
-                                <button type="button" class="child-action-btn remove-senior-btn text-red-600 hover:bg-red-50" data-senior-index="${index}" aria-label="Remove elderly member">
+                                <button type="button" class="child-action-btn remove-senior-btn text-red-600 hover:bg-red-50" data-senior-index="${index}" aria-label="Remove other family member">
                                     <span class="material-symbols-outlined text-[18px]">delete</span>
                                 </button>
                             </div>
                         </div>
                         <div class="mt-2 flex flex-wrap gap-1.5">
-                            <span class="child-chip child-chip-amber">${escapeHtml(senior.relationship || 'Elderly')}</span>
+                            <span class="child-chip child-chip-green">${escapeHtml(senior.relationship || 'Relative')}</span>
                             <span class="child-chip child-chip-neutral">${escapeHtml(senior.gender || '—')}</span>
+                            ${civilStatusChip}
                             ${ageLabel ? `<span class="child-chip child-chip-violet">${escapeHtml(ageLabel)}</span>` : ''}
-                            <span class="child-chip child-chip-blue">Senior citizen</span>
+                            ${seniorCitizenChip}
                         </div>
                         <p class="mt-2 text-xs text-gray-600 flex items-center gap-1.5">
                             <span class="material-symbols-outlined text-[16px] text-gray-400 shrink-0 leading-none">location_on</span>
@@ -3235,7 +3333,10 @@
                     ['relationship', senior.relationship || ''],
                     ['place_of_birth', senior.place_of_birth || ''],
                     ['educational_attainment', senior.educational_attainment || ''],
+                    ['civil_status', senior.civil_status || ''],
                     ['occupation', senior.occupation || ''],
+                    ['is_elderly', (senior.is_elderly === true || (getChildAgeInYears(senior.birthdate) !== null && getChildAgeInYears(senior.birthdate) >= 60)) ? '1' : '0'],
+                    ['source', 'other'],
                 ];
 
                 fields.forEach(([key, value]) => {
@@ -3286,6 +3387,7 @@
             const gender = (seniorGenderSelect?.value || '').trim();
             const relationship = (seniorRelationshipSelect?.value || '').trim();
             const placeOfBirth = (seniorPlaceOfBirthInput?.value || '').trim();
+            const civilStatus = (seniorCivilStatusSelect?.value || '').trim();
             const educationalAttainment = (seniorEducationalAttainmentSelect?.value || '').trim();
             const occupation = (seniorOccupationInput?.value || '').trim();
             let firstInvalidInput = null;
@@ -3307,7 +3409,7 @@
                 flagInvalid(seniorBirthdateInput);
             } else {
                 const years = getChildAgeInYears(birthdate);
-                if (years === null || years < SENIOR_MIN_AGE) {
+                if (years === null) {
                     flagInvalid(seniorBirthdateInput);
                 }
             }
@@ -3326,6 +3428,10 @@
                 flagInvalid(seniorPlaceOfBirthInput);
             }
 
+            if (!civilStatus) {
+                flagInvalid(seniorCivilStatusSelect);
+            }
+
             if (!educationalAttainment) {
                 flagInvalid(seniorEducationalAttainmentSelect);
             }
@@ -3339,6 +3445,8 @@
                 return null;
             }
 
+            const years = getChildAgeInYears(birthdate);
+
             return withSeniorAgeFields({
                 full_name: formatChildFullName(fullName),
                 birthdate,
@@ -3346,7 +3454,10 @@
                 relationship,
                 place_of_birth: formatTextField(placeOfBirth),
                 educational_attainment: educationalAttainment,
+                civil_status: civilStatus,
                 occupation: occupation ? formatTextField(occupation) : '',
+                is_elderly: years !== null && years >= 60,
+                source: 'other',
             });
         }
 
@@ -3375,6 +3486,7 @@
             button.addEventListener('click', saveSeniorFromModal);
         });
         seniorBirthdateInput?.addEventListener('change', updateSeniorAgeHint);
+        seniorRelationshipSelect?.addEventListener('change', syncSeniorGenderFromRelationship);
 
         syncGenderFromParentRole();
         syncSpouseSectionVisibility();
@@ -3425,8 +3537,15 @@
             syncGenderFromParentRole();
 
             if (!(parentRoleSelect?.value || '').trim()) {
-                showNotice('Required Field', 'Please select whether you are the father or mother registering for your family.');
+                showNotice('Required Field', 'Please select your guardian role (self, father, mother, grandfather, or grandmother).');
                 parentRoleSelect?.focus();
+                return false;
+            }
+
+            if ((parentRoleSelect?.value || '').trim() === 'Self'
+                && !['Male', 'Female'].includes((genderInput?.value || '').trim())) {
+                showNotice('Required Field', 'Please select your gender.');
+                genderSelect?.focus();
                 return false;
             }
 

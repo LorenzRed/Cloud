@@ -114,8 +114,7 @@
             })
             ->values();
 
-        $householdSeniors = collect($residentRequest?->household_seniors ?? [])
-            ->filter(fn ($senior) => is_array($senior) && trim((string) ($senior['full_name'] ?? $senior['name'] ?? '')) !== '')
+        $householdSeniors = collect($residentRequest?->otherFamilyMembers() ?? [])
             ->map(function (array $senior) {
                 $name = trim((string) ($senior['full_name'] ?? $senior['name'] ?? ''));
                 $age = $senior['age_in_years'] ?? null;
@@ -125,7 +124,9 @@
                 $meta = collect([
                     $senior['relationship'] ?? null,
                     filled($senior['gender'] ?? null) ? ucfirst(strtolower(trim((string) $senior['gender']))) : null,
+                    $senior['civil_status'] ?? null,
                     $age !== null ? $age.' yrs' : null,
+                    \App\Models\ResidentRequest::memberIsElderly($senior) ? 'Elderly' : null,
                     filled($senior['birthdate'] ?? null) ? \Illuminate\Support\Carbon::parse((string) $senior['birthdate'])->format('M d, Y') : null,
                     $senior['place_of_birth'] ?? null,
                     $senior['educational_attainment'] ?? null,
@@ -134,6 +135,7 @@
 
                 return ['full_name' => $name, 'meta' => $meta];
             })
+            ->filter(fn ($senior) => $senior['full_name'] !== '')
             ->values();
 
         $hasHouseholdMembers = $spouseName !== '' || $householdChildren->isNotEmpty() || $householdSeniors->isNotEmpty();
@@ -152,18 +154,19 @@
     @endif
 
     <div id="usersContent" class="flex min-h-screen flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] transition-all duration-200">
-        <main class="flex-1 px-4 sm:px-5 md:px-6 lg:px-7 pt-4 md:pt-6 pb-24 md:pb-6 overflow-y-auto">
+        <main class="flex-1 px-3 sm:px-5 md:px-6 lg:px-7 pt-3 sm:pt-4 md:pt-6 pb-24 md:pb-6 overflow-y-auto">
             <div class="w-full max-w-none space-y-6">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <h1 class="mt-1 text-2xl font-bold text-[#0e1b13] dark:text-white">Profile Details</h1>
-                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Personal and household details are locked. You can still change your password.</p>
+                <header class="mb-0">
+                    <div class="flex items-start gap-1.5 sm:gap-2">
+                        <a href="{{ route('users.profile') }}" class="inline-flex size-9 sm:size-10 shrink-0 items-center justify-center rounded-full text-[#1f7f4e] dark:text-gray-200 hover:bg-[#e7f3ec] dark:hover:bg-gray-800 transition-colors -ml-1.5 mt-0.5" aria-label="Back to profile">
+                            <span class="material-symbols-outlined text-[26px] sm:text-[28px] leading-none">chevron_left</span>
+                        </a>
+                        <div class="min-w-0 flex-1 pt-1 sm:pt-1.5">
+                            <h1 class="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight leading-none text-[#0e1b13] dark:text-white">Profile Details</h1>
+                            <p class="mt-1.5 text-xs sm:text-sm leading-snug text-[#4e976b] dark:text-gray-400">Personal and household details are locked. You can still change your password.</p>
+                        </div>
                     </div>
-                    <a href="{{ route('users.profile') }}" class="inline-flex items-center gap-1 rounded-lg border border-[#d0e7d9] dark:border-gray-700 px-3 py-2 text-sm font-semibold text-[#1f7f4e] dark:text-gray-200">
-                        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-                        Back
-                    </a>
-                </div>
+                </header>
 
                 <section class="rounded-2xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-5 md:p-6">
                     @if ($errors->any() && ! $errors->password->any())
@@ -214,7 +217,7 @@
 
                         @if ($representativeRole !== '')
                             <div>
-                                <label class="block text-base font-medium mb-1" for="profileParentRole">Parent Role</label>
+                                <label class="block text-base font-medium mb-1" for="profileParentRole">Guardian Role</label>
                                 <input id="profileParentRole" type="text" value="{{ $representativeRole }}" disabled class="{{ $lockedInputClass }}">
                             </div>
                         @endif
@@ -265,15 +268,15 @@
                 <section class="rounded-2xl border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm p-5 md:p-6 space-y-4">
                     <div>
                         <h2 class="text-lg font-bold text-[#0e1b13] dark:text-white">Household Members</h2>
-                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Representative, spouse, children, and older members from your registration.</p>
-                    </div>
+                        <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Guardian, spouse, children, and other family living in the house from your registration.</p>
+                        </div>
 
                     <div class="space-y-3">
                         <div class="rounded-xl border border-[#d0e7d9] dark:border-gray-700 p-4">
                             <div class="flex items-start gap-3">
                                 <span class="material-symbols-outlined text-[#1f7f4e] text-[22px] shrink-0">person</span>
                                 <div class="min-w-0">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Representative</p>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Guardian</p>
                                     <p class="mt-1 text-sm font-semibold text-[#0e1b13] dark:text-white break-words">{{ $representativeName !== '' ? $representativeName : '—' }}</p>
                                     <p class="mt-1 text-xs text-[#4e976b] dark:text-gray-400">
                                         {{ collect([$representativeRole ?: null, $gender !== '' ? ucfirst(strtolower($gender)) : null, $representativeContact !== '' ? $representativeContact : null])->filter()->implode(' · ') ?: 'Account holder' }}
@@ -315,9 +318,9 @@
                         @foreach ($householdSeniors as $senior)
                             <div class="rounded-xl border border-[#d0e7d9] dark:border-gray-700 p-4">
                                 <div class="flex items-start gap-3">
-                                    <span class="material-symbols-outlined text-[#1f7f4e] text-[22px] shrink-0">elderly</span>
+                                    <span class="material-symbols-outlined text-[#1f7f4e] text-[22px] shrink-0">groups</span>
                                     <div class="min-w-0">
-                                        <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Older</p>
+                                        <p class="text-xs font-semibold uppercase tracking-wide text-[#4e976b] dark:text-gray-400">Other family</p>
                                         <p class="mt-1 text-sm font-semibold text-[#0e1b13] dark:text-white break-words">{{ $senior['full_name'] }}</p>
                                         @if ($senior['meta'] !== '')
                                             <p class="mt-1 text-xs text-[#4e976b] dark:text-gray-400 break-words">{{ $senior['meta'] }}</p>
@@ -329,7 +332,7 @@
 
                         @if (! $hasHouseholdMembers)
                             <div class="rounded-xl border border-dashed border-[#d0e7d9] dark:border-gray-700 p-4 text-sm text-[#4e976b] dark:text-gray-400">
-                                No spouse, child, or older household members on file. Only the representative is listed.
+                                No spouse, child, or older household members on file. Only the guardian is listed.
                             </div>
                         @endif
                     </div>
@@ -384,7 +387,7 @@
                     </div>
                 </div>
 
-                <p class="text-xs text-gray-500 dark:text-gray-400">Use at least 8 characters with letters and numbers.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">At least 10 characters, with uppercase, lowercase, a number, and a special character (e.g. !@#$%).</p>
 
                 <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
                     <button type="button" id="cancelChangePasswordModalBtn" class="w-full sm:w-auto h-10 px-4 rounded-lg border border-[#d0e7d9] dark:border-gray-700 text-sm font-semibold text-[#376f50] dark:text-gray-200">
@@ -410,7 +413,7 @@
 
             function bindPasswordToggle(toggleBtn, input, eyeOpen, eyeClosed) {
                 if (!toggleBtn || !input || !eyeOpen || !eyeClosed) {
-                    return;
+                return;
                 }
 
                 toggleBtn.addEventListener('click', () => {
@@ -426,7 +429,7 @@
 
             function resetPasswordVisibility(input, toggleBtn, eyeOpen, eyeClosed) {
                 if (!input) {
-                    return;
+                return;
                 }
 
                 input.setAttribute('type', 'password');

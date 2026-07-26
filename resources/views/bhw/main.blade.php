@@ -153,7 +153,7 @@
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
 @include('partials.app-flash')
-@include('sidebars.bhw')
+    @include('sidebars.bhw')
 
 <div id="bhwContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
     @include('partials.bhw-mobile-topbar')
@@ -306,7 +306,7 @@
                             <canvas id="commonIllnessesBarChart" aria-label="Common health concerns bar chart"></canvas>
                         </div>
                         <div id="concernLegendPills" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4"></div>
-                    </div>
+                        </div>
 
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm">
                         <div class="mb-4">
@@ -318,8 +318,8 @@
                                 <canvas id="healthConcernMixChart" aria-label="Health concern mix pie chart"></canvas>
                             </div>
                             <div id="concernMixLegend" class="grid grid-cols-1 gap-3"></div>
+                            </div>
                         </div>
-                    </div>
 
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm xl:col-span-2">
                         <div class="mb-4">

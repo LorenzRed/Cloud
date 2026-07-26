@@ -77,7 +77,7 @@
 
     .illness-purok-table th {
         position: sticky;
-        top: 0;
+            top: 0;
         z-index: 1;
         background: #FFFFFF;
         box-shadow: 0 1px 0 #EAEAEA;
@@ -212,8 +212,8 @@
 </head>
 <body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
 @include('partials.app-flash')
-@include('sidebars.barangay_captain')
-
+    @include('sidebars.barangay_captain')
+    
 <div id="captainContent" class="flex min-h-[100dvh] flex-col w-full min-w-0 lg:ml-64 lg:w-[calc(100%-16rem)] lg:h-screen">
     @include('partials.captain-mobile-topbar')
 
@@ -331,7 +331,7 @@
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-accent-orange/10 text-accent-orange font-semibold"><span class="size-2 rounded-full bg-accent-orange"></span>Watch</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary font-semibold"><span class="size-2 rounded-full bg-primary"></span>Low</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-semibold"><span class="size-2 rounded-full bg-emerald-500"></span>Clear</span>
-                        </div>
+                            </div>
                         <div class="flex flex-col sm:flex-row sm:flex-wrap gap-1 sm:gap-x-4 sm:gap-y-1 text-xs text-text-light/70 dark:text-text-dark/70">
                             <p><span class="font-bold text-text-light dark:text-text-dark">HTN</span> — Hypertension (high blood pressure)</p>
                             <p><span class="font-bold text-text-light dark:text-text-dark">DM</span> — Diabetes Mellitus</p>
@@ -376,7 +376,7 @@
                                     <div>
                                         <p class="text-sm font-bold tabular-nums">{{ number_format((int) ($alert['Hyperlipidemia'] ?? 0)) }}</p>
                                         <p class="text-[10px] uppercase tracking-wide text-text-light/50">Lipid</p>
-                                    </div>
+                        </div>
                                 </div>
                             </div>
                         @empty
@@ -500,7 +500,7 @@
                             <canvas id="monthlyIllnessTrendChart" aria-label="Medicine transaction trend"></canvas>
                         </div>
                         <p id="transactionTrendFootnote" class="text-[11px] text-text-light/50 dark:text-text-dark/50 mt-3 text-center sm:text-left"></p>
-                    </div>
+                            </div>
 
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm">
                         <div class="flex flex-col gap-3 mb-4">
@@ -521,7 +521,7 @@
                             <canvas id="commonIllnessesBarChart" aria-label="Common health concerns bar chart"></canvas>
                         </div>
                         <div id="concernLegendPills" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4"></div>
-                    </div>
+                        </div>
 
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm">
                         <div class="mb-4">
@@ -553,7 +553,7 @@
                                 ] as $index => $item)
                                     @php
                                         $value = (int) (($monitoringMix['values'] ?? [])[$index] ?? 0);
-                                    @endphp
+                                @endphp
                                     @if ($item['clickable'])
                                         <button
                                             type="button"
@@ -690,7 +690,7 @@
                                 @endforeach
                             </div>
                         </div>
-                    </div>
+                </div>
                 </section>
                 @endunless
             </div>

@@ -86,8 +86,6 @@ class User extends Authenticatable implements CanResetPasswordContract
         'name',
         'full_name',
         'email',
-        'role',
-        'managed_by_user_id',
         'gender',
         'parent_role',
         'date_of_birth',
@@ -107,6 +105,28 @@ class User extends Authenticatable implements CanResetPasswordContract
         'profile_picture_path',
         'password',
     ];
+
+    /**
+     * Create a user and set privileged fields outside mass assignment.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public static function createWithRole(array $attributes): self
+    {
+        $role = (string) ($attributes['role'] ?? self::ROLE_USERS);
+        $managedBy = $attributes['managed_by_user_id'] ?? null;
+        $emailVerifiedAt = $attributes['email_verified_at'] ?? null;
+        unset($attributes['role'], $attributes['managed_by_user_id'], $attributes['email_verified_at']);
+
+        $user = static::query()->create($attributes);
+        $user->forceFill([
+            'role' => $role,
+            'managed_by_user_id' => $managedBy,
+            'email_verified_at' => $emailVerifiedAt,
+        ])->save();
+
+        return $user->refresh();
+    }
 
     /**
      * The attributes that should be hidden for serialization.

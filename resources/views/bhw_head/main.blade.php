@@ -77,7 +77,7 @@
 
     .illness-purok-table th {
         position: sticky;
-        top: 0;
+            top: 0;
         z-index: 1;
         background: #FFFFFF;
         box-shadow: 0 1px 0 #EAEAEA;
@@ -423,8 +423,8 @@
                             ['label' => 'No weight record', 'value' => (int) ($bnsNutritionStats['no_weight_record'] ?? 0)],
                             ['label' => 'Overweight / obese', 'value' => (int) ($bnsNutritionStats['overweight_cases'] ?? 0)],
                             ['label' => 'Puroks covered', 'value' => (int) ($bnsNutritionStats['puroks_covered'] ?? 0)],
-                        ];
-                    @endphp
+                            ];
+                        @endphp
 
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 dash-kpi-grid-mobile-span">
                         @foreach ($bnsSecondaryKpis as $card)
@@ -433,7 +433,7 @@
                                 <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 leading-snug">{{ $card['label'] }}</p>
                             </div>
                         @endforeach
-                    </div>
+                        </div>
                 </section>
 
                 <section>
@@ -450,9 +450,9 @@
                             <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-3">
                                 <p class="text-xl font-bold tabular-nums">{{ number_format($kpiValue) }}</p>
                                 <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 leading-snug">{{ $card['label'] }}</p>
-                            </div>
-                        @endforeach
-                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                 </section>
 
                 <section class="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -475,7 +475,7 @@
                             <canvas id="monthlyIllnessTrendChart" aria-label="Medicine transaction trend"></canvas>
                         </div>
                         <p id="transactionTrendFootnote" class="text-[11px] text-text-light/50 dark:text-text-dark/50 mt-3 text-center sm:text-left"></p>
-                    </div>
+                            </div>
 
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm">
                         <div class="flex flex-col gap-3 mb-4">
@@ -496,20 +496,20 @@
                             <canvas id="commonIllnessesBarChart" aria-label="Common health concerns bar chart"></canvas>
                         </div>
                         <div id="concernLegendPills" class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4"></div>
-                    </div>
+                            </div>
 
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm">
                         <div class="mb-4">
                             <h2 class="text-base font-bold">Health concern mix</h2>
                             <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Share of hypertension, diabetes, and cholesterol cases in selected period</p>
-                        </div>
+                                </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
                             <div class="h-56 sm:h-64 max-w-xs mx-auto w-full">
                                 <canvas id="healthConcernMixChart" aria-label="Health concern mix pie chart"></canvas>
                             </div>
                             <div id="concernMixLegend" class="grid grid-cols-1 gap-3"></div>
+                            </div>
                         </div>
-                    </div>
 
                     <div class="dash-card rounded-xl border border-border-light dark:border-border-dark p-4 sm:p-5 shadow-sm xl:col-span-2">
                         <div class="mb-4">
@@ -528,7 +528,7 @@
                                 ] as $index => $item)
                                     @php
                                         $value = (int) (($monitoringMix['values'] ?? [])[$index] ?? 0);
-                                    @endphp
+                                @endphp
                                     @if ($item['clickable'])
                                         <button
                                             type="button"
@@ -562,7 +562,7 @@
                             <div>
                                 <h2 class="text-base font-bold">Illness by purok</h2>
                                 <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Health concerns inferred from medicines across all BHW-covered puroks</p>
-                            </div>
+                                </div>
                         </div>
                         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
                             <div class="dash-chart-wrap xl:h-full xl:min-h-[22rem]">
@@ -613,7 +613,7 @@
                                 </table>
                             </div>
                         </div>
-                    </div>
+                </div>
                 </section>
 
                 @include('partials.population-distribution-charts')

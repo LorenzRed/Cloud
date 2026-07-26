@@ -4,12 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AuthRateLimit;
 use App\Support\AuthTokenService;
 use App\Support\SafeInput;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 class AuthTokenController extends Controller
@@ -25,13 +25,12 @@ class AuthTokenController extends Controller
         ]);
 
         $email = mb_strtolower(SafeInput::plainText($data['email']));
-        $throttleKey = 'api-login:'.$request->ip().'|'.$email;
+        $ip = (string) $request->ip();
+        $blocked = AuthRateLimit::loginBlocked($email, $ip);
 
-        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
-            $seconds = RateLimiter::availableIn($throttleKey);
-
+        if ($blocked['blocked']) {
             return response()->json([
-                'message' => 'Too many login attempts. Try again in '.$seconds.' seconds.',
+                'message' => $blocked['message'],
             ], 429);
         }
 
@@ -39,14 +38,14 @@ class AuthTokenController extends Controller
         $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {
-            RateLimiter::hit($throttleKey, 60);
+            AuthRateLimit::hitLoginFailure($email, $ip);
 
             throw ValidationException::withMessages([
                 'email' => ['These credentials do not match our records.'],
             ]);
         }
 
-        RateLimiter::clear($throttleKey);
+        AuthRateLimit::clearLoginFailures($email, $ip);
 
         $pair = $this->tokens->issuePair($user, $request);
 

@@ -13,14 +13,26 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Prefer TRUSTED_PROXIES=your-load-balancer-ip in production.
+        // '*' is only safe when a reverse proxy strips client X-Forwarded-For.
+        $trustedProxies = env('TRUSTED_PROXIES', '*');
+        $proxyAt = $trustedProxies === '*' || $trustedProxies === null || $trustedProxies === ''
+            ? '*'
+            : array_values(array_filter(array_map('trim', explode(',', (string) $trustedProxies))));
+
         $middleware->trustProxies(
-            at: '*',
+            at: $proxyAt,
             headers: Request::HEADER_X_FORWARDED_FOR
                 | Request::HEADER_X_FORWARDED_HOST
                 | Request::HEADER_X_FORWARDED_PORT
                 | Request::HEADER_X_FORWARDED_PROTO
                 | Request::HEADER_X_FORWARDED_AWS_ELB,
         );
+
+        $middleware->alias([
+            'role' => \App\Http\Middleware\EnsureUserRole::class,
+            'role.prefix' => \App\Http\Middleware\EnsureRoleByPrefix::class,
+        ]);
 
         $middleware->web(append: [
             \App\Http\Middleware\SanitizeUserInput::class,

@@ -8,7 +8,6 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
 
 class ResidentBhwChat
 {
@@ -262,7 +261,7 @@ class ResidentBhwChat
 
         $attachmentPath = null;
         if ($request->hasFile('attachment')) {
-            $attachmentPath = $request->file('attachment')->store('bhw-resident-chat', 'public');
+            $attachmentPath = PrivateStorage::store($request->file('attachment'), 'bhw-resident-chat');
         }
 
         return ResidentBhwMessage::query()->create([
@@ -305,8 +304,8 @@ class ResidentBhwChat
             return ['id' => $message->id, 'scope' => 'you'];
         }
 
-        if ($message->attachment_path && Storage::disk('public')->exists($message->attachment_path)) {
-            Storage::disk('public')->delete($message->attachment_path);
+        if ($message->attachment_path) {
+            PrivateStorage::delete($message->attachment_path);
         }
 
         $message->reactions()->delete();

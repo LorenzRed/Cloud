@@ -75,14 +75,14 @@
 
                 <section class="bg-card-light dark:bg-card-dark rounded-xl shadow-sm border border-border-light dark:border-border-dark p-5 sm:p-6">
                     @if ($errors->any() && ! $errors->password->any())
-                        <div class="mb-4 rounded-lg border border-accent-red/40 bg-accent-red/10 px-4 py-3 text-sm">
-                            <ul class="list-disc pl-5 space-y-1">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
+                    <div class="mb-4 rounded-lg border border-accent-red/40 bg-accent-red/10 px-4 py-3 text-sm">
+                        <ul class="list-disc pl-5 space-y-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                     <form id="profileSettingsForm" method="POST" action="{{ route('bns.settings.update') }}" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         @csrf
@@ -99,7 +99,7 @@
                                 <button type="button" id="openChangePasswordModalBtn" class="absolute right-0 top-full mt-0.5 text-sm font-semibold text-primary hover:underline leading-none">
                                     Change password
                                 </button>
-                            </div>
+                        </div>
                         </div>
 
                         <div>
@@ -167,7 +167,7 @@
                 </div>
             </div>
 
-            <p class="text-xs text-text-light/60 dark:text-text-dark/60">Use at least 8 characters with letters and numbers.</p>
+            <p class="text-xs text-text-light/60 dark:text-text-dark/60">At least 10 characters, with uppercase, lowercase, a number, and a special character (e.g. !@#$%).</p>
 
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1">
                 <button type="button" id="cancelChangePasswordModalBtn" class="w-full sm:w-auto h-10 px-4 rounded-lg border border-border-light dark:border-border-dark text-sm font-semibold text-text-light dark:text-text-dark hover:bg-primary/5">
@@ -209,7 +209,7 @@
 
         function resetPasswordVisibility(input, toggleBtn, eyeOpen, eyeClosed) {
             if (!input) {
-                return;
+            return;
             }
 
             input.setAttribute('type', 'password');

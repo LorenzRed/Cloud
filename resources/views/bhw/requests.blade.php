@@ -148,8 +148,8 @@
                                 $spousePlaceOfBirthLabel = trim((string) ($spouseDetails['place_of_birth'] ?? ''));
                                 $spouseEducationalAttainmentLabel = trim((string) ($spouseDetails['educational_attainment'] ?? ''));
                                 $spouseRoleLabel = match ($parentRoleLabel) {
-                                    'Father' => 'Wife',
-                                    'Mother' => 'Husband',
+                                    'Father', 'Grandfather' => 'Wife',
+                                    'Mother', 'Grandmother' => 'Husband',
                                     default => 'Spouse',
                                 };
                                 $childrenSummary = collect($pendingRequest->household_children ?? [])
@@ -217,14 +217,17 @@
                                         $ageLabel = $birthdate !== '' ? \App\Support\PersonAge::labelFromBirthdate($birthdate) : null;
                                         $placeOfBirth = trim((string) ($senior['place_of_birth'] ?? ''));
                                         $educationalAttainment = trim((string) ($senior['educational_attainment'] ?? ''));
+                                        $civilStatus = trim((string) ($senior['civil_status'] ?? ''));
                                         $occupation = trim((string) ($senior['occupation'] ?? ''));
+                                        $isElderly = \App\Models\ResidentRequest::memberIsElderly($senior);
 
                                         $parts = array_filter([
                                             $relationship !== '' ? $relationship : null,
                                             $gender !== '' ? $gender : null,
+                                            $civilStatus !== '' ? $civilStatus : null,
                                             $birthdateLabel,
                                             $ageLabel,
-                                            'Senior citizen',
+                                            $isElderly ? 'Elderly' : null,
                                             $placeOfBirth !== '' ? $placeOfBirth : null,
                                             $educationalAttainment !== '' ? $educationalAttainment : null,
                                             $occupation !== '' ? $occupation : null,
@@ -349,7 +352,7 @@
                         <div class="detail-body-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 md:p-5 space-y-3">
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
                                 <div class="rounded-xl bg-background-light dark:bg-background-dark p-3">
-                                    <p class="text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Parent Role</p>
+                                    <p class="text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Guardian Role</p>
                                     <p class="text-sm font-semibold mt-0.5" id="detailParentRole">—</p>
                                 </div>
                                 <div class="rounded-xl bg-background-light dark:bg-background-dark p-3">
@@ -393,7 +396,7 @@
                                 <ul id="detailChildrenList" class="mt-2 space-y-2 text-sm font-medium"></ul>
                             </div>
                             <div id="detailSeniorsWrap" class="hidden rounded-xl border border-border-light dark:border-border-dark p-3">
-                                <p class="text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Elderly in household</p>
+                                <p class="text-[10px] uppercase tracking-wide text-text-light/50 dark:text-text-dark/50">Other family in the house</p>
                                 <ul id="detailSeniorsList" class="mt-2 space-y-2 text-sm font-medium"></ul>
                             </div>
 

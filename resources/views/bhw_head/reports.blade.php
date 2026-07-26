@@ -117,7 +117,7 @@
                             </a>
                         @endforeach
                     </div>
-                </div>
+                                </div>
 
                 <div id="reportContent" class="space-y-6">
                     <section>
@@ -137,7 +137,7 @@
                                     <div class="flex items-center justify-between mb-2">
                                         <p class="text-xs text-text-light/60 dark:text-text-dark/60">{{ $card['label'] }}</p>
                                         <span class="material-symbols-outlined {{ $card['icon_class'] }} text-lg">{{ $card['icon'] }}</span>
-                                    </div>
+                                </div>
                                     <p class="text-2xl font-bold">{{ number_format((int) $card['value']) }}</p>
                                 </div>
                             @endforeach
@@ -180,7 +180,7 @@
                                     <div class="flex items-center justify-between mb-2">
                                         <p class="text-xs text-text-light/60 dark:text-text-dark/60">{{ $card['label'] }}</p>
                                         <span class="material-symbols-outlined {{ $card['icon_class'] }} text-lg">{{ $card['icon'] }}</span>
-                                    </div>
+                            </div>
                                     <p class="text-2xl font-bold">{{ number_format((int) $card['value']) }}</p>
                                 </div>
                             @endforeach
@@ -249,7 +249,7 @@
                                 <div><span class="block font-bold text-primary">{{ number_format((int) ($monitoring['need_maintenance'] ?? 0)) }}</span>Need maintenance</div>
                             </div>
                         </section>
-                    </div>
+                                </div>
 
                     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
                         <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
@@ -260,7 +260,7 @@
                             <h2 class="text-lg font-bold mb-4 shrink-0">Illness by purok</h2>
                             <div class="h-72"><canvas id="illnessByPurokChart"></canvas></div>
                         </section>
-                    </div>
+                        </div>
 
                     <div class="grid grid-cols-1 gap-6 items-stretch">
                         <section class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
@@ -311,38 +311,38 @@
         const activityCanvas = document.getElementById('activityChart');
         if (activityCanvas) {
             new Chart(activityCanvas, {
-                type: 'bar',
-                data: {
+            type: 'bar',
+            data: {
                     labels: activity.labels || [],
                     datasets: [
                         { label: 'Transactions', data: activity.transactions || [], backgroundColor: '#4A90E2' },
                         { label: 'Visits', data: activity.visits || [], backgroundColor: '#50E3C2' },
                         { label: 'Consultations', data: activity.consultations || [], backgroundColor: '#F5A623' },
                     ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
                     scales: {
                         x: { stacked: false },
                         y: { beginAtZero: true, ticks: { precision: 0 } },
                     },
-                },
-            });
-        }
+            },
+        });
+    }
 
         const concerns = reportPayload.health_concerns?.chart || {};
         const concernCanvas = document.getElementById('concernChart');
         if (concernCanvas) {
             new Chart(concernCanvas, {
-                type: 'doughnut',
-                data: {
+            type: 'doughnut',
+            data: {
                     labels: concerns.labels || [],
-                    datasets: [{
+                datasets: [{
                         data: concerns.values || [],
                         backgroundColor: concerns.colors || ['#BE123C', '#0EA5E9', '#F59E0B'],
-                    }],
-                },
+                }],
+            },
                 options: { responsive: true, maintainAspectRatio: false },
             });
         }
@@ -367,47 +367,47 @@
         const purokCanvas = document.getElementById('purokChart');
         if (purokCanvas) {
             new Chart(purokCanvas, {
-                type: 'bar',
-                data: {
+            type: 'bar',
+            data: {
                     labels: purokData.map((row) => row.purok),
-                    datasets: [{
+                datasets: [{
                         label: 'Households',
                         data: purokData.map((row) => row.count),
                         backgroundColor: '#4A90E2',
-                    }],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
                     indexAxis: 'y',
                     scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-                },
-            });
-        }
+            },
+        });
+    }
 
         const illnessPurok = reportPayload.illness_by_purok || [];
         const illnessPurokCanvas = document.getElementById('illnessByPurokChart');
         if (illnessPurokCanvas) {
             new Chart(illnessPurokCanvas, {
-                type: 'bar',
-                data: {
+            type: 'bar',
+            data: {
                     labels: illnessPurok.map((row) => row.purok),
                     datasets: [
                         { label: 'Hypertension', data: illnessPurok.map((row) => row.Hypertension || 0), backgroundColor: '#BE123C' },
                         { label: 'Diabetes', data: illnessPurok.map((row) => row.Diabetes || 0), backgroundColor: '#0EA5E9' },
                         { label: 'Hyperlipidemia', data: illnessPurok.map((row) => row.Hyperlipidemia || 0), backgroundColor: '#F59E0B' },
                     ],
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
                     scales: {
                         x: { stacked: true },
                         y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
                     },
-                },
-            });
-        }
+            },
+        });
+    }
     }
 
     initCharts();

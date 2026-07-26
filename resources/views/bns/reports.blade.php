@@ -106,8 +106,8 @@
                                 <span class="truncate">{{ $preset['label'] }}</span>
                             </a>
                         @endforeach
-                    </div>
-                </div>
+                        </div>
+                        </div>
 
                 <div id="reportContent" class="space-y-6">
                     <section class="print-break">
@@ -161,7 +161,7 @@
                             <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
                                 <h3 class="text-base font-bold mb-4 shrink-0">Nutrition status distribution</h3>
                                 <div class="h-72 max-w-md mx-auto w-full"><canvas id="nutritionChart"></canvas></div>
-                            </div>
+                                </div>
                             <div class="rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark p-5 flex flex-col min-h-0">
                                 <h3 class="text-base font-bold mb-4 shrink-0">Children needing attention</h3>
                                 <div class="report-scroll-panel">

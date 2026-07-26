@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\HouseholdMonitoringCase;
 use App\Models\ResidentRequest;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -89,32 +90,34 @@ class BhwHouseholdEditor
      */
     private static function upsertSenior(ResidentRequest $resident, string $action, array $payload): string
     {
-        $seniors = self::normalizedList($resident->household_seniors);
+        [$otherSeniors, $autoSeniors] = self::splitOtherAndAutoSeniors(self::normalizedList($resident->household_seniors));
         $index = self::optionalIndex($payload['member_index'] ?? null);
         $row = self::buildSeniorRow($payload);
 
         if ($action === 'update_senior') {
-            if ($index === null || ! array_key_exists($index, $seniors)) {
+            if ($index === null || ! array_key_exists($index, $otherSeniors)) {
                 throw ValidationException::withMessages([
-                    'member_index' => 'Unable to update this elderly member.',
+                    'member_index' => 'Unable to update this family member.',
                 ]);
             }
 
-            $oldName = self::memberName($seniors[$index]);
-            $seniors[$index] = $row;
-            $resident->update(['household_seniors' => array_values($seniors)]);
+            $oldName = self::memberName($otherSeniors[$index]);
+            $otherSeniors[$index] = $row;
+            $merged = array_values(array_merge($otherSeniors, $autoSeniors));
+            $resident->update(['household_seniors' => $merged]);
             self::reindexMonitoring($resident, 'household_senior', self::normalizedList($resident->fresh()->household_seniors));
             if ($oldName !== '' && strcasecmp($oldName, $row['full_name']) !== 0) {
                 self::renameMonitoring($resident, 'household_senior', $oldName, $row['full_name']);
             }
 
-            return 'Elderly member details updated.';
+            return 'Other family member details updated.';
         }
 
-        $seniors[] = $row;
-        $resident->update(['household_seniors' => array_values($seniors)]);
+        $otherSeniors[] = $row;
+        $merged = array_values(array_merge($otherSeniors, $autoSeniors));
+        $resident->update(['household_seniors' => $merged]);
 
-        return 'Elderly member added to the household.';
+        return 'Other family member added to the household.';
     }
 
     /**
@@ -122,23 +125,45 @@ class BhwHouseholdEditor
      */
     private static function removeSenior(ResidentRequest $resident, array $payload): string
     {
-        $seniors = self::normalizedList($resident->household_seniors);
+        [$otherSeniors, $autoSeniors] = self::splitOtherAndAutoSeniors(self::normalizedList($resident->household_seniors));
         $index = self::optionalIndex($payload['member_index'] ?? null);
 
-        if ($index === null || ! array_key_exists($index, $seniors)) {
+        if ($index === null || ! array_key_exists($index, $otherSeniors)) {
             throw ValidationException::withMessages([
-                'member_index' => 'Unable to remove this elderly member.',
+                'member_index' => 'Unable to remove this family member.',
             ]);
         }
 
-        $removedName = self::memberName($seniors[$index]);
-        unset($seniors[$index]);
-        $seniors = array_values($seniors);
-        $resident->update(['household_seniors' => $seniors !== [] ? $seniors : null]);
+        $removedName = self::memberName($otherSeniors[$index]);
+        unset($otherSeniors[$index]);
+        $otherSeniors = array_values($otherSeniors);
+        $merged = array_values(array_merge($otherSeniors, $autoSeniors));
+        $resident->update(['household_seniors' => $merged !== [] ? $merged : null]);
         self::completeMonitoringForMember($resident, 'household_senior', $removedName);
-        self::reindexMonitoring($resident, 'household_senior', $seniors);
+        self::reindexMonitoring($resident, 'household_senior', $merged);
 
-        return 'Elderly member removed from the household.';
+        return 'Other family member removed from the household.';
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $seniors
+     * @return array{0: list<array<string, mixed>>, 1: list<array<string, mixed>>}
+     */
+    private static function splitOtherAndAutoSeniors(array $seniors): array
+    {
+        $other = [];
+        $auto = [];
+
+        foreach ($seniors as $row) {
+            $source = trim((string) ($row['source'] ?? 'other'));
+            if (in_array($source, ['guardian', 'spouse'], true)) {
+                $auto[] = $row;
+            } else {
+                $other[] = $row;
+            }
+        }
+
+        return [$other, $auto];
     }
 
     /**
@@ -168,16 +193,16 @@ class BhwHouseholdEditor
             ]);
         }
 
-        if (! in_array($parentRole, ResidentRequest::PARENT_ROLES, true)) {
+        if (! in_array($parentRole, ResidentRequest::SPOUSE_PARENT_ROLES, true)) {
             throw ValidationException::withMessages([
-                'spouse_parent_role' => 'Please select the spouse parent role.',
+                'spouse_parent_role' => 'Please select the spouse guardian role.',
             ]);
         }
 
         $residentRole = trim((string) ($resident->parent_role ?? ''));
         if ($residentRole !== '' && $parentRole === $residentRole) {
             throw ValidationException::withMessages([
-                'spouse_parent_role' => 'Spouse parent role must be different from the resident.',
+                'spouse_parent_role' => 'Spouse guardian role must be different from the resident.',
             ]);
         }
 
@@ -193,7 +218,7 @@ class BhwHouseholdEditor
             ]);
         }
 
-        $gender = $parentRole === ResidentRequest::PARENT_ROLE_FATHER ? 'Male' : 'Female';
+        $gender = ResidentRequest::genderFromParentRole($parentRole) ?? 'Male';
         $oldName = trim((string) ($resident->spouse_full_name ?? ''));
         $details = [
             'first_name' => $firstName,
@@ -356,6 +381,7 @@ class BhwHouseholdEditor
         $relationship = trim((string) ($payload['relationship'] ?? ''));
         $placeOfBirth = trim((string) ($payload['place_of_birth'] ?? ''));
         $educationalAttainment = trim((string) ($payload['educational_attainment'] ?? ''));
+        $civilStatus = trim((string) ($payload['civil_status'] ?? ''));
         $occupation = trim((string) ($payload['occupation'] ?? ''));
 
         if ($fullName === '') {
@@ -373,14 +399,17 @@ class BhwHouseholdEditor
         if ($placeOfBirth === '') {
             throw ValidationException::withMessages(['place_of_birth' => 'Please enter place of birth.']);
         }
+        if ($civilStatus === '' || ! in_array($civilStatus, User::CIVIL_STATUSES, true)) {
+            throw ValidationException::withMessages(['civil_status' => 'Please select marital status.']);
+        }
         if ($educationalAttainment === '' || ! in_array($educationalAttainment, ResidentRequest::EDUCATIONAL_ATTAINMENTS, true)) {
             throw ValidationException::withMessages(['educational_attainment' => 'Please select educational attainment.']);
         }
 
         $age = PersonAge::ageInYears($birthdate);
-        if ($age === null || $age < 60) {
+        if ($age === null) {
             throw ValidationException::withMessages([
-                'birthdate' => 'Elderly household members must be at least 60 years old.',
+                'birthdate' => 'Please enter a valid birthdate.',
             ]);
         }
 
@@ -392,7 +421,10 @@ class BhwHouseholdEditor
             'relationship' => $relationship,
             'place_of_birth' => $placeOfBirth,
             'educational_attainment' => $educationalAttainment,
+            'civil_status' => $civilStatus,
             'occupation' => $occupation !== '' ? $occupation : null,
+            'is_elderly' => $age >= 60,
+            'source' => 'other',
         ];
     }
 

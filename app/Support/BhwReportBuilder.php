@@ -203,6 +203,10 @@ class BhwReportBuilder
                         return false;
                     }
 
+                    if (! ResidentRequest::memberIsElderly($senior)) {
+                        return false;
+                    }
+
                     return filled(trim((string) ($senior['full_name'] ?? $senior['name'] ?? '')));
                 })
                 ->count();

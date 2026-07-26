@@ -88,17 +88,41 @@ class BnsChildMonitoring
             $fatherName = $parentName;
         } elseif ($parentRole === ResidentRequest::PARENT_ROLE_MOTHER && $parentName !== '') {
             $motherName = $parentName;
+        } elseif ($parentRole === ResidentRequest::PARENT_ROLE_GRANDFATHER && $parentName !== '') {
+            $fatherName = $parentName;
+        } elseif ($parentRole === ResidentRequest::PARENT_ROLE_GRANDMOTHER && $parentName !== '') {
+            $motherName = $parentName;
+        } elseif ($parentRole === ResidentRequest::PARENT_ROLE_SELF && $parentName !== '') {
+            $selfGender = ucfirst(strtolower(trim((string) ($request->user?->gender ?? ''))));
+            if ($selfGender === 'Male') {
+                $fatherName = $parentName;
+            } elseif ($selfGender === 'Female') {
+                $motherName = $parentName;
+            }
         }
 
         if ($spouseName !== '') {
-            if ($spouseRole === ResidentRequest::PARENT_ROLE_FATHER) {
+            if ($spouseRole === ResidentRequest::PARENT_ROLE_FATHER || $spouseRole === ResidentRequest::PARENT_ROLE_GRANDFATHER) {
                 $fatherName = $spouseName;
-            } elseif ($spouseRole === ResidentRequest::PARENT_ROLE_MOTHER) {
+            } elseif ($spouseRole === ResidentRequest::PARENT_ROLE_MOTHER || $spouseRole === ResidentRequest::PARENT_ROLE_GRANDMOTHER) {
                 $motherName = $spouseName;
-            } elseif ($parentRole === ResidentRequest::PARENT_ROLE_FATHER && $motherName === '') {
+            } elseif (
+                in_array($parentRole, [ResidentRequest::PARENT_ROLE_FATHER, ResidentRequest::PARENT_ROLE_GRANDFATHER], true)
+                && $motherName === ''
+            ) {
                 $motherName = $spouseName;
-            } elseif ($parentRole === ResidentRequest::PARENT_ROLE_MOTHER && $fatherName === '') {
+            } elseif (
+                in_array($parentRole, [ResidentRequest::PARENT_ROLE_MOTHER, ResidentRequest::PARENT_ROLE_GRANDMOTHER], true)
+                && $fatherName === ''
+            ) {
                 $fatherName = $spouseName;
+            } elseif ($parentRole === ResidentRequest::PARENT_ROLE_SELF) {
+                $selfGender = ucfirst(strtolower(trim((string) ($request->user?->gender ?? ''))));
+                if ($selfGender === 'Male' && $motherName === '') {
+                    $motherName = $spouseName;
+                } elseif ($selfGender === 'Female' && $fatherName === '') {
+                    $fatherName = $spouseName;
+                }
             }
         }
 
