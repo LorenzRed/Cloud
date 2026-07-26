@@ -1179,7 +1179,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             return response()->json(['message' => 'No health worker is assigned to your purok yet.'], 422);
         }
 
-        $message = ResidentBhwChat::storeMessage($request, $user, $bhw, $user);
+        $message = ResidentBhwChat::storeMessage($request, $user, $bhw, $user, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
 
         return response()->json([
             'ok' => true,
@@ -2284,6 +2284,30 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
 
         return redirect()->route('lgu.barangays')->with('status', 'Barangay captain assignment updated successfully.');
     })->name('lgu.barangays.captains.assignment');
+
+    Route::post('/lgu/barangays/captains/password', function (Request $request) {
+        if (Auth::user()->role !== 'LGU') {
+            return redirect()->route('dashboard');
+        }
+
+        $data = $request->validate([
+            'captain_user_id' => ['required', 'integer', 'exists:users,id'],
+            'password' => ['required', 'confirmed', PasswordRule::defaults()],
+        ], [
+            'password.required' => 'Please enter a new password.',
+            'password.confirmed' => 'The new password confirmation does not match.',
+        ]);
+
+        $captain = User::query()
+            ->where('role', 'BrgCaptain')
+            ->findOrFail($data['captain_user_id']);
+
+        $captain->update([
+            'password' => $data['password'],
+        ]);
+
+        return redirect()->route('lgu.barangays')->with('status', 'Password updated for '.$captain->name.'.');
+    })->name('lgu.barangays.captains.password');
 
     Route::delete('/lgu/barangays/captains/{captain}', function (User $captain) {
         if (Auth::user()->role !== 'LGU') {

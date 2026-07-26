@@ -359,6 +359,86 @@
         </div>
     </div>
 
+    <div id="unassignCaptainModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
+        <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-background-dark border border-border-light dark:border-border-dark shadow-2xl">
+            <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
+                <div>
+                    <h2 class="text-xl font-bold text-text-light dark:text-text-dark">Confirm Unassign</h2>
+                    <p class="text-sm text-text-light/70 dark:text-text-dark/70">This will clear the selected barangay assignment.</p>
+                </div>
+                <button type="button" id="closeUnassignCaptainModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <div class="space-y-4 px-6 py-5">
+                <p class="text-sm leading-6 text-text-light/80 dark:text-text-dark/80">
+                    Unassign <span id="unassignCaptainName" class="font-semibold text-text-light dark:text-text-dark"></span> from <span id="unassignCaptainBarangay" class="font-semibold text-text-light dark:text-text-dark"></span>?
+                </p>
+                <p class="text-xs text-text-light/60 dark:text-text-dark/60">
+                    The captain account will remain active. Only the barangay assignment is removed.
+                </p>
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" id="cancelUnassignCaptainModalBtn" class="rounded-lg h-11 px-4 border border-border-light dark:border-border-dark text-sm font-semibold hover:bg-background-light dark:hover:bg-background-dark">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirmUnassignCaptainBtn" class="rounded-lg h-11 px-4 bg-amber-100 text-amber-700 text-sm font-semibold border border-amber-300 hover:bg-amber-200">
+                        <span id="unassignCaptainAction">Unassign</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="changeCaptainPasswordModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4 py-6" role="dialog" aria-modal="true" aria-labelledby="changeCaptainPasswordTitle">
+        <div class="w-full max-w-md max-h-[90dvh] overflow-hidden rounded-2xl bg-white dark:bg-background-dark border border-border-light dark:border-border-dark shadow-2xl flex flex-col">
+            <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4 shrink-0">
+                <div>
+                    <h2 id="changeCaptainPasswordTitle" class="text-lg font-bold text-text-light dark:text-text-dark">Change Password</h2>
+                    <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-0.5">Set a new password for <span id="passwordCaptainName" class="font-semibold text-text-light dark:text-text-dark"></span>.</p>
+                </div>
+                <button type="button" id="closeChangeCaptainPasswordModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark shrink-0" aria-label="Close">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <form method="POST" action="{{ route('lgu.barangays.captains.password') }}" class="flex flex-col min-h-0 flex-1">
+                @csrf
+                <input type="hidden" name="captain_user_id" id="passwordCaptainId" value="" />
+                <input type="hidden" name="password_form" value="1" />
+                <div class="overflow-y-auto px-6 py-4 space-y-3 flex-1">
+                    @if (($errors->has('password') || $errors->has('password_confirmation') || $errors->has('captain_user_id')) && old('password_form'))
+                        <div class="rounded-lg border border-accent-red/40 bg-accent-red/10 px-4 py-3 text-sm text-accent-red">
+                            <ul class="list-disc pl-5 space-y-1">
+                                @foreach ($errors->get('password') as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                                @foreach ($errors->get('password_confirmation') as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                                @foreach ($errors->get('captain_user_id') as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="captain_password_change">New Password</label>
+                        <input id="captain_password_change" type="password" name="password" required autocomplete="new-password" class="w-full h-11 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1" for="captain_password_confirmation_change">Confirm Password</label>
+                        <input id="captain_password_confirmation_change" type="password" name="password_confirmation" required autocomplete="new-password" class="w-full h-11 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 text-sm">
+                    </div>
+                    <p class="text-xs text-text-light/60 dark:text-text-dark/60">Use at least 8 characters with letters and numbers.</p>
+                </div>
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-border-light dark:border-border-dark px-6 py-3 shrink-0">
+                    <button type="button" id="cancelChangeCaptainPasswordModalBtn" class="h-11 w-full sm:w-auto px-4 rounded-lg border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                    <button type="submit" class="h-11 w-full sm:w-auto px-4 rounded-lg bg-primary text-white text-sm font-bold hover:opacity-90">Save Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="deleteCaptainModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
         <div class="w-full max-w-lg rounded-2xl bg-white dark:bg-background-dark border border-border-light dark:border-border-dark shadow-2xl">
             <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
@@ -510,6 +590,22 @@
         const captainManagementUserId = document.getElementById('captainManagementUserId');
         const captainManagementBarangayId = document.getElementById('captainManagementBarangayId');
         const captainManagementAction = document.getElementById('captainManagementAction');
+        const unassignCaptainModal = document.getElementById('unassignCaptainModal');
+        const closeUnassignCaptainModalBtn = document.getElementById('closeUnassignCaptainModalBtn');
+        const cancelUnassignCaptainModalBtn = document.getElementById('cancelUnassignCaptainModalBtn');
+        const confirmUnassignCaptainBtn = document.getElementById('confirmUnassignCaptainBtn');
+        const unassignCaptainName = document.getElementById('unassignCaptainName');
+        const unassignCaptainBarangay = document.getElementById('unassignCaptainBarangay');
+        const unassignCaptainAction = document.getElementById('unassignCaptainAction');
+        let pendingUnassignCaptain = null;
+        const changeCaptainPasswordModal = document.getElementById('changeCaptainPasswordModal');
+        const passwordCaptainId = document.getElementById('passwordCaptainId');
+        const passwordCaptainName = document.getElementById('passwordCaptainName');
+        const captainPasswordInput = document.getElementById('captain_password_change');
+        const captainPasswordConfirmationInput = document.getElementById('captain_password_confirmation_change');
+        const closeChangeCaptainPasswordModalBtn = document.getElementById('closeChangeCaptainPasswordModalBtn');
+        const cancelChangeCaptainPasswordModalBtn = document.getElementById('cancelChangeCaptainPasswordModalBtn');
+        const shouldOpenCaptainPasswordModal = @json(old('password_form') && ($errors->has('password') || $errors->has('password_confirmation') || $errors->has('captain_user_id')));
         const deleteCaptainModal = document.getElementById('deleteCaptainModal');
         const closeDeleteCaptainModalBtn = document.getElementById('closeDeleteCaptainModalBtn');
         const cancelDeleteCaptainModalBtn = document.getElementById('cancelDeleteCaptainModalBtn');
@@ -758,9 +854,13 @@
                                 <span class="material-symbols-outlined text-sm">assignment_ind</span>
                                 Assign Position
                             </button>
-                            <button type="button" class="captain-management-action-btn inline-flex items-center gap-2 rounded-lg px-3 h-9 text-sm font-semibold border border-amber-300 bg-amber-100 text-amber-700 hover:bg-amber-200" data-captain-id="${captain.id}" data-action="unassign" ${!isAssignedHere && !isAssignedElsewhere ? 'disabled' : ''}>
+                            <button type="button" class="captain-management-action-btn inline-flex items-center gap-2 rounded-lg px-3 h-9 text-sm font-semibold border border-amber-300 bg-amber-100 text-amber-700 hover:bg-amber-200" data-captain-id="${captain.id}" data-captain-name="${escapeHtml(captain.name)}" data-action="unassign" ${!isAssignedHere && !isAssignedElsewhere ? 'disabled' : ''}>
                                 <span class="material-symbols-outlined text-sm">do_not_disturb_on</span>
                                 Unassign
+                            </button>
+                            <button type="button" class="open-captain-password-modal-btn inline-flex items-center gap-2 rounded-lg px-3 h-9 text-sm font-semibold border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15" data-captain-id="${captain.id}" data-captain-name="${escapeHtml(captain.name)}" title="Change password" aria-label="Change password">
+                                <span class="material-symbols-outlined text-sm">lock_reset</span>
+                                Password
                             </button>
                             <button type="button" class="captain-management-delete-btn inline-flex items-center gap-2 rounded-lg px-3 h-9 text-sm font-semibold border border-red-300 bg-red-100 text-red-700 hover:bg-red-200" data-captain-id="${captain.id}" data-captain-name="${escapeHtml(captain.name)}">
                                 <span class="material-symbols-outlined text-sm">remove</span>
@@ -838,12 +938,74 @@
             closeModal(deleteCaptainModal);
         }
 
+        function openUnassignCaptainModal(captainId, captainName) {
+            if (!unassignCaptainModal || !unassignCaptainName || !unassignCaptainBarangay || !unassignCaptainAction) {
+                return;
+            }
+
+            pendingUnassignCaptain = {
+                captainId: String(captainId || ''),
+                captainName: captainName || 'this captain',
+            };
+
+            unassignCaptainName.textContent = pendingUnassignCaptain.captainName;
+            unassignCaptainBarangay.textContent = selectedCaptainManagementBarangay?.name || 'the selected barangay';
+            unassignCaptainAction.textContent = `Unassign ${pendingUnassignCaptain.captainName}`;
+
+            openModal(unassignCaptainModal);
+        }
+
+        function closeUnassignCaptainModal() {
+            pendingUnassignCaptain = null;
+            closeModal(unassignCaptainModal);
+        }
+
+        function openChangeCaptainPasswordModal(captainId, captainName) {
+            if (!changeCaptainPasswordModal || !passwordCaptainId) {
+                return;
+            }
+
+            passwordCaptainId.value = captainId || '';
+
+            if (passwordCaptainName) {
+                passwordCaptainName.textContent = captainName || 'this captain';
+            }
+
+            if (captainPasswordInput) {
+                captainPasswordInput.value = '';
+            }
+
+            if (captainPasswordConfirmationInput) {
+                captainPasswordConfirmationInput.value = '';
+            }
+
+            openModal(changeCaptainPasswordModal);
+
+            setTimeout(() => captainPasswordInput?.focus(), 50);
+        }
+
+        function closeChangeCaptainPasswordModal() {
+            closeModal(changeCaptainPasswordModal);
+        }
+
+        function confirmUnassignCaptain() {
+            if (!pendingUnassignCaptain || !captainManagementForm || !captainManagementUserId || !captainManagementBarangayId || !captainManagementAction || !selectedCaptainManagementBarangay) {
+                return;
+            }
+
+            captainManagementUserId.value = pendingUnassignCaptain.captainId;
+            captainManagementBarangayId.value = selectedCaptainManagementBarangay.id;
+            captainManagementAction.value = 'unassign';
+            captainManagementForm.submit();
+        }
+
         function submitCaptainManagementAction(captainId, action) {
             if (!captainManagementForm || !captainManagementUserId || !captainManagementBarangayId || !captainManagementAction || !selectedCaptainManagementBarangay) {
                 return;
             }
 
-            if (action === 'unassign' && !window.confirm('Unassign this captain from the selected barangay?')) {
+            if (action === 'unassign') {
+                openUnassignCaptainModal(captainId, 'this captain');
                 return;
             }
 
@@ -1377,6 +1539,11 @@
         closeAddCaptainModalBtn?.addEventListener('click', () => closeModal(addCaptainModal));
         cancelAddCaptainModalBtn?.addEventListener('click', () => closeModal(addCaptainModal));
         closeCaptainManagementModalBtn?.addEventListener('click', closeCaptainManagementModal);
+        closeUnassignCaptainModalBtn?.addEventListener('click', closeUnassignCaptainModal);
+        cancelUnassignCaptainModalBtn?.addEventListener('click', closeUnassignCaptainModal);
+        confirmUnassignCaptainBtn?.addEventListener('click', confirmUnassignCaptain);
+        closeChangeCaptainPasswordModalBtn?.addEventListener('click', closeChangeCaptainPasswordModal);
+        cancelChangeCaptainPasswordModalBtn?.addEventListener('click', closeChangeCaptainPasswordModal);
         closeDeleteCaptainModalBtn?.addEventListener('click', closeDeleteCaptainModal);
         cancelDeleteCaptainModalBtn?.addEventListener('click', closeDeleteCaptainModal);
 
@@ -1425,15 +1592,25 @@
 
         captainManagementCards?.addEventListener('click', (event) => {
             const actionButton = event.target.closest('.captain-management-action-btn');
+            const passwordButton = event.target.closest('.open-captain-password-modal-btn');
             const deleteButton = event.target.closest('.captain-management-delete-btn');
 
             if (actionButton) {
                 const captainId = actionButton.getAttribute('data-captain-id');
                 const action = actionButton.getAttribute('data-action');
+                const captainName = actionButton.getAttribute('data-captain-name') || 'this captain';
 
                 if (captainId && action) {
-                    submitCaptainManagementAction(captainId, action);
+                    if (action === 'unassign') {
+                        openUnassignCaptainModal(captainId, captainName);
+                    } else {
+                        submitCaptainManagementAction(captainId, action);
+                    }
                 }
+            }
+
+            if (passwordButton) {
+                openChangeCaptainPasswordModal(passwordButton.getAttribute('data-captain-id') || '', passwordButton.getAttribute('data-captain-name') || 'this captain');
             }
 
             if (deleteButton) {
@@ -1453,11 +1630,35 @@
             }
         });
 
+        unassignCaptainModal?.addEventListener('click', (event) => {
+            if (event.target === unassignCaptainModal) {
+                closeUnassignCaptainModal();
+            }
+        });
+
         deleteCaptainModal?.addEventListener('click', (event) => {
             if (event.target === deleteCaptainModal) {
                 closeDeleteCaptainModal();
             }
         });
+
+        changeCaptainPasswordModal?.addEventListener('click', (event) => {
+            if (event.target === changeCaptainPasswordModal) {
+                closeChangeCaptainPasswordModal();
+            }
+        });
+
+        if (shouldOpenCaptainPasswordModal) {
+            const oldCaptainId = @json(old('captain_user_id'));
+            const oldCaptainBtn = oldCaptainId
+                ? document.querySelector(`.open-captain-password-modal-btn[data-captain-id="${oldCaptainId}"]`)
+                : null;
+
+            openChangeCaptainPasswordModal(
+                oldCaptainId || '',
+                oldCaptainBtn?.dataset.captainName || 'this captain'
+            );
+        }
 
         barangayOverviewModal?.addEventListener('click', (event) => {
             if (event.target === barangayOverviewModal) {

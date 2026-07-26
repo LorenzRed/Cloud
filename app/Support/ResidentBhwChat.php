@@ -157,6 +157,7 @@ class ResidentBhwChat
             abort(422, 'Invalid reaction.');
         }
 
+        /** @var ResidentBhwMessageReaction|null $existing */
         $existing = $message->reactions()->where('user_id', $viewer->id)->first();
 
         if ($existing && $existing->emoji === $emoji) {
@@ -244,11 +245,14 @@ class ResidentBhwChat
             && $message->unsent_at === null;
     }
 
-    public static function storeMessage(Request $request, User $resident, User $bhw, User $sender): ResidentBhwMessage
+    /**
+     * @param  list<string>  $allowedAttachmentMimes
+     */
+    public static function storeMessage(Request $request, User $resident, User $bhw, User $sender, array $allowedAttachmentMimes = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf']): ResidentBhwMessage
     {
         $data = $request->validate([
             'message' => SafeInput::chatMessageRules(false),
-            'attachment' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp,pdf'],
+            'attachment' => ['nullable', 'file', 'max:5120', 'mimes:'.implode(',', $allowedAttachmentMimes)],
         ]);
 
         $messageText = SafeInput::chatMessage($data['message'] ?? null);
