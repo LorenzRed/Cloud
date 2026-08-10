@@ -6,7 +6,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     @include('partials.submit-guard')
     <title>Bantay Kalusugan - Finish registration</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link
@@ -16,6 +16,37 @@
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
         rel="stylesheet" />
     @include('partials.auth-input-styles')
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4A90E2",
+                        "secondary": "#50E3C2",
+                        "background-light": "#F4F7F6",
+                        "background-dark": "#1F2937",
+                        "text-light": "#333333",
+                        "text-dark": "#E5E7EB",
+                        "border-light": "#A9A9A9",
+                        "border-dark": "#4B5563",
+                        "form-bg-light": "#FFFFFF",
+                        "form-bg-dark": "#374151"
+                    },
+                    fontFamily: {
+                        "display": ["Nunito Sans", "sans-serif"],
+                        "heading": ["Lato", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
     <style>
         .otp-boxes {
             display: flex;
