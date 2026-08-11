@@ -48,7 +48,15 @@ class PreventDuplicateRequests
 
     private function fingerprint(Request $request, string $actor): string
     {
-        $payload = $request->except(['_token', '_method']);
+        $payload = $request->except([
+            '_token',
+            '_method',
+            'password',
+            'password_confirmation',
+            'current_password',
+            'new_password',
+            'new_password_confirmation',
+        ]);
 
         foreach ($request->allFiles() as $key => $file) {
             if (is_array($file)) {
