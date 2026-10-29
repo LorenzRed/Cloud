@@ -3,6 +3,7 @@
 <html class="light" lang="en">
 
 <head>
+    @include('partials.favicon')
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     @include('partials.submit-guard')
@@ -64,8 +65,10 @@
                                 <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" class="w-12 h-12 rounded" />
                                 <h1 class="text-4xl font-black font-heading tracking-tight">Bantay Kalusugan</h1>
                             </div>
-                            <p class="text-lg font-light">Your community's partner in maternal and child health.
-                                Protecting futures, one check-up at a time.</p>
+                            <p class="text-lg font-light">
+                                <strong>Your Community's Partner in Health</strong><br />
+                                Supporting a healthier community through smarter and more accessible health management.
+                            </p>
                         </div>
                     </div>
                     <!-- Right Panel -->

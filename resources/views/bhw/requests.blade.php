@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    @include('partials.favicon')
 <meta charset="utf-8"/>
 @include('partials.bhw-viewport')
 <meta name="csrf-token" content="{{ csrf_token() }}"/>

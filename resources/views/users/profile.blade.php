@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html class="light" lang="en">
 <head>
+    @include('partials.favicon')
     <meta charset="utf-8" />
     @include('partials.users-viewport')
     <title>Bantay Kalusugan - Profile</title>
