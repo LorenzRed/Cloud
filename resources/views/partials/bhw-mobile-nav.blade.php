@@ -37,14 +37,6 @@
         <a href="{{ route('bhw.my-profile') }}" class="relative flex flex-col items-center justify-center rounded-lg py-1.5 text-[9px] sm:text-[10px] font-semibold leading-tight {{ $isProfile ? 'text-primary bg-primary/10' : 'text-text-light/70 dark:text-text-dark/70' }}">
             <span class="material-symbols-outlined text-[20px]" @if ($isProfile) style="font-variation-settings: 'FILL' 1;" @endif>person</span>
             Profile
-            @php
-                $profileUnreadTotal = (int) ($profileUnreadChatTotal ?? 0);
-            @endphp
-            @if ($profileUnreadTotal > 0)
-                <span class="absolute top-0.5 right-1.5 inline-flex min-w-[16px] h-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white shadow-sm" aria-label="{{ $profileUnreadTotal }} unread chat{{ $profileUnreadTotal === 1 ? '' : 's' }}">
-                    {{ $profileUnreadTotal > 9 ? '9+' : $profileUnreadTotal }}
-                </span>
-            @endif
         </a>
     </div>
 </nav>

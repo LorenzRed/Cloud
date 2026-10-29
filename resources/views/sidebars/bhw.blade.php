@@ -84,14 +84,6 @@
                 aria-label="Open profile">
                 <span class="{{ ($isMyProfile || $isSettings) ? $activeIconClass : 'material-symbols-outlined' }}" @if ($isMyProfile || $isSettings) style="font-variation-settings: 'FILL' 1;" @endif>person</span>
                 <p class="{{ ($isMyProfile || $isSettings) ? $activeTextClass : 'text-sm font-medium' }}">Profile</p>
-                @php
-                    $profileUnreadTotal = (int) ($profileUnreadChatTotal ?? 0);
-                @endphp
-                @if ($profileUnreadTotal > 0)
-                    <span class="ml-auto inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-accent-red px-1.5 text-[10px] font-bold leading-none text-white" aria-label="{{ $profileUnreadTotal }} unread chat{{ $profileUnreadTotal === 1 ? '' : 's' }}">
-                        {{ $profileUnreadTotal > 99 ? '99+' : $profileUnreadTotal }}
-                    </span>
-                @endif
             </a>
         </div>
     </div>

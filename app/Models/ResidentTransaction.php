@@ -75,6 +75,7 @@ class ResidentTransaction extends Model
         'transaction_date',
         'gender',
         'philhealth_number',
+        'notes',
         'member_name',
         'member_source',
         'member_index',

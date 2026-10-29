@@ -76,6 +76,18 @@
         min-width: 0;
     }
 
+    @media (min-width: 1024px) {
+        .profile-sidebar-card {
+            overflow-y: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .profile-sidebar-card::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
     .profile-main-panel {
         display: flex;
         flex-direction: column;
@@ -248,6 +260,18 @@
         display: none;
     }
 
+    .active-care-scroll {
+        max-height: 10rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .active-care-scroll::-webkit-scrollbar {
+        display: none;
+    }
+
     .summary-card {
         border-radius: 0.875rem;
         border: 1px solid #EAEAEA;
@@ -390,6 +414,14 @@
         background: #2C2C2C;
     }
 
+    #medicalHistoryFormWrapper .transaction-modal-body {
+        scrollbar-width: none;
+    }
+
+    #medicalHistoryFormWrapper .transaction-modal-body::-webkit-scrollbar {
+        display: none;
+    }
+
     @media (max-width: 1023px) {
         #medicalHistoryFormWrapper {
             align-items: flex-end;
@@ -498,6 +530,17 @@
             max-width: min(72rem, 88vw);
             max-height: none;
         }
+
+        #medicalHistoryFormWrapper .transaction-modal-panel {
+            max-height: min(92vh, 880px);
+        }
+
+        #medicalHistoryFormWrapper .transaction-modal-body {
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
     }
 
     .transaction-modal-header {
@@ -532,6 +575,10 @@
         .transaction-modal-body {
             overflow: visible;
             padding: 0.625rem 1.25rem 1rem;
+        }
+
+        #medicalHistoryFormWrapper .transaction-modal-body {
+            overflow-y: auto;
         }
 
         .transaction-modal-body .tx-form {
@@ -1143,6 +1190,7 @@
         line-height: 1.4;
         color: rgba(47, 47, 47, 0.85);
         word-break: break-word;
+        white-space: pre-wrap;
     }
     .dark .mnt-visit-notes {
         background: rgba(74, 144, 226, 0.12);
@@ -1834,6 +1882,13 @@
         : 'Resident';
     $civilStatusLabel = trim((string) ($resident->civil_status ?? $residentUser?->civil_status ?? ''));
     $placeOfBirthLabel = trim((string) ($resident->place_of_birth ?? $residentUser?->place_of_birth ?? ''));
+    $normalizedPlaceOfBirth = strtolower(preg_replace('/\s+/', ' ', $placeOfBirthLabel));
+    $normalizedBarangay = strtolower(preg_replace('/\s+/', ' ', $residentBarangay));
+    $isLocalResident = $normalizedPlaceOfBirth !== ''
+        && (
+            str_contains($normalizedPlaceOfBirth, 'macatoc')
+            || ($normalizedBarangay !== '' && $normalizedPlaceOfBirth === $normalizedBarangay)
+        );
     $educationalAttainmentLabel = trim((string) ($resident->educational_attainment ?? $residentUser?->educational_attainment ?? ''));
     $residentMetaParts = array_values(array_filter([
         $residentAge !== null ? $residentAge.' yrs old' : null,
@@ -1843,6 +1898,13 @@
         $placeOfBirthLabel !== '' ? $placeOfBirthLabel : null,
         $educationalAttainmentLabel !== '' ? $educationalAttainmentLabel : null,
     ]));
+    $activeMonitoringCases = collect($resident->monitoringCases ?? [])
+        ->filter(fn ($case) => (bool) $case->is_active && $case->completed_at === null)
+        ->values();
+    $activeConsultations = collect($resident->consultations ?? [])
+        ->filter(fn ($consultation) => $consultation->scheduled_at && $consultation->scheduled_at->isFuture())
+        ->sortBy('scheduled_at')
+        ->values();
 
     $spouseDetails = $resident->spouse_details ?? $residentUser?->spouse_details ?? [];
     if (! is_array($spouseDetails)) {
@@ -2237,13 +2299,24 @@
                                     </div>
                                 @endif
                                 <div class="min-w-0 flex-1 text-center sm:text-left lg:text-center">
-                                    <p class="text-base lg:text-lg font-bold leading-tight break-words text-text-light dark:text-text-dark">{{ $residentName }}</p>
+                                    <div class="flex flex-col items-center justify-center gap-1.5 sm:flex-row sm:flex-wrap sm:justify-start lg:justify-center">
+                                        <p class="text-base lg:text-lg font-bold leading-tight break-words text-text-light dark:text-text-dark">{{ $residentName }}</p>
+                                        @if ($isLocalResident)
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary" title="Place of birth matches the local community">
+                                                <span class="material-symbols-outlined text-[13px]">location_on</span>
+                                                <span>Local resident</span>
+                                            </span>
+                                        @endif
+                                    </div>
                                     @if (! empty($residentMetaParts))
                                         <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5 line-clamp-2">{{ implode(' · ', array_slice($residentMetaParts, 0, 3)) }}</p>
                                     @endif
-                                    <a href="{{ route('bhw.residents.chat', $resident) }}" class="profile-chat-compact profile-chat-glow inline-flex items-center justify-center gap-1.5 mt-2 px-3.5 py-1.5 rounded-full bg-primary text-white text-sm font-semibold hover:opacity-95 transition">
+                                    <a href="{{ route('bhw.residents.chat', $resident) }}" class="profile-chat-compact profile-chat-glow relative inline-flex items-center justify-center gap-1.5 mt-2 px-3.5 py-1.5 rounded-full bg-primary text-white text-sm font-semibold hover:opacity-95 transition">
                                         <span class="material-symbols-outlined text-base">forum</span>
                                         <span>Chat</span>
+                                        @if (($residentChatUnreadCount ?? 0) > 0)
+                                            <span class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-card-light bg-red-600 shadow-sm dark:border-card-dark" aria-label="Unread chat messages"></span>
+                                        @endif
                                     </a>
                                 </div>
                             </div>
@@ -2261,6 +2334,35 @@
                                     <p class="text-sm mt-1 break-words leading-relaxed text-text-light dark:text-text-dark">{{ $residentAddress ?: 'N/A' }}</p>
                                 </div>
                             </div>
+                            @if ($activeMonitoringCases->isNotEmpty() || $activeConsultations->isNotEmpty())
+                                <div class="mt-3 w-full rounded-xl border border-primary/15 bg-primary/5 p-3 text-left dark:border-primary/25 dark:bg-primary/10">
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+                                            <span class="material-symbols-outlined text-[18px]">health_and_safety</span>
+                                        </span>
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-bold uppercase tracking-wide text-primary">Active care</p>
+                                            <p class="text-[11px] text-text-light/60 dark:text-text-dark/60">Current cases and upcoming consultations</p>
+                                        </div>
+                                    </div>
+                                    <div class="active-care-scroll mt-2 space-y-1.5" tabindex="0" aria-label="Active care items">
+                                        @foreach ($activeMonitoringCases as $activeCase)
+                                            <div class="flex items-center gap-2 text-xs text-text-light dark:text-text-dark">
+                                                <span class="material-symbols-outlined text-[15px] text-primary">monitor_heart</span>
+                                                <span class="truncate">{{ $activeCase->typeLabel() }}{{ filled($activeCase->member_name) ? ' · '.$activeCase->member_name : '' }}</span>
+                                                <span class="ml-auto shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">Active</span>
+                                            </div>
+                                        @endforeach
+                                        @foreach ($activeConsultations as $activeConsultation)
+                                            <div class="flex items-center gap-2 text-xs text-text-light dark:text-text-dark">
+                                                <span class="material-symbols-outlined text-[15px] text-primary">event</span>
+                                                <span class="truncate">{{ $activeConsultation->medical_checkup ?: 'Consultation' }}</span>
+                                                <span class="ml-auto shrink-0 text-[10px] font-semibold text-primary">{{ $activeConsultation->scheduled_at->format('M j, g:i A') }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                         <div id="removeResidentModal" class="hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
                             <div class="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl" role="dialog" aria-modal="true" aria-labelledby="removeResidentModalTitle">
@@ -2968,8 +3070,13 @@
                                     </div>
                                 </div>
 
-                                <div id="medical-history" class="tab-content min-w-0">
-                                    <div class="profile-tab-toolbar">
+                                <div id="medical-history" class="tab-content relative min-w-0">
+                                    @if (session('status'))
+                                        <div id="transactionStatusToast" class="absolute top-0 left-0 right-0 z-[70] rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg transition-opacity duration-300 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200" role="status">
+                                            {{ session('status') }}
+                                        </div>
+                                    @endif
+                                    <div id="transactionStatusScroll" class="profile-tab-toolbar {{ session('status') ? 'pt-12' : '' }}">
                                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                             <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Transaction Record</h4>
                                             <button type="button" id="toggleMedicalHistoryForm" class="inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-wide whitespace-nowrap shrink-0">
@@ -2977,12 +3084,6 @@
                                                 <span>Add Transaction</span>
                                         </button>
                                     </div>
-
-                                    @if (session('status'))
-                                            <div class="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
-                                            {{ session('status') }}
-                                        </div>
-                                    @endif
 
                                     @if ($errors->any())
                                             <div class="mt-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200">
@@ -3123,6 +3224,14 @@
                                                 </div>
                                             </section>
 
+                                            <section class="space-y-3">
+                                                <div class="tx-section-heading">
+                                                    <h6 class="text-sm font-bold text-text-light dark:text-text-dark">Notes</h6>
+                                                    <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Add notes about this transaction.</p>
+                                                </div>
+                                                <textarea id="transaction_notes" name="notes" rows="3" maxlength="2000" required class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3 py-2" placeholder="Enter transaction notes">{{ old('notes') }}</textarea>
+                                            </section>
+
                                             <div id="transactionConditionPreview" class="tx-condition-preview hidden">
                                                 <div class="flex items-start gap-3">
                                                     <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
@@ -3135,6 +3244,8 @@
                                                     </div>
                                                 </div>
                                             </div>
+
+
 
                                             <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
                                                 <button type="button" id="cancelMedicalHistoryForm" class="inline-flex items-center justify-center h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
@@ -3150,9 +3261,79 @@
                                         </div>
                                     </div>
 
+                                    <div id="editConsultationModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 py-6">
+                                        <div class="w-full max-w-lg rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl" role="dialog" aria-modal="true" aria-labelledby="editConsultationModalTitle">
+                                            <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-5 py-4">
+                                                <div>
+                                                    <p class="text-xs font-semibold uppercase tracking-wide text-primary/80">Resident consultation</p>
+                                                    <h5 id="editConsultationModalTitle" class="text-lg font-bold mt-1">Edit Appointment</h5>
+                                                </div>
+                                                <button type="button" id="closeEditConsultationModal" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border-light dark:border-border-dark" aria-label="Close edit appointment">
+                                                    <span class="material-symbols-outlined text-base">close</span>
+                                                </button>
+                                            </div>
+                                            <form id="editConsultationForm" method="POST" action="#" class="space-y-4 px-5 py-4">
+                                                @csrf
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="edit_consultation_date">Date</label>
+                                                        <input id="edit_consultation_date" name="consultation_date" type="date" required class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm px-3" />
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="edit_consultation_time">Time</label>
+                                                        <input id="edit_consultation_time" name="consultation_time" type="time" required class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm px-3" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-semibold mb-1.5" for="edit_consultation_checkup">Medical checkup</label>
+                                                    <input id="edit_consultation_checkup" name="consultation_checkup" required maxlength="255" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm px-3" />
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-semibold mb-1.5" for="edit_consultation_note">Note <span class="text-red-500">*</span></label>
+                                                    <textarea id="edit_consultation_note" name="consultation_note" rows="5" required maxlength="500" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark text-sm px-3 py-2.5" style="white-space: pre-wrap;" placeholder="Enter instructions or notes for the resident"></textarea>
+                                                </div>
+                                                <div class="flex justify-end gap-2 border-t border-border-light dark:border-border-dark pt-4">
+                                                    <button type="button" id="cancelEditConsultationModal" class="h-10 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                                                    <button type="submit" class="h-10 px-5 rounded-xl bg-primary text-white text-sm font-bold">Save changes</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <div id="deleteConsultationModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 py-6">
+                                        <div class="w-full max-w-md rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl" role="dialog" aria-modal="true" aria-labelledby="deleteConsultationModalTitle">
+                                            <div class="px-5 py-5">
+                                                <div class="flex items-start gap-3">
+                                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                                                        <span class="material-symbols-outlined">delete</span>
+                                                    </span>
+                                                    <div>
+                                                        <h5 id="deleteConsultationModalTitle" class="text-lg font-bold">Delete appointment?</h5>
+                                                        <p class="mt-1 text-sm text-text-light/70 dark:text-text-dark/70">This appointment will be permanently removed.</p>
+                                                        <p id="deleteConsultationMessage" class="mt-2 text-sm font-semibold"></p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <form id="deleteConsultationForm" method="POST" action="#" class="flex justify-end gap-2 border-t border-border-light dark:border-border-dark px-5 py-4">
+                                                @csrf
+                                                <button type="button" id="cancelDeleteConsultationModal" class="h-10 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                                                <button type="submit" class="h-10 px-5 rounded-xl bg-red-600 text-white text-sm font-bold">Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+
                                     <div class="profile-tab-scroll">
+                                    @php
+                                        $latestTransactions = $resident->transactions
+                                            ->sortByDesc(fn ($transaction) => sprintf(
+                                                '%s|%012d',
+                                                $transaction->transaction_date?->format('Y-m-d') ?? '',
+                                                $transaction->id
+                                            ))
+                                            ->take(4);
+                                    @endphp
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        @forelse ($resident->transactions as $transaction)
+                                        @forelse ($latestTransactions as $transaction)
                                             <div class="rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
                                                 <div class="flex items-start justify-between gap-3">
                                                     <div class="min-w-0">
@@ -3161,6 +3342,9 @@
                                                         @if (filled($transaction->member_name))
                                                             <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">For <span class="font-semibold text-text-light dark:text-text-dark">{{ $transaction->member_name }}</span></p>
                                                         @endif
+                                                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">
+                                                            {{ $residentAddress }} · Age {{ $transaction->age }} · {{ $transaction->gender === 'M' ? 'Male' : 'Female' }}
+                                                        </p>
                                                     </div>
                                                     <span class="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary shrink-0">
                                                         {{ $transaction->gender }}
@@ -3203,6 +3387,13 @@
                                                     </div>
                                                 @endif
 
+                                                @if (filled($transaction->notes))
+                                                    <details class="mt-3 border-t border-border-light dark:border-border-dark pt-2">
+                                                        <summary class="cursor-pointer text-xs font-semibold text-primary">View notes</summary>
+                                                        <p class="text-sm text-text-light/80 dark:text-text-dark/80 mt-2 whitespace-pre-line break-words">{{ $transaction->notes }}</p>
+                                                    </details>
+                                                @endif
+
                                                 <p class="mt-3 text-xs text-text-light/50 dark:text-text-dark/50">
                                                     Recorded {{ $transaction->created_at?->diffForHumans() }}
                                                 </p>
@@ -3217,7 +3408,7 @@
                                 </div>
 
                                 <div id="maintenance" class="tab-content min-w-0">
-                                    <div class="profile-tab-toolbar">
+                                    <div id="maintenanceScroll" class="profile-tab-toolbar relative {{ session('status') && (request('tab') === 'maintenance' || str_contains(session('status'), 'monitoring')) ? 'pt-12' : '' }}">
                                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                                     <div>
                                                 <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Household Maintenance</h4>
@@ -3230,7 +3421,7 @@
                                                 </div>
 
                                         @if (session('status') && (request('tab') === 'maintenance' || str_contains(session('status'), 'monitoring')))
-                                            <div class="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
+                                            <div id="maintenanceStatusToast" class="absolute top-0 left-0 right-0 z-[70] rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg transition-opacity duration-300 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200" role="status">
                                                 {{ session('status') }}
                                             </div>
                                         @endif
@@ -3396,6 +3587,12 @@
                                                     </div>
                                                 </section>
 
+                                                <section class="tx-section-heading border-t border-border-light dark:border-border-dark pt-4">
+                                                    <label class="block text-sm font-bold text-text-light dark:text-text-dark" for="monitoring_issue_notes">Notes <span class="text-red-500">*</span></label>
+                                                    <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-0.5">Describe the health concern or reason for monitoring.</p>
+                                                    <textarea id="monitoring_issue_notes" name="issue_notes" required maxlength="1000" rows="3" class="mt-2 w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3 py-2" placeholder="Enter monitoring notes or health concern">{{ old('issue_notes') }}</textarea>
+                                                </section>
+
                                                 <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
                                                     <button type="button" id="cancelMonitoringCaseForm" class="inline-flex items-center justify-center h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold text-text-light dark:text-text-dark hover:bg-background-light dark:hover:bg-background-dark">
                                                         Cancel
@@ -3413,8 +3610,9 @@
                                     <div class="profile-tab-scroll">
                                         @php
                                             $monitoringCases = $resident->monitoringCases ?? collect();
-                                            $activeMonitoringCases = $monitoringCases->where('is_active', true)->values();
-                                            $completedMonitoringCases = $monitoringCases->where('is_active', false)->values();
+                                            $latestMonitoringCases = $monitoringCases->take(2)->values();
+                                            $activeMonitoringCases = $latestMonitoringCases->where('is_active', true)->values();
+                                            $completedMonitoringCases = $latestMonitoringCases->where('is_active', false)->values();
                                         @endphp
 
                                         @if ($monitoringCases->isEmpty())
@@ -3513,7 +3711,7 @@
                                                                 </div>
                                                             </div>
 
-                                                            <div id="addVisitBpSection" class="hidden mnt-metric-card">
+                                                            <div id="addVisitBpSection" class="mnt-metric-card">
                                                                 <div class="mnt-metric-card__head">
                                                                     <span class="mnt-metric-card__icon">
                                                                         <span class="material-symbols-outlined text-[20px]">cardiology</span>
@@ -3557,7 +3755,7 @@
                                                         </div>
                                                     </section>
 
-                                                    <section id="addVisitPregnantSection" class="hidden space-y-3">
+                                                    <section id="addVisitPregnantSection" class="hidden space-y-3" aria-hidden="true">
                                                         <div class="tx-section-heading">
                                                             <h6 class="text-sm font-bold text-text-light dark:text-text-dark">Pregnant follow-up</h6>
                                                         </div>
@@ -3579,9 +3777,17 @@
                                                         </div>
                                                     </section>
 
-                                                    <section>
-                                                        <label class="block text-sm font-semibold mb-1.5" for="add_visit_notes">Notes <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
-                                                        <textarea id="add_visit_notes" name="notes" rows="2" maxlength="500" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3 py-2" placeholder="Additional visit notes">{{ old('form_intent') === 'monitoring_visit' ? old('notes') : '' }}</textarea>
+                                                    <section class="rounded-2xl border border-primary/20 bg-primary/5 p-4 dark:border-primary/25 dark:bg-primary/10">
+                                                        <div class="flex items-start gap-3">
+                                                            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                                                                <span class="material-symbols-outlined text-[20px]">edit_note</span>
+                                                            </span>
+                                                            <div class="min-w-0 flex-1">
+                                                                <label class="block text-sm font-bold text-text-light dark:text-text-dark" for="add_visit_notes">Visit notes <span class="text-red-500">*</span></label>
+                                                                <p class="mt-0.5 text-xs text-text-light/60 dark:text-text-dark/60">Record observations, health concerns, or follow-up instructions.</p>
+                                                                <textarea id="add_visit_notes" name="notes" rows="3" maxlength="500" required class="mt-3 w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3 py-2.5 placeholder:text-text-light/45 dark:placeholder:text-text-dark/45" placeholder="Enter notes for this visit">{{ old('form_intent') === 'monitoring_visit' ? old('notes') : '' }}</textarea>
+                                                            </div>
+                                                        </div>
                                                     </section>
 
                                                     <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
@@ -3633,7 +3839,7 @@
                                 </div>
 
                                 <div id="consultations" class="tab-content min-w-0">
-                                    <div class="profile-tab-toolbar">
+                                    <div id="consultationScroll" class="profile-tab-toolbar relative {{ session('status') && request('tab') === 'consultations' ? 'pt-12' : '' }}">
                                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div class="min-w-0">
                                                 <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Consultations</h4>
@@ -3646,7 +3852,7 @@
                                     </div>
 
                                         @if (session('status') && request('tab') === 'consultations')
-                                            <div class="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
+                                            <div id="consultationStatusToast" class="absolute top-0 left-0 right-0 z-[70] rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg transition-opacity duration-300 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200" role="status">
                                                 {{ session('status') }}
                                             </div>
                                         @endif
@@ -3733,8 +3939,8 @@
                                                 </section>
 
                                                 <section>
-                                                    <label class="block text-sm font-semibold mb-1.5" for="consultation_note">Note <span class="font-normal text-text-light/50 dark:text-text-dark/50">(optional)</span></label>
-                                                    <textarea id="consultation_note" name="consultation_note" rows="2" maxlength="500" class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3 py-2" placeholder="Optional instructions for the resident">{{ old('consultation_note') }}</textarea>
+                                                    <label class="block text-sm font-semibold mb-1.5" for="consultation_note">Note <span class="text-red-500">*</span></label>
+                                                    <textarea id="consultation_note" name="consultation_note" rows="5" maxlength="500" required class="w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:border-primary text-sm px-3 py-2.5" style="white-space: pre-wrap;" placeholder="Enter instructions or notes for the resident">{{ old('consultation_note') }}</textarea>
                                                 </section>
 
                                                 <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
@@ -3758,6 +3964,11 @@
                                                 $consultAt = $consultation->scheduled_at;
                                                 $checkupLabel = $consultation->medical_checkup ?: 'General consultation';
                                                 $isPast = $consultAt ? $consultAt->isPast() : false;
+                                                $consultationNote = str_replace(
+                                                    ["\r\n", "\r", '\r\n', '\n', '\r'],
+                                                    "\n",
+                                                    (string) $consultation->note
+                                                );
                                             @endphp
                                             <article class="consult-card">
                                                 <div class="consult-date-badge" aria-hidden="true">
@@ -3768,14 +3979,19 @@
                                                 <div class="consult-card__body">
                                                     <div class="consult-card__top">
                                                         <h5 class="consult-card__title">{{ $checkupLabel }}</h5>
-                                                        <span class="consult-time-chip">
-                                                            <span class="material-symbols-outlined">schedule</span>
-                                                            {{ $consultAt?->format('g:i A') ?: '—' }}
-                                                        </span>
+                                                        <div class="flex items-center gap-1.5">
+                                                            <span class="consult-time-chip">
+                                                                <span class="material-symbols-outlined">schedule</span>
+                                                                {{ $consultAt?->format('g:i A') ?: '—' }}
+                                                            </span>
+                                                            <button type="button" class="open-edit-consultation inline-flex h-8 w-8 items-center justify-center rounded-lg text-primary hover:bg-primary/10" data-update-url="{{ route('bhw.consultations.update', $consultation) }}" data-date="{{ $consultAt?->format('Y-m-d') }}" data-time="{{ $consultAt?->format('H:i') }}" data-checkup="{{ $checkupLabel }}" data-note="{{ base64_encode($consultationNote) }}" title="Edit appointment" aria-label="Edit appointment">
+                                                                <span class="material-symbols-outlined text-[18px]">edit</span>
+                                                            </button>
+                                                            <button type="button" class="open-delete-consultation inline-flex h-8 w-8 items-center justify-center rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30" data-delete-url="{{ route('bhw.consultations.delete', $consultation) }}" data-checkup="{{ $checkupLabel }}" title="Delete appointment" aria-label="Delete appointment">
+                                                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                                                            </button>
+                                                        </div>
                                                     </div>
-                                                @if ($consultation->note)
-                                                        <p class="consult-card__note">{{ $consultation->note }}</p>
-                                                @endif
                                                     <div class="consult-card__meta">
                                                         <span class="consult-meta-chip">
                                                             <span class="material-symbols-outlined">calendar_month</span>
@@ -3785,7 +4001,16 @@
                                                             <span class="material-symbols-outlined">{{ $isPast ? 'event_available' : 'upcoming' }}</span>
                                                             {{ $isPast ? 'Past' : 'Upcoming' }}
                                                         </span>
-                                            </div>
+                                                    </div>
+                                                    @if (filled($consultationNote))
+                                                        <details class="mt-3 border-t border-border-light dark:border-border-dark pt-2">
+                                                            <summary class="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-primary">
+                                                                <span class="material-symbols-outlined text-[16px]">notes</span>
+                                                                <span>View notes</span>
+                                                            </summary>
+                                                            <p class="mt-2 break-words text-sm text-text-light/80 dark:text-text-dark/80">{!! nl2br(e($consultationNote)) !!}</p>
+                                                        </details>
+                                                    @endif
                                                 </div>
                                             </article>
                                         @empty
@@ -3853,6 +4078,16 @@
     const cancelConsultationFormBtn = document.getElementById('cancelConsultationForm');
     const consultationFormWrapper = document.getElementById('consultationFormWrapper');
     const consultationDateInput = document.getElementById('consultation_date');
+    const editConsultationModal = document.getElementById('editConsultationModal');
+    const deleteConsultationModal = document.getElementById('deleteConsultationModal');
+    const editConsultationForm = document.getElementById('editConsultationForm');
+    const deleteConsultationForm = document.getElementById('deleteConsultationForm');
+    const consultationStatusToast = document.getElementById('consultationStatusToast');
+    const consultationScroll = document.getElementById('consultationScroll');
+
+    [editConsultationModal, deleteConsultationModal].forEach((modal) => {
+        modal && document.body.appendChild(modal);
+    });
     const toggleMonitoringCaseFormBtn = document.getElementById('toggleMonitoringCaseForm');
     const closeMonitoringCaseFormBtn = document.getElementById('closeMonitoringCaseForm');
     const cancelMonitoringCaseFormBtn = document.getElementById('cancelMonitoringCaseForm');
@@ -4109,6 +4344,59 @@
     closeConsultationFormBtn?.addEventListener('click', closeConsultationModal);
     cancelConsultationFormBtn?.addEventListener('click', closeConsultationModal);
 
+    function closeConsultationActionModal(modal) {
+        modal?.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    document.querySelectorAll('.open-edit-consultation').forEach((button) => {
+        button.addEventListener('click', () => {
+            const noteBytes = Uint8Array.from(atob(button.dataset.note || ''), (character) => character.charCodeAt(0));
+            const consultationNote = new TextDecoder().decode(noteBytes);
+
+            editConsultationForm?.setAttribute('action', button.dataset.updateUrl || '#');
+            document.getElementById('edit_consultation_date').value = button.dataset.date || '';
+            document.getElementById('edit_consultation_time').value = button.dataset.time || '';
+            document.getElementById('edit_consultation_checkup').value = button.dataset.checkup || '';
+            document.getElementById('edit_consultation_note').value = consultationNote;
+            editConsultationModal?.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        });
+    });
+
+    document.querySelectorAll('.open-delete-consultation').forEach((button) => {
+        button.addEventListener('click', () => {
+            deleteConsultationForm?.setAttribute('action', button.dataset.deleteUrl || '#');
+            const message = document.getElementById('deleteConsultationMessage');
+            if (message) {
+                message.textContent = button.dataset.checkup ? `Appointment: ${button.dataset.checkup}` : '';
+            }
+            deleteConsultationModal?.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        });
+    });
+
+    document.getElementById('closeEditConsultationModal')?.addEventListener('click', () => closeConsultationActionModal(editConsultationModal));
+    document.getElementById('cancelEditConsultationModal')?.addEventListener('click', () => closeConsultationActionModal(editConsultationModal));
+    document.getElementById('cancelDeleteConsultationModal')?.addEventListener('click', () => closeConsultationActionModal(deleteConsultationModal));
+    [editConsultationModal, deleteConsultationModal].forEach((modal) => {
+        modal?.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeConsultationActionModal(modal);
+            }
+        });
+
+        if (consultationStatusToast) {
+            window.setTimeout(() => {
+                consultationStatusToast.classList.add('opacity-0');
+                window.setTimeout(() => {
+                    consultationStatusToast.remove();
+                    consultationScroll?.classList.remove('pt-12');
+                }, 300);
+            }, 1000);
+        }
+    });
+
     const syncPregnantPeriodFields = () => {
         const isPregnant = memberTypeSelect?.value === 'pregnant';
         pregnantPeriodFields?.classList.toggle('hidden', !isPregnant);
@@ -4351,8 +4639,11 @@
             addVisitMemberName.textContent = memberName;
         }
 
-        addVisitBpSection?.classList.toggle('hidden', ! isSenior);
-        addVisitPregnantSection?.classList.toggle('hidden', ! isPregnant);
+        if (addVisitPregnantSection) {
+            addVisitPregnantSection.classList.toggle('hidden', ! isPregnant);
+            addVisitPregnantSection.style.display = isPregnant ? '' : 'none';
+            addVisitPregnantSection.setAttribute('aria-hidden', isPregnant ? 'false' : 'true');
+        }
 
         if (addVisitLastPeriodDate) {
             if (firstPeriodDate) {
@@ -4366,7 +4657,7 @@
         }
 
         addVisitForm.querySelectorAll('#addVisitBpSection input').forEach((el) => {
-            el.disabled = ! isSenior;
+            el.disabled = false;
         });
         addVisitForm.querySelectorAll('#addVisitPregnantSection input, #addVisitPregnantSection select').forEach((el) => {
             el.disabled = ! isPregnant;
@@ -4440,7 +4731,18 @@
             return;
         }
 
-        bmiInput.value = (weightKg / Math.pow(heightCm / 100, 2)).toFixed(1);
+        const bmi = weightKg / Math.pow(heightCm / 100, 2);
+        const category = bmi < 18.5
+            ? 'Underweight'
+            : (bmi < 25
+                ? 'Normal weight'
+                : (bmi < 30
+                    ? 'Overweight'
+                    : (bmi < 35
+                        ? 'Obese class I'
+                        : (bmi < 40 ? 'Obese class II' : 'Extremely obese'))));
+
+        bmiInput.value = `${bmi.toFixed(1)} · ${category}`;
     };
 
     const updateVisitBpPreview = (caseId) => {
@@ -4455,7 +4757,24 @@
         const systolic = systolicInput?.value?.trim();
         const diastolic = diastolicInput?.value?.trim();
 
-        previewInput.value = systolic && diastolic ? `${systolic}/${diastolic}` : '';
+        if (!systolic || !diastolic) {
+            previewInput.value = '';
+            return;
+        }
+
+        const systolicValue = Number(systolic);
+        const diastolicValue = Number(diastolic);
+        const category = systolicValue >= 180 || diastolicValue >= 120
+            ? 'Hypertensive crisis'
+            : (systolicValue >= 140 || diastolicValue >= 90
+                ? 'High BP stage 2'
+                : (systolicValue >= 130 || diastolicValue >= 80
+                    ? 'High BP stage 1'
+                    : (systolicValue >= 120 && diastolicValue < 80
+                        ? 'Elevated BP'
+                        : (systolicValue < 90 || diastolicValue < 60 ? 'Low BP' : 'Normal BP'))));
+
+        previewInput.value = `${systolic}/${diastolic} · ${category}`;
     };
 
     document.querySelectorAll('[data-visit-height], [data-visit-weight]').forEach((input) => {
@@ -4491,8 +4810,12 @@
     const editResidentDetailsModal = document.getElementById('editResidentDetailsModal');
     const overviewStatusToast = document.getElementById('overviewStatusToast');
     const overviewScroll = document.getElementById('overviewScroll');
+    const transactionStatusToast = document.getElementById('transactionStatusToast');
+    const transactionStatusScroll = document.getElementById('transactionStatusScroll');
     const familyStatusToast = document.getElementById('familyStatusToast');
     const familyScroll = document.getElementById('familyScroll');
+    const maintenanceStatusToast = document.getElementById('maintenanceStatusToast');
+    const maintenanceScroll = document.getElementById('maintenanceScroll');
 
     [familyChildModal, familySeniorModal, familySpouseModal, familyRemoveModal].forEach((modal) => {
         modal && document.body.appendChild(modal);
@@ -4543,6 +4866,26 @@
             window.setTimeout(() => {
                 familyStatusToast.remove();
                 familyScroll?.classList.remove('pt-12');
+            }, 300);
+        }, 1000);
+    }
+
+    if (transactionStatusToast) {
+        window.setTimeout(() => {
+            transactionStatusToast.classList.add('opacity-0');
+            window.setTimeout(() => {
+                transactionStatusToast.remove();
+                transactionStatusScroll?.classList.remove('pt-12');
+            }, 300);
+        }, 1000);
+    }
+
+    if (maintenanceStatusToast) {
+        window.setTimeout(() => {
+            maintenanceStatusToast.classList.add('opacity-0');
+            window.setTimeout(() => {
+                maintenanceStatusToast.remove();
+                maintenanceScroll?.classList.remove('pt-12');
             }, 300);
         }, 1000);
     }

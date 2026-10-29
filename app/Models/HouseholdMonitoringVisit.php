@@ -291,6 +291,62 @@ class HouseholdMonitoringVisit extends Model
         return min($bmi, 9999.9);
     }
 
+    public static function bmiCategory(?float $bmi): ?string
+    {
+        if ($bmi === null || $bmi <= 0) {
+            return null;
+        }
+
+        return match (true) {
+            $bmi < 18.5 => 'Underweight',
+            $bmi < 25 => 'Normal weight',
+            $bmi < 30 => 'Overweight',
+            $bmi < 35 => 'Obese class I',
+            $bmi < 40 => 'Obese class II',
+            default => 'Extremely obese',
+        };
+    }
+
+    /**
+     * @return array{label: string, recommendation: string}|null
+     */
+    public static function bloodPressureAssessment(?string $bloodPressure): ?array
+    {
+        if (! filled($bloodPressure) || ! preg_match('/^\s*(\d{2,3})\s*\/\s*(\d{2,3})\s*$/', $bloodPressure, $matches)) {
+            return null;
+        }
+
+        $systolic = (int) $matches[1];
+        $diastolic = (int) $matches[2];
+
+        return match (true) {
+            $systolic >= 180 || $diastolic >= 120 => [
+                'label' => 'Hypertensive crisis',
+                'recommendation' => 'Seek emergency medical care immediately.',
+            ],
+            $systolic >= 140 || $diastolic >= 90 => [
+                'label' => 'High blood pressure (stage 2)',
+                'recommendation' => 'Arrange a prompt health-center follow-up and take prescribed medicine.',
+            ],
+            $systolic >= 130 || $diastolic >= 80 => [
+                'label' => 'High blood pressure (stage 1)',
+                'recommendation' => 'Reduce salt, maintain healthy activity, and schedule a follow-up check.',
+            ],
+            $systolic >= 120 && $diastolic < 80 => [
+                'label' => 'Elevated blood pressure',
+                'recommendation' => 'Reduce salt, stay active, and recheck blood pressure regularly.',
+            ],
+            $systolic < 90 || $diastolic < 60 => [
+                'label' => 'Low blood pressure',
+                'recommendation' => 'Drink enough fluids and seek care if dizziness, fainting, or weakness occurs.',
+            ],
+            default => [
+                'label' => 'Normal blood pressure',
+                'recommendation' => 'Maintain healthy habits and continue regular monitoring.',
+            ],
+        };
+    }
+
     public function notificationSummary(HouseholdMonitoringCase $case): string
     {
         return 'Check the info in Maintenance.';

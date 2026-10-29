@@ -68,8 +68,11 @@
                         <p class="mt-1 text-sm text-[#4e976b] dark:text-gray-400">Monitoring records from your BHW</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href="{{ route('users.profile.bhw-chat') }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open BHW chat">
+                        <a href="{{ route('users.profile.bhw-chat') }}" class="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Open BHW chat">
                             <span class="material-symbols-outlined text-[16px]">message</span>
+                            @if (($unreadBhwChatCount ?? 0) > 0)
+                                <span class="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-600 ring-2 ring-white dark:ring-gray-800" aria-label="Unread BHW chat messages"></span>
+                            @endif
                         </a>
                         <a href="{{ route('users.notifications') }}" class="relative inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#d0e7d9] bg-white text-[#1f7f4e] shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200" aria-label="Notifications">
                             <span class="material-symbols-outlined text-[16px] {{ $isNotifications ? 'text-primary' : '' }}">notifications</span>
@@ -99,6 +102,16 @@
                                     ? ucwords(str_replace('_', ' ', (string) $monitoringCase->member_source))
                                     : null,
                             };
+                            $residentRequest = $monitoringCase->residentRequest;
+                            $residentUser = $residentRequest?->user;
+                            $residentAddressParts = array_values(array_filter([
+                                trim((string) ($residentRequest?->purok?->name ?? $residentUser?->purok?->name ?? '')),
+                                trim((string) ($residentRequest?->barangay ?? $residentUser?->barangay ?? '')),
+                                trim((string) ($residentUser?->province ?? 'Oriental Mindoro')),
+                            ], static fn (string $part): bool => $part !== '' && strcasecmp($part, 'N/A') !== 0 && strcasecmp($part, 'Non') !== 0));
+                            $residentInfo = implode(', ', $residentAddressParts);
+                            $residentAge = $residentRequest?->age ?? $residentUser?->age;
+                            $residentGender = trim((string) ($residentUser?->gender ?? ''));
                         @endphp
                         <article class="rounded-2xl border border-[#e7f3ec] dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
                             <div class="px-4 md:px-5 pt-4 md:pt-5 pb-3 md:pb-4">
@@ -122,6 +135,17 @@
                                                 <span>{{ $familyRole }}</span>
                                             @endif
                                         </p>
+                                        @if ($residentInfo !== '' || $residentAge !== null || $residentGender !== '')
+                                            <p class="mt-1 text-xs md:text-sm leading-relaxed text-[#376f50] dark:text-gray-300">
+                                                {{ $residentInfo !== '' ? $residentInfo : 'Resident information' }}
+                                                @if ($residentAge !== null)
+                                                    · Age {{ $residentAge }}
+                                                @endif
+                                                @if ($residentGender !== '')
+                                                    · {{ ucfirst(strtolower($residentGender)) }}
+                                                @endif
+                                            </p>
+                                        @endif
                                     </div>
                                 </div>
 
@@ -137,10 +161,6 @@
                                         </p>
                                     </div>
                                 </div>
-
-                                @if (filled($monitoringCase->issue_notes))
-                                    <p class="mt-3 md:mt-4 text-sm md:text-[15px] leading-snug text-[#376f50] dark:text-gray-300 line-clamp-2 md:line-clamp-3">{{ $monitoringCase->issue_notes }}</p>
-                                @endif
 
                                 @if ($monitoringCase->isPregnant() && ($monitoringCase->first_period_date || $monitoringCase->last_period_date))
                                     <div class="mt-3 md:mt-4 grid grid-cols-2 gap-2 md:gap-3">
@@ -178,13 +198,19 @@
                                                 $visitLabel = (! $monitoringCase->is_active && $loop->last)
                                                     ? 'Last Visit'
                                                     : $resolved['visit_label'];
+                                                $bmiCategory = \App\Models\HouseholdMonitoringVisit::bmiCategory($resolved['bmi_value']);
+                                                $bpAssessment = \App\Models\HouseholdMonitoringVisit::bloodPressureAssessment($resolved['blood_pressure']);
+                                                $visitNotes = $visit->notes === 'Initial monitoring baseline' && filled($monitoringCase->issue_notes)
+                                                    ? $monitoringCase->issue_notes
+                                                    : $visit->notes;
+                                                $visitNotes = str_replace(["\\r\\n", "\\n", "\\r"], "\n", (string) $visitNotes);
                                                 $vitalRows = collect([
                                                     $resolved['height_cm'] !== null ? ['label' => 'Height', 'value' => $resolved['height_cm'].' cm'] : null,
                                                     $resolved['weight_kg'] !== null ? ['label' => 'Weight', 'value' => $resolved['weight_kg'].' kg'] : null,
-                                                    $resolved['bmi_value'] !== null ? ['label' => 'BMI', 'value' => (string) $resolved['bmi_value']] : null,
+                                                    $resolved['bmi_value'] !== null ? ['label' => 'BMI', 'value' => (string) $resolved['bmi_value'].($bmiCategory ? ' · '.$bmiCategory : '')] : null,
                                                     $resolved['muac_cm'] !== null ? ['label' => 'MUAC', 'value' => $resolved['muac_cm'].' cm'] : null,
                                                     filled($resolved['anti_tetanus']) ? ['label' => 'Anti-tetanus', 'value' => (string) $resolved['anti_tetanus']] : null,
-                                                    filled($resolved['blood_pressure']) ? ['label' => 'BP', 'value' => (string) $resolved['blood_pressure']] : null,
+                                                    filled($resolved['blood_pressure']) ? ['label' => 'BP', 'value' => (string) $resolved['blood_pressure'].($bpAssessment ? ' · '.$bpAssessment['label'] : '')] : null,
                                                 ])->filter()->values();
                                             @endphp
                                             <div class="rounded-xl border border-[#e7f3ec] dark:border-gray-700 bg-[#fbfdfc] dark:bg-gray-800/80 px-3.5 md:px-4 py-3">
@@ -213,10 +239,28 @@
                                                     </div>
                                                 @endif
 
-                                                @if ($visit->notes)
-                                                    <p class="mt-2.5 text-xs md:text-sm leading-relaxed text-[#4e976b] dark:text-gray-400 border-t border-[#e7f3ec] dark:border-gray-700 pt-2">
-                                                        {{ $visit->notes }}
-                                                    </p>
+                                                @if ($bmiCategory || $bpAssessment)
+                                                    <div class="mt-2.5 grid gap-2 {{ $bmiCategory && $bpAssessment ? 'md:grid-cols-2' : '' }}">
+                                                        @if ($bmiCategory)
+                                                            <div class="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 dark:border-sky-800/50 dark:bg-sky-900/20">
+                                                                <p class="text-[10px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">BMI assessment</p>
+                                                                <p class="mt-0.5 text-xs md:text-sm text-sky-900 dark:text-sky-100">{{ $bmiCategory }}</p>
+                                                            </div>
+                                                        @endif
+                                                        @if ($bpAssessment)
+                                                            <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800/50 dark:bg-amber-900/20">
+                                                                <p class="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">{{ $bpAssessment['label'] }}</p>
+                                                                <p class="mt-0.5 text-xs md:text-sm text-amber-900 dark:text-amber-100">{{ $bpAssessment['recommendation'] }}</p>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                @endif
+
+                                                @if (filled($visitNotes))
+                                                    <details class="mt-2.5 border-t border-[#e7f3ec] dark:border-gray-700 pt-2">
+                                                        <summary class="cursor-pointer text-xs md:text-sm font-semibold text-[#1f7f4e] dark:text-[#8cefb5]">View notes</summary>
+                                                        <p class="mt-2 text-xs md:text-sm leading-relaxed text-[#4e976b] dark:text-gray-400 whitespace-pre-line break-words">{{ $visitNotes }}</p>
+                                                    </details>
                                                 @endif
                                             </div>
                                         @endforeach

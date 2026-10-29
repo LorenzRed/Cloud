@@ -627,6 +627,9 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             ->first();
 
         $verificationStatus = $residentRequest?->status ?? 'unverified';
+        $user = Auth::user();
+        $bhw = ResidentBhwChat::assignedBhwForResident($user);
+        $unreadBhwChatCount = $bhw ? ResidentBhwChat::unreadCountForResident($user, $bhw) : 0;
         $unreadInboxCount = InboxMessage::query()
             ->where('user_id', Auth::id())
             ->whereNull('read_at')
@@ -734,6 +737,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
 
         return view('users.main', compact(
             'unreadInboxCount',
+            'unreadBhwChatCount',
             'verificationStatus',
             'upcomingConsultations',
             'upcomingImmunizations',
@@ -1072,7 +1076,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         RateLimiter::hit($rateKey, 60);
 
         $apiKey = config('services.groq.key');
-        $model = config('services.groq.model', 'llama-3.3-70b-versatile');
+        $model = config('services.groq.model', 'openai/gpt-oss-120b');
         $baseUrl = rtrim((string) config('services.groq.base_url', 'https://api.groq.com/openai/v1'), '/');
 
         if (! $apiKey) {
@@ -1358,7 +1362,11 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         }
 
         $monitoringCases = HouseholdMonitoringCase::query()
-            ->with(['visits' => fn ($query) => $query->orderBy('visit_date')->orderBy('id')])
+            ->with([
+                'residentRequest.user.purok',
+                'residentRequest.purok',
+                'visits' => fn ($query) => $query->orderBy('visit_date')->orderBy('id'),
+            ])
             ->where(function ($query) use ($residentRequest) {
                 $query->where('user_id', Auth::id())
                     ->orWhere('resident_request_id', $residentRequest->id);
@@ -4959,7 +4967,11 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'user.purok',
             'purok',
             'transactions' => fn ($query) => $query->latest(),
-            'monitoringCases' => fn ($query) => $query->with(['visits' => fn ($visitQuery) => $visitQuery->orderBy('visit_date')->orderBy('id')])->latest(),
+            'monitoringCases' => fn ($query) => $query->with([
+                'residentRequest.user.purok',
+                'residentRequest.purok',
+                'visits' => fn ($visitQuery) => $visitQuery->orderBy('visit_date')->orderBy('id'),
+            ])->latest(),
             'consultations' => fn ($query) => $query->orderByDesc('scheduled_at'),
         ]);
 
@@ -5310,6 +5322,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'transaction_date' => ['required', 'date'],
             'gender' => ['required', 'in:M,F'],
             'philhealth_number' => ['required', 'string', 'max:50'],
+            'notes' => ['required', 'string', 'max:2000'],
             'member_name' => ['required', 'string', 'max:255'],
             'member_source' => ['nullable', 'string', 'max:40'],
             'member_index' => ['nullable', 'integer', 'min:0'],
@@ -5323,6 +5336,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'transaction_date' => $data['transaction_date'],
             'gender' => $data['gender'],
             'philhealth_number' => trim((string) $data['philhealth_number']),
+            'notes' => trim((string) $data['notes']),
             'member_name' => trim((string) $data['member_name']),
             'member_source' => $data['member_source'] ?? null,
             'member_index' => $data['member_index'] ?? null,
@@ -5377,7 +5391,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'member_source' => ['nullable', 'string', 'max:50'],
             'member_index' => ['nullable', 'integer', 'min:0'],
             'visit_date' => ['required', 'date'],
-            'issue_notes' => ['nullable', 'string', 'max:1000'],
+            'issue_notes' => ['required', 'string', 'max:1000'],
             'first_period_date' => ['nullable', 'date', 'required_if:member_type,pregnant'],
             'height_cm' => ['nullable', 'numeric', 'min:30', 'max:300'],
             'weight_kg' => ['nullable', 'numeric', 'min:1', 'max:500'],
@@ -5401,7 +5415,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'member_name' => trim((string) $data['member_name']),
             'member_source' => filled($data['member_source'] ?? null) ? trim((string) $data['member_source']) : null,
             'member_index' => $data['member_index'] ?? null,
-            'issue_notes' => filled($data['issue_notes'] ?? null) ? trim((string) $data['issue_notes']) : null,
+            'issue_notes' => trim((string) $data['issue_notes']),
             'first_period_date' => $data['first_period_date'] ?? null,
             'last_period_date' => null,
             'is_active' => true,
@@ -5433,7 +5447,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'blood_pressure' => $bloodPressure,
             'muac_cm' => $muacCm,
             'anti_tetanus' => $antiTetanus,
-            'notes' => 'Initial monitoring baseline',
+            'notes' => trim((string) $data['issue_notes']),
         ]);
 
         return redirect()->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'maintenance'])
@@ -5509,7 +5523,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'weight_kg' => ['nullable', 'numeric', 'min:1', 'max:500'],
             'height_cm' => ['nullable', 'numeric', 'min:30', 'max:300'],
             'muac_cm' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'notes' => ['nullable', 'string', 'max:500'],
+            'notes' => ['required', 'string', 'max:500'],
         ];
 
         if ($monitoringCase->isPregnant()) {
@@ -5524,10 +5538,8 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             }
         }
 
-        if ($monitoringCase->isSenior()) {
-            $rules['bp_systolic'] = ['nullable', 'integer', 'min:50', 'max:300'];
-            $rules['bp_diastolic'] = ['nullable', 'integer', 'min:30', 'max:200'];
-        }
+        $rules['bp_systolic'] = ['nullable', 'integer', 'min:50', 'max:300'];
+        $rules['bp_diastolic'] = ['nullable', 'integer', 'min:30', 'max:200'];
 
         $data = $request->validate($rules, [
             'height_cm.min' => 'Height must be at least 30 cm (enter centimeters, e.g. 165).',
@@ -5652,7 +5664,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'consultation_date' => ['required', 'date'],
             'consultation_time' => ['required', 'date_format:H:i'],
             'consultation_checkup' => ['required', 'string', 'max:255'],
-            'consultation_note' => ['nullable', 'string', 'max:500'],
+            'consultation_note' => ['required', 'string', 'max:500'],
         ]);
 
         $scheduledAt = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $data['consultation_date'].' '.$data['consultation_time']);
@@ -5663,15 +5675,13 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'user_id' => $residentRequest->user_id,
             'scheduled_at' => $scheduledAt,
             'medical_checkup' => $medicalCheckup,
-            'note' => filled($data['consultation_note'] ?? null) ? trim((string) $data['consultation_note']) : null,
+            'note' => trim((string) $data['consultation_note']),
             'set_by' => Auth::id(),
         ]);
 
         $message = 'Appointment: '.$scheduledAt->format('M d, Y h:i A').'. Medical checkup: '.$medicalCheckup;
 
-        if (filled($data['consultation_note'] ?? null)) {
-            $message .= '. Note: '.trim((string) $data['consultation_note']);
-        }
+        $message .= '. Note: '.trim((string) $data['consultation_note']);
 
         InboxMessage::query()->create([
             'user_id' => $residentRequest->user_id,
@@ -5682,6 +5692,61 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         return redirect()->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'consultations'])
             ->with('status', 'Consultation schedule sent to resident account notifications.');
     })->name('bhw.residents.consultations.store');
+
+    Route::post('/bhw/consultations/{consultation}/update', function (Request $request, Consultation $consultation) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $residentRequest = $consultation->residentRequest;
+
+        if (! $residentRequest || ! $residentRequest->isAccessibleByBhw(Auth::user())) {
+            return redirect()->route('bhw.residents')->with('status', 'This resident is outside your assigned purok.');
+        }
+
+        if ($residentRequest->status !== 'accepted') {
+            return redirect()->route('bhw.residents')->with('status', 'Resident profile is only available for accepted residents.');
+        }
+
+        $data = $request->validate([
+            'consultation_date' => ['required', 'date'],
+            'consultation_time' => ['required', 'date_format:H:i'],
+            'consultation_checkup' => ['required', 'string', 'max:255'],
+            'consultation_note' => ['required', 'string', 'max:500'],
+        ]);
+
+        $scheduledAt = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $data['consultation_date'].' '.$data['consultation_time']);
+        $consultation->update([
+            'scheduled_at' => $scheduledAt,
+            'medical_checkup' => trim((string) $data['consultation_checkup']),
+            'note' => trim((string) $data['consultation_note']),
+            'set_by' => Auth::id(),
+        ]);
+
+        return redirect()->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'consultations'])
+            ->with('status', 'Consultation updated successfully.');
+    })->name('bhw.consultations.update');
+
+    Route::post('/bhw/consultations/{consultation}/delete', function (Consultation $consultation) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        $residentRequest = $consultation->residentRequest;
+
+        if (! $residentRequest || ! $residentRequest->isAccessibleByBhw(Auth::user())) {
+            return redirect()->route('bhw.residents')->with('status', 'This resident is outside your assigned purok.');
+        }
+
+        if ($residentRequest->status !== 'accepted') {
+            return redirect()->route('bhw.residents')->with('status', 'Resident profile is only available for accepted residents.');
+        }
+
+        $consultation->delete();
+
+        return redirect()->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'consultations'])
+            ->with('status', 'Consultation deleted successfully.');
+    })->name('bhw.consultations.delete');
 
     Route::post('/bhw/requests/{residentRequest}/accept', function (Request $request, ResidentRequest $residentRequest) {
         if (Auth::user()->role !== 'BHW') {

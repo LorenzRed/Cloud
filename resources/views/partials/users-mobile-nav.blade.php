@@ -1,7 +1,7 @@
 @php
     $isDashboard = request()->routeIs('users.main');
     $isAnnouncements = request()->routeIs('users.announcements*');
-    $isProfile = request()->routeIs('users.profile*');
+    $isProfile = request()->routeIs('users.profile') || request()->routeIs('users.profile.details') || request()->routeIs('users.profile.chat-support');
     $isTransactionRecords = request()->routeIs('users.transaction-records');
     $isMaintenanceRecords = request()->routeIs('users.maintenance-records');
 @endphp
@@ -32,9 +32,6 @@
         <a href="{{ route('users.profile') }}" class="relative flex flex-col items-center justify-center rounded-lg py-1.5 text-[10px] font-semibold {{ $isProfile ? 'text-[#0e1b13] dark:text-white bg-primary/15' : 'text-[#4e976b] dark:text-gray-300' }}">
             <span class="relative material-symbols-outlined text-[20px]">
                 person
-                @if (($unreadBhwChatCount ?? 0) > 0)
-                    <span class="absolute -top-0.5 -right-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" aria-hidden="true"></span>
-                @endif
             </span>
             Profile
         </a>
