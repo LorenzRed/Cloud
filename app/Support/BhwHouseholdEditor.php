@@ -282,9 +282,10 @@ class BhwHouseholdEditor
     {
         $fullName = trim((string) ($payload['full_name'] ?? ''));
         $birthdate = trim((string) ($payload['birthdate'] ?? ''));
+        $placeOfBirth = trim((string) ($payload['place_of_birth'] ?? ''));
         $gender = ucfirst(strtolower(trim((string) ($payload['gender'] ?? ''))));
         $relationship = trim((string) ($payload['relationship'] ?? ''));
-        $currentlyStudying = in_array($payload['currently_studying'] ?? '', ['yes', 'no', 'infant'], true)
+        $currentlyStudying = in_array($payload['currently_studying'] ?? '', ['yes', 'no', 'working', 'not_studying', 'not_working', 'infant'], true)
             ? (string) $payload['currently_studying']
             : '';
 
@@ -293,6 +294,9 @@ class BhwHouseholdEditor
         }
         if ($birthdate === '') {
             throw ValidationException::withMessages(['birthdate' => 'Please enter the birthdate.']);
+        }
+        if ($placeOfBirth === '') {
+            throw ValidationException::withMessages(['place_of_birth' => 'Please enter the place of birth.']);
         }
         if (! in_array($gender, ['Male', 'Female'], true)) {
             throw ValidationException::withMessages(['gender' => 'Please select gender.']);
@@ -318,6 +322,7 @@ class BhwHouseholdEditor
             return [
                 'full_name' => $fullName,
                 'birthdate' => $birthdate,
+                'place_of_birth' => $placeOfBirth,
                 'age_in_months' => PersonAge::ageInWholeMonths($birthdate),
                 'gender' => $gender,
                 'relationship' => $relationship,
@@ -337,11 +342,27 @@ class BhwHouseholdEditor
             return [
                 'full_name' => $fullName,
                 'birthdate' => $birthdate,
+                'place_of_birth' => $placeOfBirth,
                 'age_in_months' => PersonAge::ageInWholeMonths($birthdate),
                 'gender' => $gender,
                 'relationship' => $relationship,
                 'currently_studying' => 'yes',
                 'school' => $school,
+                'educational_attainment' => null,
+                'occupation' => null,
+            ];
+        }
+
+        if (in_array($currentlyStudying, ['not_studying', 'not_working'], true)) {
+            return [
+                'full_name' => $fullName,
+                'birthdate' => $birthdate,
+                'place_of_birth' => $placeOfBirth,
+                'age_in_months' => PersonAge::ageInWholeMonths($birthdate),
+                'gender' => $gender,
+                'relationship' => $relationship,
+                'currently_studying' => $currentlyStudying,
+                'school' => null,
                 'educational_attainment' => null,
                 'occupation' => null,
             ];
@@ -359,10 +380,11 @@ class BhwHouseholdEditor
         return [
             'full_name' => $fullName,
             'birthdate' => $birthdate,
+            'place_of_birth' => $placeOfBirth,
             'age_in_months' => PersonAge::ageInWholeMonths($birthdate),
             'gender' => $gender,
             'relationship' => $relationship,
-            'currently_studying' => 'no',
+            'currently_studying' => 'working',
             'school' => null,
             'educational_attainment' => $educationalAttainment,
             'occupation' => $occupation,

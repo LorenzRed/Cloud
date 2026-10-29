@@ -213,6 +213,13 @@
         overflow: hidden;
     }
 
+    .family-member-card .open-edit-child-btn,
+    .family-member-card .open-edit-senior-btn,
+    .family-member-card .open-remove-member-btn[data-action="remove_child"],
+    .family-member-card .open-remove-member-btn[data-action="remove_senior"] {
+        display: none;
+    }
+
     .profile-tab-toolbar {
         flex-shrink: 0;
         padding-bottom: 0.75rem;
@@ -223,22 +230,22 @@
         min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
+        scrollbar-width: none;
         -webkit-overflow-scrolling: touch;
         padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
         scroll-padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
     }
 
     .profile-tab-scroll::-webkit-scrollbar {
-        width: 6px;
+        display: none;
     }
 
-    .profile-tab-scroll::-webkit-scrollbar-track {
-        background: transparent;
+    .resident-details-modal-panel {
+        scrollbar-width: none;
     }
 
-    .profile-tab-scroll::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 10px;
+    .resident-details-modal-panel::-webkit-scrollbar {
+        display: none;
     }
 
     .summary-card {
@@ -1796,7 +1803,6 @@
     $residentGender = $resident->user->gender ?? 'N/A';
     $residentAge = $resident->age ?? ($resident->user->age ?? null);
 
-    $residentMunicipality = trim((string) ($residentUser?->municipality ?? '')) ?: 'Victoria';
     $residentProvince = trim((string) ($residentUser?->province ?? '')) ?: 'Oriental Mindoro';
     $residentPurok = trim((string) ($resident->purok?->name ?? $residentUser?->purok?->name ?? ''));
     if (strcasecmp($residentPurok, 'Non') === 0) {
@@ -1806,19 +1812,13 @@
     if (strcasecmp($residentBarangay, 'N/A') === 0) {
         $residentBarangay = '';
     }
-    $residentMapAddress = trim((string) ($resident->address ?? ''));
-
     $residentAddressParts = [];
-    if ($residentMapAddress !== '') {
-        $residentAddressParts[] = $residentMapAddress;
-    }
     if ($residentPurok !== '') {
         $residentAddressParts[] = $residentPurok;
     }
     if ($residentBarangay !== '') {
         $residentAddressParts[] = $residentBarangay;
     }
-    $residentAddressParts[] = $residentMunicipality;
     $residentAddressParts[] = $residentProvince;
 
     $residentAddress = implode(', ', $residentAddressParts);
@@ -1829,6 +1829,9 @@
     $residentProfilePicturePath = $residentUser?->profile_picture_path;
 
     $parentRoleLabel = trim((string) ($resident->parent_role ?? ''));
+    $residentCardLabel = $parentRoleLabel !== '' && $parentRoleLabel !== \App\Models\ResidentRequest::PARENT_ROLE_SELF
+        ? 'Family holder'
+        : 'Resident';
     $civilStatusLabel = trim((string) ($resident->civil_status ?? $residentUser?->civil_status ?? ''));
     $placeOfBirthLabel = trim((string) ($resident->place_of_birth ?? $residentUser?->place_of_birth ?? ''));
     $educationalAttainmentLabel = trim((string) ($resident->educational_attainment ?? $residentUser?->educational_attainment ?? ''));
@@ -1876,7 +1879,7 @@
     ]));
 
     $householdChildren = collect($resident->household_children ?? [])
-        ->map(function ($child) {
+        ->map(function ($child, $childIndex) {
             if (! is_array($child)) {
                 return null;
             }
@@ -1896,6 +1899,8 @@
             $studying = match ($child['currently_studying'] ?? '') {
                 'yes' => 'Studying',
                 'infant' => 'Infant',
+                'not_studying' => 'Not studying',
+                'not_working' => 'Not working',
                 default => 'Working',
             };
             $school = trim((string) ($child['school'] ?? ''));
@@ -1909,20 +1914,30 @@
                 $ageLabel,
                 $studying,
                 ($child['currently_studying'] ?? '') === 'yes' ? ($school !== '' ? $school : null) : null,
-                ($child['currently_studying'] ?? '') === 'no' && $attainment !== '' ? $attainment : null,
-                ($child['currently_studying'] ?? '') === 'no' && $occupation !== '' ? $occupation : null,
+                in_array(($child['currently_studying'] ?? ''), ['no', 'working'], true) && $attainment !== '' ? $attainment : null,
+                in_array(($child['currently_studying'] ?? ''), ['no', 'working'], true) && $occupation !== '' ? $occupation : null,
             ]));
 
             return [
+                'index' => $childIndex,
                 'full_name' => $fullName,
                 'meta' => implode(' · ', $metaParts),
+                'birthdate' => $birthdate,
+                'place_of_birth' => trim((string) ($child['place_of_birth'] ?? '')),
+                'gender' => $gender,
+                'relationship' => $relationship,
+                'currently_studying' => (string) ($child['currently_studying'] ?? ''),
+                'school' => $school,
+                'educational_attainment' => $attainment,
+                'occupation' => $occupation,
             ];
         })
         ->filter()
         ->values();
 
+    $otherSeniorIndex = 0;
     $householdSeniors = collect($resident->household_seniors ?? [])
-        ->map(function ($senior) {
+        ->map(function ($senior, $seniorIndex) use (&$otherSeniorIndex) {
             if (! is_array($senior)) {
                 return null;
             }
@@ -1954,9 +1969,21 @@
                 $occupation !== '' ? $occupation : null,
             ]));
 
+            $source = (string) ($senior['source'] ?? 'other');
+            $editableIndex = $source === 'other' ? $otherSeniorIndex++ : null;
+
             return [
+                'index' => $editableIndex,
+                'source' => $source,
                 'full_name' => $fullName,
                 'meta' => implode(' · ', $metaParts),
+                'birthdate' => $birthdate,
+                'place_of_birth' => $placeOfBirth,
+                'gender' => $gender,
+                'relationship' => $relationship,
+                'civil_status' => trim((string) ($senior['civil_status'] ?? '')),
+                'educational_attainment' => $educationalAttainment,
+                'occupation' => $occupation,
             ];
         })
         ->filter()
@@ -2235,6 +2262,28 @@
                                 </div>
                             </div>
                         </div>
+                        <div id="removeResidentModal" class="hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+                            <div class="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl" role="dialog" aria-modal="true" aria-labelledby="removeResidentModalTitle">
+                                <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-4 py-4">
+                                    <div class="min-w-0">
+                                        <h5 id="removeResidentModalTitle" class="text-lg font-bold text-red-600 dark:text-red-300">Remove Resident Account</h5>
+                                        <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Are you sure you want to remove {{ $residentName }} from your assigned purok?</p>
+                                    </div>
+                                    <button type="button" id="closeRemoveResidentModal" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark" aria-label="Close">
+                                        <span class="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+                                <form method="POST" action="{{ route('bhw.residents.destroy', $resident) }}" class="px-4 py-4 space-y-4">
+                                    @csrf
+                                    @method('DELETE')
+                                    <p class="text-xs text-text-light/60 dark:text-text-dark/60">This action cannot be undone and will remove the resident account and records.</p>
+                                    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                        <button type="button" id="cancelRemoveResidentModal" class="h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                                        <button type="submit" class="h-11 px-4 rounded-xl bg-red-600 text-white text-sm font-bold">Remove resident</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="min-w-0 flex flex-col min-h-0 flex-1 lg:min-h-0">
@@ -2249,12 +2298,27 @@
 
                             <div class="p-4 sm:p-5 flex-1 min-h-0 profile-tab-body">
                                 <div id="overview" class="tab-content active min-h-0 flex-1">
-                                    <div class="profile-tab-scroll space-y-4">
+                                    <div id="overviewScroll" class="profile-tab-scroll relative space-y-4 {{ session('status') && request('tab') === 'overview' ? 'pt-12' : '' }}">
+                                        @if (session('status') && request('tab') === 'overview')
+                                            <div id="overviewStatusToast" class="absolute top-0 left-0 right-0 z-[70] rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg transition-opacity duration-300 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200" role="status">
+                                                {{ session('status') }}
+                                            </div>
+                                        @endif
                                         <div class="summary-card">
                                             <div class="flex items-start gap-3">
                                                 <span class="material-symbols-outlined text-primary text-xl shrink-0 mt-0.5">person</span>
                                                 <div class="min-w-0 flex-1">
-                                                    <p class="summary-card-label">Resident</p>
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <p class="summary-card-label">{{ $residentCardLabel }}</p>
+                                                        <div class="flex items-center gap-1">
+                                                            <button type="button" id="openEditResidentDetailsModal" class="inline-flex items-center justify-center rounded-lg p-1.5 text-primary hover:bg-primary/10" title="Edit resident information" aria-label="Edit resident information">
+                                                                <span class="material-symbols-outlined text-base">edit</span>
+                                                            </button>
+                                                            <button type="button" id="openRemoveResidentModal" class="inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" title="Delete resident account" aria-label="Delete resident account">
+                                                                <span class="material-symbols-outlined text-base">delete</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                     <p class="text-sm font-semibold mt-1 break-words text-text-light dark:text-text-dark">{{ $residentName }}</p>
                                                     @if (! empty($residentMetaParts))
                                                         <div class="flex flex-wrap gap-1.5 mt-2">
@@ -2265,6 +2329,75 @@
                                                     @endif
                                                 </div>
                                             </div>
+                            </div>
+                            <div id="editResidentDetailsModal" class="hidden fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
+                                <div class="resident-details-modal-panel w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl" role="dialog" aria-modal="true" aria-labelledby="editResidentDetailsTitle">
+                                    <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-4 py-4">
+                                        <div>
+                                            <h5 id="editResidentDetailsTitle" class="text-lg font-bold text-text-light dark:text-text-dark">Edit Resident Information</h5>
+                                            <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Update the information shown in the overview.</p>
+                                        </div>
+                                        <button type="button" id="closeEditResidentDetailsModal" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark" aria-label="Close">
+                                            <span class="material-symbols-outlined">close</span>
+                                        </button>
+                                    </div>
+                                    <form method="POST" action="{{ route('bhw.residents.personal-details.update', $resident) }}" class="p-4 space-y-4">
+                                        @csrf
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-1" for="editResidentFullName">Full name</label>
+                                            <input id="editResidentFullName" name="full_name" value="{{ $residentName }}" required maxlength="255" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm" />
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm font-semibold mb-1" for="editResidentGender">Gender</label>
+                                                <select id="editResidentGender" name="gender" required class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm">
+                                                    <option value="Male" @selected(strtolower((string) $residentGender) === 'male')>Male</option>
+                                                    <option value="Female" @selected(strtolower((string) $residentGender) === 'female')>Female</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-semibold mb-1" for="editResidentDateOfBirth">Birthdate</label>
+                                                <input id="editResidentDateOfBirth" name="date_of_birth" type="date" value="{{ $residentBirthdate }}" max="{{ now()->toDateString() }}" required class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-1" for="editResidentParentRole">Guardian role</label>
+                                            <select id="editResidentParentRole" name="parent_role" required class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm">
+                                                @foreach (\App\Models\ResidentRequest::PARENT_ROLES as $roleOption)
+                                                    <option value="{{ $roleOption }}" @selected($parentRoleLabel === $roleOption)>{{ $roleOption }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-1" for="editResidentContact">Contact</label>
+                                            <input id="editResidentContact" name="contact" value="{{ $residentContact }}" maxlength="50" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-1" for="editResidentCivilStatus">Civil status</label>
+                                            <select id="editResidentCivilStatus" name="civil_status" required class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm">
+                                                @foreach (\App\Models\User::CIVIL_STATUSES as $civilStatus)
+                                                    <option value="{{ $civilStatus }}" @selected($civilStatusLabel === $civilStatus)>{{ $civilStatus }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-1" for="editResidentPlaceOfBirth">Place of birth</label>
+                                            <input id="editResidentPlaceOfBirth" name="place_of_birth" value="{{ $placeOfBirthLabel }}" maxlength="255" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-1" for="editResidentEducation">Educational attainment</label>
+                                            <select id="editResidentEducation" name="educational_attainment" required class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm">
+                                                @foreach (\App\Models\ResidentRequest::EDUCATIONAL_ATTAINMENTS as $attainmentOption)
+                                                    <option value="{{ $attainmentOption }}" @selected($educationalAttainmentLabel === $attainmentOption)>{{ $attainmentOption }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                                            <button type="button" id="cancelEditResidentDetailsModal" class="h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
+                                            <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white text-sm font-bold">Save changes</button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
 
                                     @if ($spouseName !== '' || $householdChildren->isNotEmpty() || $householdSeniors->isNotEmpty())
@@ -2278,13 +2411,46 @@
                                             @if ($spouseName !== '')
                                                 <div class="household-member-row">
                                                     <span class="material-symbols-outlined text-text-light/50 dark:text-text-dark/50 text-lg shrink-0">favorite</span>
-                                                    <div class="min-w-0">
-                                                        <p class="summary-card-label">{{ $spouseRoleLabel }}</p>
-                                                        <p class="text-sm font-semibold mt-0.5 break-words text-text-light dark:text-text-dark">{{ $spouseName }}</p>
-                                                        @if (! empty($spouseMetaParts))
-                                                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 break-words leading-relaxed">{{ implode(' · ', $spouseMetaParts) }}</p>
-                                                        @endif
-                                        </div>
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="flex items-start justify-between gap-2">
+                                                            <div class="min-w-0">
+                                                                <p class="summary-card-label">{{ $spouseRoleLabel }}</p>
+                                                                <p class="text-sm font-semibold mt-0.5 break-words text-text-light dark:text-text-dark">{{ $spouseName }}</p>
+                                                                @if (! empty($spouseMetaParts))
+                                                                    <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 break-words leading-relaxed">{{ implode(' · ', $spouseMetaParts) }}</p>
+                                                                @endif
+                                                            </div>
+                                                            <div class="flex items-center gap-1 shrink-0">
+                                                                @php
+                                                                    $spouseEditFirst = trim((string) ($spouseDetails['first_name'] ?? ''));
+                                                                    $spouseEditLast = trim((string) ($spouseDetails['last_name'] ?? ''));
+                                                                    if ($spouseEditFirst === '' && $spouseEditLast === '' && $spouseName !== '') {
+                                                                        $nameParts = preg_split('/\s+/', $spouseName) ?: [];
+                                                                        $spouseEditFirst = $nameParts[0] ?? '';
+                                                                        $spouseEditLast = count($nameParts) > 1 ? (string) end($nameParts) : '';
+                                                                    }
+                                                                @endphp
+                                                                <button type="button" class="open-edit-spouse-btn inline-flex items-center justify-center rounded-lg p-1.5 text-primary hover:bg-primary/10" title="Edit spouse" aria-label="Edit spouse"
+                                                                    data-first-name="{{ $spouseEditFirst }}"
+                                                                    data-last-name="{{ $spouseEditLast }}"
+                                                                    data-middle-initial="{{ $spouseDetails['middle_initial'] ?? '' }}"
+                                                                    data-birthdate="{{ $spouseDetails['birthdate'] ?? '' }}"
+                                                                    data-parent-role="{{ $spouseDetails['parent_role'] ?? '' }}"
+                                                                    data-place-of-birth="{{ $spouseDetails['place_of_birth'] ?? '' }}"
+                                                                    data-educational-attainment="{{ $spouseDetails['educational_attainment'] ?? '' }}"
+                                                                >
+                                                                    <span class="material-symbols-outlined text-base">edit</span>
+                                                                </button>
+                                                                <button type="button" class="open-remove-member-btn inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" title="Remove spouse" aria-label="Remove spouse"
+                                                                    data-action="remove_spouse"
+                                                                    data-member-name="{{ $spouseName }}"
+                                                                    data-member-label="spouse"
+                                                                >
+                                                                    <span class="material-symbols-outlined text-base">delete</span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                         </div>
                                             @endif
 
@@ -2292,13 +2458,42 @@
                                                 @foreach ($householdChildren as $child)
                                                     <div class="household-member-row">
                                                         <span class="material-symbols-outlined text-text-light/50 dark:text-text-dark/50 text-lg shrink-0">child_care</span>
-                                                        <div class="min-w-0">
-                                                            <p class="summary-card-label">Child</p>
-                                                            <p class="text-sm font-semibold mt-0.5 break-words text-text-light dark:text-text-dark">{{ $child['full_name'] }}</p>
-                                                            @if ($child['meta'] !== '')
-                                                                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 break-words leading-relaxed">{{ $child['meta'] }}</p>
-                                                            @endif
-                                        </div>
+                                                        <div class="min-w-0 flex-1">
+                                                            <div class="flex items-start justify-between gap-2">
+                                                                <div class="min-w-0">
+                                                                    <p class="summary-card-label">Child</p>
+                                                                    <p class="text-sm font-semibold mt-0.5 break-words text-text-light dark:text-text-dark">{{ $child['full_name'] }}</p>
+                                                                    @if ($child['meta'] !== '')
+                                                                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 break-words leading-relaxed">{{ $child['meta'] }}</p>
+                                                                    @endif
+                                                                </div>
+                                                                <div class="flex items-center gap-1 shrink-0">
+                                                                    <button type="button" class="open-edit-child-btn inline-flex items-center justify-center rounded-lg p-1.5 text-primary hover:bg-primary/10" title="Edit child" aria-label="Edit child"
+                                                                        data-index="{{ $child['index'] }}"
+                                                                        data-full-name="{{ $child['full_name'] }}"
+                                                                        data-birthdate="{{ $child['birthdate'] }}"
+                                                                        data-place-of-birth="{{ $child['place_of_birth'] }}"
+                                                                        data-gender="{{ $child['gender'] }}"
+                                                                        data-relationship="{{ $child['relationship'] }}"
+                                                                        data-currently-studying="{{ $child['currently_studying'] }}"
+                                                                        data-school="{{ $child['school'] }}"
+                                                                        data-educational-attainment="{{ $child['educational_attainment'] }}"
+                                                                        data-occupation="{{ $child['occupation'] }}"
+                                                                    >
+                                                                        <span class="material-symbols-outlined text-base">edit</span>
+                                                                    </button>
+                                                                    <button type="button" class="open-remove-member-btn inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" title="Remove child" aria-label="Remove child"
+                                                                        data-action="remove_child"
+                                                                        data-return-tab="overview"
+                                                                        data-index="{{ $child['index'] }}"
+                                                                        data-member-name="{{ $child['full_name'] }}"
+                                                                        data-member-label="child"
+                                                                    >
+                                                                        <span class="material-symbols-outlined text-base">delete</span>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 @endforeach
                                             @endif
@@ -2306,13 +2501,43 @@
                                             @if ($householdSeniors->isNotEmpty())
                                                 @foreach ($householdSeniors as $senior)
                                                     <div class="household-member-row">
-                                                        <span class="material-symbols-outlined text-text-light/50 dark:text-text-dark/50 text-lg shrink-0">elderly</span>
-                                                        <div class="min-w-0">
-                                                            <p class="summary-card-label">Other family in the house</p>
-                                                            <p class="text-sm font-semibold mt-0.5 break-words text-text-light dark:text-text-dark">{{ $senior['full_name'] }}</p>
-                                                            @if ($senior['meta'] !== '')
-                                                                <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 break-words leading-relaxed">{{ $senior['meta'] }}</p>
-                                                            @endif
+                                                        <span class="material-symbols-outlined text-text-light/50 dark:text-text-dark/50 text-lg shrink-0">person</span>
+                                                        <div class="min-w-0 flex-1">
+                                                            <div class="flex items-start justify-between gap-2">
+                                                                <div class="min-w-0">
+                                                                    <p class="summary-card-label">Other family in the house</p>
+                                                                    <p class="text-sm font-semibold mt-0.5 break-words text-text-light dark:text-text-dark">{{ $senior['full_name'] }}</p>
+                                                                    @if ($senior['meta'] !== '')
+                                                                        <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1 break-words leading-relaxed">{{ $senior['meta'] }}</p>
+                                                                    @endif
+                                                                </div>
+                                                                @if (($senior['source'] ?? 'other') === 'other')
+                                                                <div class="flex items-center gap-1 shrink-0">
+                                                                    <button type="button" class="open-edit-senior-btn inline-flex items-center justify-center rounded-lg p-1.5 text-primary hover:bg-primary/10" title="Edit other family member" aria-label="Edit other family member"
+                                                                        data-index="{{ $senior['index'] }}"
+                                                                        data-full-name="{{ $senior['full_name'] }}"
+                                                                        data-birthdate="{{ $senior['birthdate'] }}"
+                                                                        data-gender="{{ $senior['gender'] }}"
+                                                                        data-relationship="{{ $senior['relationship'] }}"
+                                                                        data-place-of-birth="{{ $senior['place_of_birth'] }}"
+                                                                        data-civil-status="{{ $senior['civil_status'] }}"
+                                                                        data-educational-attainment="{{ $senior['educational_attainment'] }}"
+                                                                        data-occupation="{{ $senior['occupation'] }}"
+                                                                    >
+                                                                        <span class="material-symbols-outlined text-base">edit</span>
+                                                                    </button>
+                                                                    <button type="button" class="open-remove-member-btn inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" title="Remove other family member" aria-label="Remove other family member"
+                                                                        data-action="remove_senior"
+                                                                        data-return-tab="overview"
+                                                                        data-index="{{ $senior['index'] }}"
+                                                                        data-member-name="{{ $senior['full_name'] }}"
+                                                                        data-member-label="other family member"
+                                                                    >
+                                                                        <span class="material-symbols-outlined text-base">delete</span>
+                                                                    </button>
+                                                                </div>
+                                                                @endif
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 @endforeach
@@ -2323,12 +2548,15 @@
                                     </div>
                                 </div>
 
-                                <div id="family" class="tab-content min-w-0">
+                                <div id="family" class="tab-content relative min-w-0">
                                     <div class="profile-tab-toolbar">
                                         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                             <div class="min-w-0">
-                                                <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Family Members</h4>
-                                                <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Add or update household members so family counting stays accurate (new members, removals, and corrections).</p>
+                                                <div class="flex items-center gap-2">
+                                                    <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Family Members</h4>
+                                                    <span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{{ $familyPeopleCount }}</span>
+                                                </div>
+                                                <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Add or update household members.</p>
                                             </div>
                                             <div class="family-action-row {{ $spouseName === '' ? '' : 'family-action-row--two' }} shrink-0">
                                                 @if ($spouseName === '')
@@ -2342,17 +2570,11 @@
                                                     <span>Add Child</span>
                                                 </button>
                                                 <button type="button" id="openAddSeniorBtn" class="family-action-btn bg-primary text-white font-bold hover:opacity-90">
-                                                    <span class="material-symbols-outlined text-base shrink-0">elderly</span>
+                                                    <span class="material-symbols-outlined text-base shrink-0">person</span>
                                                     <span>Add other family</span>
                                         </button>
                                             </div>
                                     </div>
-
-                                        @if (session('status') && (request('tab') === 'family' || old('household_action')))
-                                            <div class="mt-3 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200">
-                                            {{ session('status') }}
-                                        </div>
-                                    @endif
 
                                         @if ($errors->any() && old('household_action'))
                                             <div class="mt-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200">
@@ -2365,12 +2587,12 @@
                                     @endif
                                     </div>
 
-                                    <div class="profile-tab-scroll space-y-4">
-                                        <div class="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
-                                            <p class="font-semibold text-text-light dark:text-text-dark">Household count: <span class="text-primary">{{ $familyPeopleCount }}</span> {{ $familyPeopleCount === 1 ? 'person' : 'people' }}</p>
-                                            <p class="text-xs text-text-light/60 dark:text-text-dark/60 mt-1">Includes the resident, spouse, children, and elderly members listed below.</p>
-                                                </div>
-
+                                    <div id="familyScroll" class="profile-tab-scroll relative space-y-4 {{ session('status') && (request('tab') === 'family' || old('household_action')) ? 'pt-12' : '' }}">
+                                        @if (session('status') && (request('tab') === 'family' || old('household_action')))
+                                            <div id="familyStatusToast" class="absolute top-0 left-0 right-0 z-[70] rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg transition-opacity duration-300 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200" role="status">
+                                                {{ session('status') }}
+                                            </div>
+                                        @endif
                                         <div class="family-member-card rounded-xl border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark p-4">
                                             <div class="flex items-start justify-between gap-3 w-full">
                                                 <div class="min-w-0 flex-1">
@@ -2392,35 +2614,6 @@
                                                             <p class="family-member-card__meta text-xs text-text-light/60 dark:text-text-dark/60 mt-1">{{ implode(' · ', $spouseMetaParts) }}</p>
                                                         @endif
                                                     </div>
-                                                    <div class="flex items-center gap-2 shrink-0">
-                                                        <button type="button" class="open-edit-spouse-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-border-light dark:border-border-dark hover:bg-card-light dark:hover:bg-card-dark" title="Edit spouse" aria-label="Edit spouse"
-                                                            @php
-                                                                $spouseEditFirst = trim((string) ($spouseDetails['first_name'] ?? ''));
-                                                                $spouseEditLast = trim((string) ($spouseDetails['last_name'] ?? ''));
-                                                                if ($spouseEditFirst === '' && $spouseEditLast === '' && $spouseName !== '') {
-                                                                    $nameParts = preg_split('/\s+/', $spouseName) ?: [];
-                                                                    $spouseEditFirst = $nameParts[0] ?? '';
-                                                                    $spouseEditLast = count($nameParts) > 1 ? (string) end($nameParts) : '';
-                                                                }
-                                                            @endphp
-                                                            data-first-name="{{ $spouseEditFirst }}"
-                                                            data-last-name="{{ $spouseEditLast }}"
-                                                            data-middle-initial="{{ $spouseDetails['middle_initial'] ?? '' }}"
-                                                            data-birthdate="{{ $spouseDetails['birthdate'] ?? '' }}"
-                                                            data-parent-role="{{ $spouseDetails['parent_role'] ?? '' }}"
-                                                            data-place-of-birth="{{ $spouseDetails['place_of_birth'] ?? '' }}"
-                                                            data-educational-attainment="{{ $spouseDetails['educational_attainment'] ?? '' }}"
-                                                        >
-                                                            <span class="material-symbols-outlined text-base">edit</span>
-                                                        </button>
-                                                        <button type="button" class="open-remove-member-btn inline-flex items-center justify-center rounded-lg h-9 w-9 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300" title="Remove spouse" aria-label="Remove spouse"
-                                                            data-action="remove_spouse"
-                                                            data-member-name="{{ $spouseName }}"
-                                                            data-member-label="spouse"
-                                                        >
-                                                            <span class="material-symbols-outlined text-base">person_remove</span>
-                                                </button>
-                                            </div>
                                                 </div>
                                             </div>
                                         @endif
@@ -2448,6 +2641,7 @@
                                                             data-index="{{ $childIndex }}"
                                                             data-full-name="{{ $childName }}"
                                                             data-birthdate="{{ $childRow['birthdate'] ?? '' }}"
+                                                            data-place-of-birth="{{ $childRow['place_of_birth'] ?? '' }}"
                                                             data-gender="{{ $childRow['gender'] ?? '' }}"
                                                             data-relationship="{{ $childRow['relationship'] ?? '' }}"
                                                             data-currently-studying="{{ $childRow['currently_studying'] ?? 'no' }}"
@@ -2469,9 +2663,6 @@
                                                 </div>
                                             </div>
                                         @empty
-                                            <div class="rounded-xl border border-dashed border-border-light dark:border-border-dark px-4 py-6 text-center text-sm text-text-light/60 dark:text-text-dark/60">
-                                                No children listed yet. Use <span class="font-semibold">Add Child</span> when a new family member is born or joins the household.
-                                            </div>
                                         @endforelse
 
                                         @forelse ($editableSeniors as $seniorIndex => $seniorRow)
@@ -2518,9 +2709,6 @@
                                                 </div>
                                             </div>
                                         @empty
-                                            <div class="rounded-xl border border-dashed border-border-light dark:border-border-dark px-4 py-6 text-center text-sm text-text-light/60 dark:text-text-dark/60">
-                                                No other family members listed. Use <span class="font-semibold">Add other family</span> when a relative joins the household, or remove them here if they leave.
-                                            </div>
                                         @endforelse
                                     </div>
 
@@ -2539,14 +2727,19 @@
                                             @csrf
                                                     <input type="hidden" name="household_action" id="family_child_action" value="add_child" />
                                                     <input type="hidden" name="member_index" id="family_child_index" value="" />
+                                                    <input type="hidden" name="return_tab" id="family_child_return_tab" value="family" />
                                             <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_child_full_name">Full Name</label>
-                                                        <input id="family_child_full_name" name="full_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        <input id="family_child_full_name" name="full_name" required placeholder="Enter full name" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div>
                                                             <label class="block text-sm font-semibold mb-1.5" for="family_child_birthdate">Birthdate</label>
-                                                            <input id="family_child_birthdate" name="birthdate" type="date" required max="{{ now()->toDateString() }}" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                            <input id="family_child_birthdate" name="birthdate" type="date" required max="{{ now()->toDateString() }}" placeholder="Select birthdate" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-sm font-semibold mb-1.5" for="family_child_pob">Place of Birth</label>
+                                                            <input id="family_child_pob" name="place_of_birth" required placeholder="Enter full address" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                         </div>
                                                         <div>
                                                             <label class="block text-sm font-semibold mb-1.5" for="family_child_gender">Gender</label>
@@ -2572,13 +2765,15 @@
                                                             <select id="family_child_studying" name="currently_studying" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
                                                                 <option value="infant">Infant</option>
                                                                 <option value="yes">Studying</option>
-                                                                <option value="no">Working / Not studying</option>
+                                                                <option value="working">Working</option>
+                                                                <option value="not_studying">Not studying</option>
+                                                                <option value="not_working">Not working</option>
                                                             </select>
                                                         </div>
                                                     </div>
                                                     <div id="familyChildSchoolFields" class="hidden">
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_child_school">School</label>
-                                                        <input id="family_child_school" name="school" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        <input id="family_child_school" name="school" placeholder="Enter school name" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
                                                     <div id="familyChildWorkFields" class="hidden space-y-3">
                                                         <div>
@@ -2592,7 +2787,7 @@
                                                         </div>
                                                         <div>
                                                             <label class="block text-sm font-semibold mb-1.5" for="family_child_occupation">Occupation</label>
-                                                            <input id="family_child_occupation" name="occupation" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                            <input id="family_child_occupation" name="occupation" placeholder="Enter occupation" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                         </div>
                                                     </div>
                                                     <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
@@ -2619,9 +2814,10 @@
                                                     @csrf
                                                     <input type="hidden" name="household_action" id="family_senior_action" value="add_senior" />
                                                     <input type="hidden" name="member_index" id="family_senior_index" value="" />
+                                                    <input type="hidden" name="return_tab" id="family_senior_return_tab" value="family" />
                                             <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_senior_full_name">Full Name</label>
-                                                        <input id="family_senior_full_name" name="full_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        <input id="family_senior_full_name" name="full_name" required placeholder="Enter full name" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div>
@@ -2648,7 +2844,7 @@
                                                     </div>
                                                     <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_senior_pob">Place of Birth</label>
-                                                        <input id="family_senior_pob" name="place_of_birth" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        <input id="family_senior_pob" name="place_of_birth" required placeholder="Enter full address" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
                                                     <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_senior_civil">Marital Status</label>
@@ -2669,8 +2865,8 @@
                                                         </select>
                                                     </div>
                                                     <div>
-                                                        <label class="block text-sm font-semibold mb-1.5" for="family_senior_occupation">Occupation <span class="font-normal text-text-light/50">(optional)</span></label>
-                                                        <input id="family_senior_occupation" name="occupation" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_senior_occupation">Occupation</label>
+                                                        <input id="family_senior_occupation" name="occupation" required placeholder="Enter occupation" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
                                                     <div class="tx-form-actions flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-1 border-t border-border-light dark:border-border-dark">
                                                         <button type="button" class="close-family-senior-modal h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
@@ -2695,20 +2891,21 @@
                                                 <form method="POST" action="{{ route('bhw.residents.household.update', $resident) }}" class="tx-form" id="familySpouseForm">
                                                     @csrf
                                                     <input type="hidden" name="household_action" value="set_spouse" />
+                                                    <input type="hidden" name="return_tab" id="family_spouse_return_tab" value="family" />
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div>
                                                             <label class="block text-sm font-semibold mb-1.5" for="family_spouse_first">First Name</label>
-                                                            <input id="family_spouse_first" name="spouse_first_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                            <input id="family_spouse_first" name="spouse_first_name" required placeholder="Enter first name" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                         </div>
                                                         <div>
                                                             <label class="block text-sm font-semibold mb-1.5" for="family_spouse_last">Last Name</label>
-                                                            <input id="family_spouse_last" name="spouse_last_name" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                            <input id="family_spouse_last" name="spouse_last_name" required placeholder="Enter last name" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                         </div>
                                                     </div>
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div>
                                                             <label class="block text-sm font-semibold mb-1.5" for="family_spouse_mi">M.I. <span class="font-normal text-text-light/50">(optional)</span></label>
-                                                            <input id="family_spouse_mi" name="spouse_middle_initial" maxlength="5" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                            <input id="family_spouse_mi" name="spouse_middle_initial" maxlength="5" placeholder="Optional" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                         </div>
                                                         <div>
                                                             <label class="block text-sm font-semibold mb-1.5" for="family_spouse_birthdate">Birthdate</label>
@@ -2726,7 +2923,7 @@
                                                     </div>
                                                     <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_spouse_pob">Place of Birth</label>
-                                                        <input id="family_spouse_pob" name="spouse_place_of_birth" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                        <input id="family_spouse_pob" name="spouse_place_of_birth" required placeholder="Enter place of birth" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
                                                     <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_spouse_edu">Educational Attainment</label>
@@ -2760,6 +2957,7 @@
                                                 @csrf
                                                 <input type="hidden" name="household_action" id="family_remove_action" value="" />
                                                 <input type="hidden" name="member_index" id="family_remove_index" value="" />
+                                                <input type="hidden" name="return_tab" id="family_remove_return_tab" value="family" />
                                                 <p class="text-xs text-text-light/60 dark:text-text-dark/60">This updates family counting. Active monitoring for this person will be marked completed.</p>
                                                 <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                                                     <button type="button" id="cancelFamilyRemoveModal" class="h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
@@ -4289,6 +4487,16 @@
     const familySpouseModal = document.getElementById('familySpouseModal');
     const familyRemoveModal = document.getElementById('familyRemoveModal');
     const familyChildStudying = document.getElementById('family_child_studying');
+    const removeResidentModal = document.getElementById('removeResidentModal');
+    const editResidentDetailsModal = document.getElementById('editResidentDetailsModal');
+    const overviewStatusToast = document.getElementById('overviewStatusToast');
+    const overviewScroll = document.getElementById('overviewScroll');
+    const familyStatusToast = document.getElementById('familyStatusToast');
+    const familyScroll = document.getElementById('familyScroll');
+
+    [familyChildModal, familySeniorModal, familySpouseModal, familyRemoveModal].forEach((modal) => {
+        modal && document.body.appendChild(modal);
+    });
 
     function openFamilyModal(modal) {
         modal?.classList.remove('hidden');
@@ -4302,6 +4510,43 @@
         document.body.classList.remove('overflow-hidden');
     }
 
+    document.getElementById('openRemoveResidentModal')?.addEventListener('click', () => openFamilyModal(removeResidentModal));
+    document.getElementById('closeRemoveResidentModal')?.addEventListener('click', () => closeFamilyModal(removeResidentModal));
+    document.getElementById('cancelRemoveResidentModal')?.addEventListener('click', () => closeFamilyModal(removeResidentModal));
+    removeResidentModal?.addEventListener('click', (event) => {
+        if (event.target === removeResidentModal) {
+            closeFamilyModal(removeResidentModal);
+        }
+    });
+    document.getElementById('openEditResidentDetailsModal')?.addEventListener('click', () => openFamilyModal(editResidentDetailsModal));
+    document.getElementById('closeEditResidentDetailsModal')?.addEventListener('click', () => closeFamilyModal(editResidentDetailsModal));
+    document.getElementById('cancelEditResidentDetailsModal')?.addEventListener('click', () => closeFamilyModal(editResidentDetailsModal));
+    editResidentDetailsModal?.addEventListener('click', (event) => {
+        if (event.target === editResidentDetailsModal) {
+            closeFamilyModal(editResidentDetailsModal);
+        }
+    });
+
+    if (overviewStatusToast) {
+        window.setTimeout(() => {
+            overviewStatusToast.classList.add('opacity-0');
+            window.setTimeout(() => {
+                overviewStatusToast.remove();
+                overviewScroll?.classList.remove('pt-12');
+            }, 300);
+        }, 1000);
+    }
+
+    if (familyStatusToast) {
+        window.setTimeout(() => {
+            familyStatusToast.classList.add('opacity-0');
+            window.setTimeout(() => {
+                familyStatusToast.remove();
+                familyScroll?.classList.remove('pt-12');
+            }, 300);
+        }, 1000);
+    }
+
     function syncFamilyChildStatusFields() {
         const status = familyChildStudying?.value || 'infant';
         const schoolFields = document.getElementById('familyChildSchoolFields');
@@ -4311,10 +4556,10 @@
         const occupationInput = document.getElementById('family_child_occupation');
 
         schoolFields?.classList.toggle('hidden', status !== 'yes');
-        workFields?.classList.toggle('hidden', status !== 'no');
+        workFields?.classList.toggle('hidden', !['no', 'working'].includes(status));
         if (schoolInput) schoolInput.required = status === 'yes';
-        if (eduInput) eduInput.required = status === 'no';
-        if (occupationInput) occupationInput.required = status === 'no';
+        if (eduInput) eduInput.required = ['no', 'working'].includes(status);
+        if (occupationInput) occupationInput.required = ['no', 'working'].includes(status);
     }
 
     familyChildStudying?.addEventListener('change', syncFamilyChildStatusFields);
@@ -4323,6 +4568,7 @@
         document.getElementById('familyChildForm')?.reset();
         document.getElementById('family_child_action').value = 'add_child';
         document.getElementById('family_child_index').value = '';
+        document.getElementById('family_child_return_tab').value = 'family';
         document.getElementById('familyChildModalTitle').textContent = 'Add Child';
         if (familyChildStudying) familyChildStudying.value = 'infant';
         syncFamilyChildStatusFields();
@@ -4332,11 +4578,13 @@
         document.getElementById('familySeniorForm')?.reset();
         document.getElementById('family_senior_action').value = 'add_senior';
         document.getElementById('family_senior_index').value = '';
+        document.getElementById('family_senior_return_tab').value = 'family';
         document.getElementById('familySeniorModalTitle').textContent = 'Add other family';
     }
 
     function resetFamilySpouseForm() {
         document.getElementById('familySpouseForm')?.reset();
+        document.getElementById('family_spouse_return_tab').value = 'family';
         document.getElementById('familySpouseModalTitle').textContent = 'Add Spouse';
     }
 
@@ -4372,12 +4620,15 @@
             resetFamilyChildForm();
             document.getElementById('family_child_action').value = 'update_child';
             document.getElementById('family_child_index').value = button.dataset.index || '';
+            document.getElementById('family_child_return_tab').value = 'overview';
             document.getElementById('familyChildModalTitle').textContent = 'Edit Child';
             document.getElementById('family_child_full_name').value = button.dataset.fullName || '';
             document.getElementById('family_child_birthdate').value = button.dataset.birthdate || '';
+            document.getElementById('family_child_pob').value = button.dataset.placeOfBirth || '';
             document.getElementById('family_child_gender').value = button.dataset.gender || '';
             document.getElementById('family_child_relationship').value = button.dataset.relationship || '';
-            document.getElementById('family_child_studying').value = button.dataset.currentlyStudying || 'infant';
+            const childStatus = button.dataset.currentlyStudying || 'infant';
+            document.getElementById('family_child_studying').value = childStatus === 'no' ? 'working' : childStatus;
             document.getElementById('family_child_school').value = button.dataset.school || '';
             document.getElementById('family_child_edu').value = button.dataset.educationalAttainment || '';
             document.getElementById('family_child_occupation').value = button.dataset.occupation || '';
@@ -4391,6 +4642,7 @@
             resetFamilySeniorForm();
             document.getElementById('family_senior_action').value = 'update_senior';
             document.getElementById('family_senior_index').value = button.dataset.index || '';
+            document.getElementById('family_senior_return_tab').value = 'overview';
             document.getElementById('familySeniorModalTitle').textContent = 'Edit other family';
             document.getElementById('family_senior_full_name').value = button.dataset.fullName || '';
             document.getElementById('family_senior_birthdate').value = button.dataset.birthdate || '';
@@ -4407,6 +4659,7 @@
     document.querySelectorAll('.open-edit-spouse-btn').forEach((button) => {
         button.addEventListener('click', () => {
             resetFamilySpouseForm();
+            document.getElementById('family_spouse_return_tab').value = 'overview';
             document.getElementById('familySpouseModalTitle').textContent = 'Edit Spouse';
             document.getElementById('family_spouse_first').value = button.dataset.firstName || '';
             document.getElementById('family_spouse_last').value = button.dataset.lastName || '';
@@ -4425,6 +4678,7 @@
             const label = button.dataset.memberLabel || 'member';
             document.getElementById('family_remove_action').value = button.dataset.action || '';
             document.getElementById('family_remove_index').value = button.dataset.index || '';
+            document.getElementById('family_remove_return_tab').value = button.dataset.returnTab || 'family';
             document.getElementById('familyRemoveMessage').textContent =
                 `Remove ${name} (${label}) from this household? Family counting will update.`;
             openFamilyModal(familyRemoveModal);

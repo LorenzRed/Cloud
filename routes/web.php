@@ -1515,10 +1515,10 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'children.*.birthdate' => ['required', 'date', 'before_or_equal:today'],
             'children.*.gender' => ['required', 'in:Male,Female'],
             'children.*.relationship' => ['required', Rule::in(ResidentRequest::CHILD_RELATIONSHIPS)],
-            'children.*.currently_studying' => ['required', 'in:yes,no,infant'],
+            'children.*.currently_studying' => ['required', 'in:yes,no,working,not_studying,not_working,infant'],
             'children.*.school' => ['nullable', 'required_if:children.*.currently_studying,yes', 'string', 'max:255', $optionalPlainTextPattern],
-            'children.*.educational_attainment' => ['nullable', 'required_if:children.*.currently_studying,no', Rule::in(ResidentRequest::EDUCATIONAL_ATTAINMENTS)],
-            'children.*.occupation' => ['nullable', 'required_if:children.*.currently_studying,no', 'string', 'max:255', $optionalPlainTextPattern],
+            'children.*.educational_attainment' => ['nullable', 'required_if:children.*.currently_studying,working', Rule::in(ResidentRequest::EDUCATIONAL_ATTAINMENTS)],
+            'children.*.occupation' => ['nullable', 'required_if:children.*.currently_studying,working', 'string', 'max:255', $optionalPlainTextPattern],
             'seniors' => ['nullable', 'array'],
             'seniors.*.full_name' => ['required', 'string', 'max:255', $childFullNamePattern],
             'seniors.*.birthdate' => ['required', 'date', 'before_or_equal:today'],
@@ -1715,7 +1715,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 continue;
             }
 
-            $currentlyStudying = in_array($child['currently_studying'] ?? '', ['yes', 'no', 'infant'], true)
+            $currentlyStudying = in_array($child['currently_studying'] ?? '', ['yes', 'no', 'working', 'not_studying', 'not_working', 'infant'], true)
                 ? (string) $child['currently_studying']
                 : 'no';
 
@@ -1760,6 +1760,23 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 continue;
             }
 
+            if (in_array($currentlyStudying, ['not_studying', 'not_working'], true)) {
+                $childBirthdate = (string) $child['birthdate'];
+                $householdChildren[] = [
+                    'full_name' => $childFullName,
+                    'birthdate' => $childBirthdate,
+                    'age_in_months' => PersonAge::ageInWholeMonths($childBirthdate),
+                    'gender' => ucfirst(strtolower(trim((string) $child['gender']))),
+                    'relationship' => (string) $child['relationship'],
+                    'currently_studying' => $currentlyStudying,
+                    'school' => null,
+                    'educational_attainment' => null,
+                    'occupation' => null,
+                ];
+
+                continue;
+            }
+
             $childEducationalAttainment = trim((string) ($child['educational_attainment'] ?? ''));
             $occupation = trim((string) ($child['occupation'] ?? ''));
 
@@ -1776,7 +1793,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 'age_in_months' => PersonAge::ageInWholeMonths($childBirthdate),
                 'gender' => ucfirst(strtolower(trim((string) $child['gender']))),
                 'relationship' => (string) $child['relationship'],
-                'currently_studying' => 'no',
+                'currently_studying' => 'working',
                 'school' => null,
                 'educational_attainment' => $childEducationalAttainment,
                 'occupation' => $occupation,
@@ -4965,6 +4982,145 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         ]);
     })->name('bhw.residents.profile');
 
+    Route::delete('/bhw/residents/{residentRequest}', function (ResidentRequest $residentRequest) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        if (! $residentRequest->isAccessibleByBhw(Auth::user())) {
+            return redirect()->route('bhw.residents')->with('status', 'This resident is outside your assigned purok.');
+        }
+
+        if ($residentRequest->status !== 'accepted') {
+            return redirect()->route('bhw.residents')->with('status', 'Only accepted resident accounts can be removed.');
+        }
+
+        $residentUser = $residentRequest->user;
+        $spouseDetails = $residentRequest->spouse_details;
+        $spouseDetails = is_array($spouseDetails) ? $spouseDetails : [];
+        $spouseName = trim((string) ($residentRequest->spouse_full_name ?: ($spouseDetails['full_name'] ?? '')));
+
+        if ($spouseName !== '') {
+            $spouseBirthdate = trim((string) ($spouseDetails['birthdate'] ?? ''));
+            $spouseParentRole = trim((string) ($spouseDetails['parent_role'] ?? ''));
+            $spouseGender = trim((string) ($spouseDetails['gender'] ?? ''))
+                ?: (ResidentRequest::genderFromParentRole($spouseParentRole) ?? 'Male');
+            $spouseAge = $spouseBirthdate !== '' ? Carbon::parse($spouseBirthdate)->age : null;
+            $spousePlaceOfBirth = trim((string) ($spouseDetails['place_of_birth'] ?? ''));
+            $spouseEducationalAttainment = trim((string) ($spouseDetails['educational_attainment'] ?? ''));
+
+            DB::transaction(function () use (
+                $residentRequest,
+                $residentUser,
+                $spouseName,
+                $spouseBirthdate,
+                $spouseParentRole,
+                $spouseGender,
+                $spouseAge,
+                $spousePlaceOfBirth,
+                $spouseEducationalAttainment
+            ) {
+                $residentRequest->update([
+                    'full_name' => $spouseName,
+                    'parent_role' => $spouseParentRole !== '' ? $spouseParentRole : ResidentRequest::PARENT_ROLE_SELF,
+                    'age' => $spouseAge,
+                    'contact' => null,
+                    'place_of_birth' => $spousePlaceOfBirth !== '' ? $spousePlaceOfBirth : null,
+                    'educational_attainment' => $spouseEducationalAttainment !== '' ? $spouseEducationalAttainment : null,
+                    'spouse_full_name' => null,
+                    'spouse_details' => null,
+                ]);
+
+                if ($residentUser) {
+                    $residentUser->update([
+                        'name' => $spouseName,
+                        'full_name' => $spouseName,
+                        'gender' => $spouseGender,
+                        'parent_role' => $spouseParentRole !== '' ? $spouseParentRole : ResidentRequest::PARENT_ROLE_SELF,
+                        'date_of_birth' => $spouseBirthdate !== '' ? Carbon::parse($spouseBirthdate) : null,
+                        'age' => $spouseAge,
+                        'contact_number' => null,
+                        'place_of_birth' => $spousePlaceOfBirth !== '' ? $spousePlaceOfBirth : null,
+                        'educational_attainment' => $spouseEducationalAttainment !== '' ? $spouseEducationalAttainment : null,
+                        'spouse_full_name' => null,
+                        'spouse_details' => null,
+                    ]);
+                }
+            });
+
+            return redirect()
+                ->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'overview'])
+                ->with('status', 'Resident removed. The spouse is now the family holder.');
+        }
+
+        $residentRequest->delete();
+        $residentUser?->delete();
+
+        return redirect()->route('bhw.residents')->with('status', 'Resident account removed.');
+    })->name('bhw.residents.destroy');
+
+    Route::post('/bhw/residents/{residentRequest}/personal-details', function (Request $request, ResidentRequest $residentRequest) {
+        if (Auth::user()->role !== 'BHW') {
+            return redirect()->route('dashboard');
+        }
+
+        if (! $residentRequest->isAccessibleByBhw(Auth::user())) {
+            return redirect()->route('bhw.residents')->with('status', 'This resident is outside your assigned purok.');
+        }
+
+        if ($residentRequest->status !== 'accepted') {
+            return redirect()->route('bhw.residents')->with('status', 'Only accepted residents can be updated.');
+        }
+
+        $data = $request->validate([
+            'full_name' => ['required', 'string', 'max:255'],
+            'gender' => ['required', 'string', Rule::in(['Male', 'Female'])],
+            'date_of_birth' => ['required', 'date', 'before_or_equal:today'],
+            'contact' => ['nullable', 'string', 'max:50'],
+            'parent_role' => ['required', 'string', Rule::in(ResidentRequest::PARENT_ROLES)],
+            'civil_status' => ['required', 'string', Rule::in(User::CIVIL_STATUSES)],
+            'place_of_birth' => ['nullable', 'string', 'max:255'],
+            'educational_attainment' => ['required', 'string', Rule::in(ResidentRequest::EDUCATIONAL_ATTAINMENTS)],
+        ]);
+
+        $fullName = trim($data['full_name']);
+        $dateOfBirth = Carbon::parse($data['date_of_birth'])->startOfDay();
+        $age = $dateOfBirth->age;
+        $residentRequest->update([
+            'full_name' => $fullName,
+            'parent_role' => $data['parent_role'],
+            'age' => $age,
+            'contact' => filled($data['contact'] ?? null) ? trim((string) $data['contact']) : null,
+            'place_of_birth' => filled($data['place_of_birth'] ?? null) ? trim((string) $data['place_of_birth']) : null,
+            'civil_status' => $data['civil_status'],
+            'educational_attainment' => filled($data['educational_attainment'] ?? null)
+                ? trim((string) $data['educational_attainment'])
+                : null,
+        ]);
+
+        if ($residentRequest->user) {
+            $residentRequest->user->update([
+                'name' => $fullName,
+                'full_name' => $fullName,
+                'gender' => $data['gender'],
+                'parent_role' => $data['parent_role'],
+                'date_of_birth' => $dateOfBirth,
+                'age' => $age,
+                'contact_number' => filled($data['contact'] ?? null) ? trim((string) $data['contact']) : null,
+                'place_of_birth' => filled($data['place_of_birth'] ?? null)
+                    ? trim((string) $data['place_of_birth'])
+                    : null,
+                'civil_status' => $data['civil_status'],
+                'educational_attainment' => filled($data['educational_attainment'] ?? null)
+                    ? trim((string) $data['educational_attainment'])
+                    : null,
+            ]);
+        }
+
+        return redirect()->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'overview'])
+            ->with('status', 'Resident information updated.');
+    })->name('bhw.residents.personal-details.update');
+
     Route::post('/bhw/residents/{residentRequest}/household', function (Request $request, ResidentRequest $residentRequest) {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');
@@ -4984,16 +5140,18 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 'add_senior', 'update_senior', 'remove_senior',
                 'set_spouse', 'remove_spouse',
             ])],
+            'return_tab' => ['nullable', 'string', Rule::in(['overview', 'family'])],
             'member_index' => ['nullable', 'integer', 'min:0'],
             'full_name' => ['nullable', 'string', 'max:255'],
             'birthdate' => ['nullable', 'date', 'before_or_equal:today'],
             'gender' => ['nullable', 'string', Rule::in(['Male', 'Female', 'male', 'female'])],
             'relationship' => ['nullable', 'string', 'max:50'],
-            'currently_studying' => ['nullable', 'string', Rule::in(['yes', 'no', 'infant'])],
+            'currently_studying' => ['nullable', 'string', Rule::in(['yes', 'no', 'working', 'not_studying', 'not_working', 'infant'])],
             'school' => ['nullable', 'string', 'max:255'],
             'educational_attainment' => ['nullable', 'string', 'max:100'],
             'occupation' => ['nullable', 'string', 'max:255'],
             'place_of_birth' => ['nullable', 'string', 'max:255'],
+            'civil_status' => ['nullable', 'string', Rule::in(User::CIVIL_STATUSES)],
             'spouse_first_name' => ['nullable', 'string', 'max:100'],
             'spouse_last_name' => ['nullable', 'string', 'max:100'],
             'spouse_middle_initial' => ['nullable', 'string', 'max:5'],
@@ -5004,9 +5162,12 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         ]);
 
         $message = BhwHouseholdEditor::apply($residentRequest, (string) $data['household_action'], $data);
+        $returnTab = $data['household_action'] === 'remove_spouse'
+            ? 'overview'
+            : ($data['return_tab'] ?? 'family');
 
         return redirect()
-            ->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'family'])
+            ->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => $returnTab])
             ->with('status', $message);
     })->name('bhw.residents.household.update');
 
