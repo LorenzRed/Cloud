@@ -9,7 +9,7 @@
     @include('partials.submit-guard')
     <meta name="description"
         content="Bantay Kalusugan. Your Community's Partner in Health. Supporting a healthier community through smarter and more accessible health management." />
-    <title>Bantay Kalusugan</title>
+    <title>Bantay Kalusugan - Login &amp; Registration</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
