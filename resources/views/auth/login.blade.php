@@ -9,7 +9,7 @@
     @include('partials.submit-guard')
     <meta name="description"
         content="Bantay Kalusugan. Your Community's Partner in Health. Supporting a healthier community through smarter and more accessible health management." />
-    <title>Login &amp; Registration</title>
+    <title>BANTAY KALUSUGAN</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -63,9 +63,11 @@
                         <div class="absolute inset-0 bg-gradient-to-t from-primary/50 to-secondary/30"></div>
                         <div
                             class="auth-hero-copy absolute bottom-10 left-10 right-10 z-10 text-white p-6 rounded-lg bg-black/20 backdrop-blur-sm">
-                            <div class="flex items-center gap-4 mb-4">
-                                <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" class="w-12 h-12 rounded" />
-                                <h1 class="text-4xl font-black font-heading tracking-tight">Bantay Kalusugan</h1>
+                            <div data-nosnippet>
+                                <div class="flex items-center gap-4 mb-4">
+                                    <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" class="w-12 h-12 rounded" />
+                                    <h1 class="text-4xl font-black font-heading tracking-tight">Bantay Kalusugan</h1>
+                                </div>
                             </div>
                             <p class="text-lg font-light">
                                 <strong>Your Community's Partner in Health</strong><br />
@@ -77,7 +79,7 @@
                     <div
                         class="auth-screen flex w-full lg:w-1/2 flex-col items-center justify-center bg-background-light dark:bg-background-dark lg:p-8">
                         <div class="auth-screen__inner space-y-4 lg:space-y-6">
-                            <header class="auth-screen__brand lg:hidden">
+                            <header class="auth-screen__brand lg:hidden" data-nosnippet>
                                 <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" />
                                 <h1 class="font-heading text-text-light dark:text-text-dark">Bantay Kalusugan</h1>
                             </header>
