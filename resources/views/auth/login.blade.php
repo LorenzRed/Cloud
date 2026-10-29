@@ -8,7 +8,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     @include('partials.submit-guard')
     <meta name="description"
-        content="Your Community's Partner in Health. Supporting a healthier community through smarter and more accessible health management." />
+        content="Bantay Kalusugan. Your Community's Partner in Health. Supporting a healthier community through smarter and more accessible health management." />
     <title>Login &amp; Registration</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
@@ -65,7 +65,6 @@
                             class="auth-hero-copy absolute bottom-10 left-10 right-10 z-10 text-white p-6 rounded-lg bg-black/20 backdrop-blur-sm">
                             <div class="flex items-center gap-4 mb-4">
                                 <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" class="w-12 h-12 rounded" />
-                                <h1 class="text-4xl font-black font-heading tracking-tight">Bantay Kalusugan</h1>
                             </div>
                             <p class="text-lg font-light">
                                 <strong>Your Community's Partner in Health</strong><br />
@@ -79,7 +78,6 @@
                         <div class="auth-screen__inner space-y-4 lg:space-y-6">
                             <header class="auth-screen__brand lg:hidden">
                                 <img src="{{ asset('logo/logo.png') }}" alt="Bantay Kalusugan logo" />
-                                <h1 class="font-heading text-text-light dark:text-text-dark">Bantay Kalusugan</h1>
                             </header>
 
                             <nav class="auth-tabs lg:hidden" aria-label="Authentication">
