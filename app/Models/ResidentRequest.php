@@ -155,6 +155,8 @@ class ResidentRequest extends Model
      * @var list<string>
      */
     public const HOUSEHOLD_SENIOR_RELATIONSHIPS = [
+        self::PARENT_ROLE_FATHER,
+        self::PARENT_ROLE_MOTHER,
         'Brother',
         'Sister',
         self::SENIOR_RELATIONSHIP_GRANDFATHER,
@@ -200,6 +202,7 @@ class ResidentRequest extends Model
         'family_number',
         'age',
         'place_of_birth',
+        'years_of_residency',
         'civil_status',
         'educational_attainment',
         'spouse_full_name',
@@ -221,6 +224,7 @@ class ResidentRequest extends Model
             'household_children' => 'array',
             'household_seniors' => 'array',
             'spouse_details' => 'array',
+            'years_of_residency' => 'integer',
         ];
     }
 

@@ -308,7 +308,13 @@ class HouseholdMonitoringVisit extends Model
     }
 
     /**
-     * @return array{label: string, recommendation: string}|null
+     * @return array{
+     *     label: string,
+     *     explanation: string,
+     *     recommendation: string,
+     *     color: string,
+     *     is_crisis: bool
+     * }|null
      */
     public static function bloodPressureAssessment(?string $bloodPressure): ?array
     {
@@ -319,30 +325,58 @@ class HouseholdMonitoringVisit extends Model
         $systolic = (int) $matches[1];
         $diastolic = (int) $matches[2];
 
-        return match (true) {
-            $systolic >= 180 || $diastolic >= 120 => [
-                'label' => 'Hypertensive crisis',
-                'recommendation' => 'Seek emergency medical care immediately.',
-            ],
-            $systolic >= 140 || $diastolic >= 90 => [
-                'label' => 'High blood pressure (stage 2)',
-                'recommendation' => 'Arrange a prompt health-center follow-up and take prescribed medicine.',
-            ],
-            $systolic >= 130 || $diastolic >= 80 => [
-                'label' => 'High blood pressure (stage 1)',
-                'recommendation' => 'Reduce salt, maintain healthy activity, and schedule a follow-up check.',
-            ],
-            $systolic >= 120 && $diastolic < 80 => [
-                'label' => 'Elevated blood pressure',
-                'recommendation' => 'Reduce salt, stay active, and recheck blood pressure regularly.',
-            ],
-            $systolic < 90 || $diastolic < 60 => [
-                'label' => 'Low blood pressure',
+        if ($systolic < 50 || $systolic > 300 || $diastolic < 30 || $diastolic > 200) {
+            return null;
+        }
+
+        $systolicCategory = match (true) {
+            $systolic < 90 => 'low',
+            $systolic <= 120 => 'normal',
+            $systolic <= 140 => 'pre_high',
+            default => 'high',
+        };
+        $diastolicCategory = match (true) {
+            $diastolic < 60 => 'low',
+            $diastolic <= 80 => 'normal',
+            $diastolic <= 90 => 'pre_high',
+            default => 'high',
+        };
+        $categoryRank = ['low' => 1, 'normal' => 2, 'pre_high' => 3, 'high' => 4];
+        $category = $categoryRank[$systolicCategory] >= $categoryRank[$diastolicCategory]
+            ? $systolicCategory
+            : $diastolicCategory;
+        $isCrisis = $systolic > 180 || $diastolic > 120;
+
+        return match ($category) {
+            'low' => [
+                'label' => 'Low Blood Pressure',
+                'explanation' => 'Both systolic and diastolic readings are below the low blood pressure range.',
                 'recommendation' => 'Drink enough fluids and seek care if dizziness, fainting, or weakness occurs.',
+                'color' => '#7C3AED',
+                'is_crisis' => false,
+            ],
+            'normal' => [
+                'label' => 'Normal Blood Pressure',
+                'explanation' => 'The reading is within the normal blood pressure range.',
+                'recommendation' => 'Maintain healthy habits and continue regular monitoring.',
+                'color' => '#16A34A',
+                'is_crisis' => false,
+            ],
+            'pre_high' => [
+                'label' => 'Pre-high Blood Pressure',
+                'explanation' => 'At least one reading is in the pre-high range, so the higher-risk category is shown.',
+                'recommendation' => 'Reduce salt, maintain healthy activity, and schedule a follow-up check.',
+                'color' => '#CA8A04',
+                'is_crisis' => false,
             ],
             default => [
-                'label' => 'Normal blood pressure',
-                'recommendation' => 'Maintain healthy habits and continue regular monitoring.',
+                'label' => 'High Blood Pressure',
+                'explanation' => 'At least one reading is in the high range, so the higher-risk category is shown.',
+                'recommendation' => $isCrisis
+                    ? 'A reading above 180 systolic or 120 diastolic needs special attention. Seek emergency care immediately if chest pain, shortness of breath, weakness, or vision changes occur.'
+                    : 'Arrange a prompt health-center follow-up and take prescribed medicine.',
+                'color' => '#DC2626',
+                'is_crisis' => $isCrisis,
             ],
         };
     }

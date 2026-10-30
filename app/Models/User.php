@@ -91,6 +91,7 @@ class User extends Authenticatable implements CanResetPasswordContract
         'date_of_birth',
         'age',
         'civil_status',
+        'years_of_residency',
         'educational_attainment',
         'spouse_full_name',
         'spouse_details',
@@ -150,6 +151,7 @@ class User extends Authenticatable implements CanResetPasswordContract
             'date_of_birth' => 'date',
             'password' => 'hashed',
             'spouse_details' => 'array',
+            'years_of_residency' => 'integer',
         ];
     }
 

@@ -1882,13 +1882,8 @@
         : 'Resident';
     $civilStatusLabel = trim((string) ($resident->civil_status ?? $residentUser?->civil_status ?? ''));
     $placeOfBirthLabel = trim((string) ($resident->place_of_birth ?? $residentUser?->place_of_birth ?? ''));
-    $normalizedPlaceOfBirth = strtolower(preg_replace('/\s+/', ' ', $placeOfBirthLabel));
-    $normalizedBarangay = strtolower(preg_replace('/\s+/', ' ', $residentBarangay));
-    $isLocalResident = $normalizedPlaceOfBirth !== ''
-        && (
-            str_contains($normalizedPlaceOfBirth, 'macatoc')
-            || ($normalizedBarangay !== '' && $normalizedPlaceOfBirth === $normalizedBarangay)
-        );
+    $yearsOfResidency = $resident->years_of_residency ?? $residentUser?->years_of_residency;
+    $isLocalResident = $yearsOfResidency !== null && (int) $yearsOfResidency >= 1;
     $educationalAttainmentLabel = trim((string) ($resident->educational_attainment ?? $residentUser?->educational_attainment ?? ''));
     $residentMetaParts = array_values(array_filter([
         $residentAge !== null ? $residentAge.' yrs old' : null,
@@ -1899,7 +1894,7 @@
         $educationalAttainmentLabel !== '' ? $educationalAttainmentLabel : null,
     ]));
     $activeMonitoringCases = collect($resident->monitoringCases ?? [])
-        ->filter(fn ($case) => (bool) $case->is_active && $case->completed_at === null)
+        ->filter(fn ($case) => (bool) $case->is_active)
         ->values();
     $activeConsultations = collect($resident->consultations ?? [])
         ->filter(fn ($consultation) => $consultation->scheduled_at && $consultation->scheduled_at->isFuture())
@@ -2200,6 +2195,18 @@
 
     $householdMemberOptions = $householdMemberOptions->values();
 
+    $activeMonitoringMemberKeys = collect($resident->monitoringCases ?? [])
+        ->filter(fn ($case) => (bool) $case->is_active)
+        ->mapWithKeys(function ($case): array {
+            $source = trim((string) ($case->member_source ?? ''));
+            $index = $case->member_index;
+            $identity = $index !== null
+                ? 'index:'.$index
+                : 'name:'.mb_strtolower(trim((string) $case->member_name));
+
+            return [$source.'|'.$identity => true];
+        });
+
     $defaultTransactionMemberName = old('member_name', $residentName);
     $defaultTransactionMemberSource = old('member_source', 'resident');
     $defaultTransactionMemberIndex = old('member_index');
@@ -2244,6 +2251,8 @@
         } elseif (old('form_intent') === 'monitoring_visit') {
             $failedProfileFormTab = 'maintenance';
             $failedVisitCaseId = old('monitoring_case_id');
+        } elseif (old('form_intent') === 'monitoring_case') {
+            $failedProfileFormTab = 'maintenance';
         } elseif (old('visit_date') !== null && old('transaction_date') === null) {
             $failedProfileFormTab = 'maintenance';
         } elseif (old('transaction_date') !== null || old('philhealth_number') !== null) {
@@ -2302,9 +2311,9 @@
                                     <div class="flex flex-col items-center justify-center gap-1.5 sm:flex-row sm:flex-wrap sm:justify-start lg:justify-center">
                                         <p class="text-base lg:text-lg font-bold leading-tight break-words text-text-light dark:text-text-dark">{{ $residentName }}</p>
                                         @if ($isLocalResident)
-                                            <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary" title="Place of birth matches the local community">
+                                            <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary" title="{{ $yearsOfResidency }} year{{ (int) $yearsOfResidency === 1 ? '' : 's' }} living in this barangay">
                                                 <span class="material-symbols-outlined text-[13px]">location_on</span>
-                                                <span>Local resident</span>
+                                                <span>{{ $yearsOfResidency }} year{{ (int) $yearsOfResidency === 1 ? '' : 's' }} resident</span>
                                             </span>
                                         @endif
                                     </div>
@@ -2485,6 +2494,11 @@
                                         <div>
                                             <label class="block text-sm font-semibold mb-1" for="editResidentPlaceOfBirth">Place of birth</label>
                                             <input id="editResidentPlaceOfBirth" name="place_of_birth" value="{{ $placeOfBirthLabel }}" maxlength="255" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-semibold mb-1" for="editResidentYearsOfResidency">Years of residency</label>
+                                            <input id="editResidentYearsOfResidency" name="years_of_residency" type="number" min="0" max="150" step="1" value="{{ $yearsOfResidency }}" class="w-full rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark px-3 py-2 text-sm" />
+                                            <p class="mt-1 text-xs text-text-light/60 dark:text-text-dark/60">Enter the number of years living in this barangay.</p>
                                         </div>
                                         <div>
                                             <label class="block text-sm font-semibold mb-1" for="editResidentEducation">Educational attainment</label>
@@ -3408,7 +3422,7 @@
                                 </div>
 
                                 <div id="maintenance" class="tab-content min-w-0">
-                                    <div id="maintenanceScroll" class="profile-tab-toolbar relative {{ session('status') && (request('tab') === 'maintenance' || str_contains(session('status'), 'monitoring')) ? 'pt-12' : '' }}">
+                                    <div id="maintenanceScroll" class="profile-tab-toolbar relative">
                                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                                     <div>
                                                 <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Household Maintenance</h4>
@@ -3421,8 +3435,9 @@
                                                 </div>
 
                                         @if (session('status') && (request('tab') === 'maintenance' || str_contains(session('status'), 'monitoring')))
-                                            <div id="maintenanceStatusToast" class="absolute top-0 left-0 right-0 z-[70] rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 shadow-lg transition-opacity duration-300 dark:bg-green-900/30 dark:border-green-700 dark:text-green-200" role="status">
-                                                {{ session('status') }}
+                                            <div id="maintenanceStatusToast" class="fixed left-1/2 top-4 z-[80] flex w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 items-start gap-3 rounded-xl border border-green-300 bg-green-50 px-4 py-3.5 text-sm text-green-800 shadow-xl ring-1 ring-black/5 transition-opacity duration-300 dark:border-green-700 dark:bg-green-900/90 dark:text-green-100" role="status">
+                                                <span class="material-symbols-outlined mt-0.5 shrink-0 text-[20px] text-green-600 dark:text-green-300" aria-hidden="true">check_circle</span>
+                                                <span class="min-w-0 flex-1 leading-5">{{ session('status') }}</span>
                                             </div>
                                         @endif
                                     </div>
@@ -3441,6 +3456,13 @@
                                             </div>
 
                                             <div class="transaction-modal-body">
+                                            @if ($errors->any() && old('form_intent') === 'monitoring_case')
+                                                <div id="monitoringValidationAlert" class="mt-2 mb-2 w-full rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 transition-opacity duration-300 dark:border-red-700 dark:bg-red-900/30 dark:text-red-200" role="alert">
+                                                    @foreach ($errors->all() as $error)
+                                                        <p>{{ $error }}</p>
+                                                    @endforeach
+                                                </div>
+                                            @endif
                                             <form method="POST" action="{{ route('bhw.residents.monitoring-cases.store', $resident) }}" class="tx-form" id="monitoringCaseForm">
                                                     @csrf
                                                 <input type="hidden" name="form_intent" value="monitoring_case" />
@@ -3458,12 +3480,20 @@
                                                                 class="tx-recipient-row__select w-full rounded-xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark focus:ring-2 focus:ring-primary/25 focus:border-primary text-sm px-3"
                                                             >
                                                                 @foreach ($householdMemberOptions as $option)
+                                                                    @php
+                                                                        $optionIdentity = $option['index'] !== null
+                                                                            ? 'index:'.$option['index']
+                                                                            : 'name:'.mb_strtolower(trim($option['name']));
+                                                                        $optionMonitoringKey = $option['source'].'|'.$optionIdentity;
+                                                                        $hasActiveMonitoring = $activeMonitoringMemberKeys->has($optionMonitoringKey);
+                                                                    @endphp
                                                                     <option
                                                                         value="{{ $option['name'] }}"
                                                                         data-source="{{ $option['source'] }}"
                                                                         data-index="{{ $option['index'] ?? '' }}"
+                                                                        @disabled($hasActiveMonitoring)
                                                                         {{ $defaultMonitoringMemberSelectValue === $option['name'] ? 'selected' : '' }}
-                                                                    >{{ $option['label'] }}</option>
+                                                                    >{{ $option['label'] }}{{ $hasActiveMonitoring ? ' — Active monitoring' : '' }}</option>
                                                                 @endforeach
                                                             </select>
                                                         </div>
@@ -3607,10 +3637,10 @@
                                         </div>
                                     </div>
 
-                                    <div class="profile-tab-scroll">
+                                    <div class="profile-tab-scroll pb-4">
                                         @php
                                             $monitoringCases = $resident->monitoringCases ?? collect();
-                                            $latestMonitoringCases = $monitoringCases->take(2)->values();
+                                            $latestMonitoringCases = $monitoringCases->take(3)->values();
                                             $activeMonitoringCases = $latestMonitoringCases->where('is_active', true)->values();
                                             $completedMonitoringCases = $latestMonitoringCases->where('is_active', false)->values();
                                         @endphp
@@ -4764,17 +4794,31 @@
 
         const systolicValue = Number(systolic);
         const diastolicValue = Number(diastolic);
-        const category = systolicValue >= 180 || diastolicValue >= 120
-            ? 'Hypertensive crisis'
-            : (systolicValue >= 140 || diastolicValue >= 90
-                ? 'High BP stage 2'
-                : (systolicValue >= 130 || diastolicValue >= 80
-                    ? 'High BP stage 1'
-                    : (systolicValue >= 120 && diastolicValue < 80
-                        ? 'Elevated BP'
-                        : (systolicValue < 90 || diastolicValue < 60 ? 'Low BP' : 'Normal BP'))));
+        if (!Number.isInteger(systolicValue) || !Number.isInteger(diastolicValue)
+            || systolicValue < 50 || systolicValue > 300
+            || diastolicValue < 30 || diastolicValue > 200) {
+            previewInput.value = '';
+            return;
+        }
 
-        previewInput.value = `${systolic}/${diastolic} · ${category}`;
+        const systolicCategory = systolicValue < 90
+            ? 'low'
+            : (systolicValue <= 120 ? 'normal' : (systolicValue <= 140 ? 'pre_high' : 'high'));
+        const diastolicCategory = diastolicValue < 60
+            ? 'low'
+            : (diastolicValue <= 80 ? 'normal' : (diastolicValue <= 90 ? 'pre_high' : 'high'));
+        const categoryRank = { low: 1, normal: 2, pre_high: 3, high: 4 };
+        const category = categoryRank[systolicCategory] >= categoryRank[diastolicCategory]
+            ? systolicCategory
+            : diastolicCategory;
+        const labels = {
+            low: 'Low Blood Pressure',
+            normal: 'Normal Blood Pressure',
+            pre_high: 'Pre-high Blood Pressure',
+            high: 'High Blood Pressure',
+        };
+
+        previewInput.value = `${systolic}/${diastolic} · ${labels[category]}`;
     };
 
     document.querySelectorAll('[data-visit-height], [data-visit-weight]').forEach((input) => {
@@ -4816,6 +4860,7 @@
     const familyScroll = document.getElementById('familyScroll');
     const maintenanceStatusToast = document.getElementById('maintenanceStatusToast');
     const maintenanceScroll = document.getElementById('maintenanceScroll');
+    const monitoringValidationAlert = document.getElementById('monitoringValidationAlert');
 
     [familyChildModal, familySeniorModal, familySpouseModal, familyRemoveModal].forEach((modal) => {
         modal && document.body.appendChild(modal);
@@ -4888,6 +4933,15 @@
                 maintenanceScroll?.classList.remove('pt-12');
             }, 300);
         }, 1000);
+    }
+
+    if (monitoringValidationAlert) {
+        window.setTimeout(() => {
+            monitoringValidationAlert.classList.add('opacity-0');
+            window.setTimeout(() => {
+                monitoringValidationAlert.remove();
+            }, 300);
+        }, 5000);
     }
 
     function syncFamilyChildStatusFields() {

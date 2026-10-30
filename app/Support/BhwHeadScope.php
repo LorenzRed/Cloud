@@ -31,7 +31,12 @@ class BhwHeadScope
 
         return User::query()
             ->where('role', User::ROLE_BHW)
-            ->where('managed_by_user_id', $head->id)
+            ->whereRaw('LOWER(TRIM(barangay)) = ?', [mb_strtolower((string) $head->barangay)])
+            ->where(function ($query) use ($head): void {
+                $query
+                    ->whereNull('managed_by_user_id')
+                    ->orWhere('managed_by_user_id', $head->id);
+            })
             ->with('assignedPuroks')
             ->orderBy('name')
             ->get();
@@ -89,6 +94,10 @@ class BhwHeadScope
     {
         return $head->role === User::ROLE_BHW_HEAD
             && $worker->role === User::ROLE_BHW
-            && (int) $worker->managed_by_user_id === (int) $head->id;
+            && mb_strtolower(trim((string) $worker->barangay)) === mb_strtolower(trim((string) $head->barangay))
+            && (
+                $worker->managed_by_user_id === null
+                || (int) $worker->managed_by_user_id === (int) $head->id
+            );
     }
 }

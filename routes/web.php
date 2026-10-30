@@ -4178,6 +4178,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         }
 
         $worker->syncBhwPurokAssignments($purokIds, $assignedBarangay->name);
+        $worker->update(['managed_by_user_id' => $head->id]);
 
         $count = count($purokIds);
         $message = $count === 0
@@ -5092,6 +5093,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'parent_role' => ['required', 'string', Rule::in(ResidentRequest::PARENT_ROLES)],
             'civil_status' => ['required', 'string', Rule::in(User::CIVIL_STATUSES)],
             'place_of_birth' => ['nullable', 'string', 'max:255'],
+            'years_of_residency' => ['nullable', 'integer', 'min:0', 'max:150'],
             'educational_attainment' => ['required', 'string', Rule::in(ResidentRequest::EDUCATIONAL_ATTAINMENTS)],
         ]);
 
@@ -5104,6 +5106,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'age' => $age,
             'contact' => filled($data['contact'] ?? null) ? trim((string) $data['contact']) : null,
             'place_of_birth' => filled($data['place_of_birth'] ?? null) ? trim((string) $data['place_of_birth']) : null,
+            'years_of_residency' => $data['years_of_residency'] ?? null,
             'civil_status' => $data['civil_status'],
             'educational_attainment' => filled($data['educational_attainment'] ?? null)
                 ? trim((string) $data['educational_attainment'])
@@ -5122,6 +5125,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 'place_of_birth' => filled($data['place_of_birth'] ?? null)
                     ? trim((string) $data['place_of_birth'])
                     : null,
+                'years_of_residency' => $data['years_of_residency'] ?? null,
                 'civil_status' => $data['civil_status'],
                 'educational_attainment' => filled($data['educational_attainment'] ?? null)
                     ? trim((string) $data['educational_attainment'])
@@ -5403,6 +5407,24 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'height_cm.min' => 'Height must be at least 30 cm (enter centimeters, e.g. 165).',
         ]);
 
+        $memberSource = filled($data['member_source'] ?? null) ? trim((string) $data['member_source']) : null;
+        $memberIndex = array_key_exists('member_index', $data) && $data['member_index'] !== null
+            ? (int) $data['member_index']
+            : null;
+        $memberName = trim((string) $data['member_name']);
+
+        if (HouseholdMonitoringCase::hasActiveForMember(
+            (int) $residentRequest->id,
+            $memberSource,
+            $memberIndex,
+            $memberName
+        )) {
+            return redirect()
+                ->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'maintenance'])
+                ->withInput()
+                ->withErrors(['member_name' => $memberName.' already has active monitoring. Complete the existing monitoring record before adding another, regardless of monitoring type.']);
+        }
+
         $memberType = filled($data['member_type'] ?? null)
             ? (string) $data['member_type']
             : HouseholdMonitoringCase::TYPE_GENERAL;
@@ -5412,9 +5434,9 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'user_id' => $residentRequest->user_id,
             'recorded_by' => Auth::id(),
             'member_type' => $memberType,
-            'member_name' => trim((string) $data['member_name']),
-            'member_source' => filled($data['member_source'] ?? null) ? trim((string) $data['member_source']) : null,
-            'member_index' => $data['member_index'] ?? null,
+            'member_name' => $memberName,
+            'member_source' => $memberSource,
+            'member_index' => $memberIndex,
             'issue_notes' => trim((string) $data['issue_notes']),
             'first_period_date' => $data['first_period_date'] ?? null,
             'last_period_date' => null,

@@ -75,6 +75,31 @@ class HouseholdMonitoringCase extends Model
         return $this->hasMany(HouseholdMonitoringVisit::class);
     }
 
+    public static function hasActiveForMember(
+        int $residentRequestId,
+        ?string $memberSource,
+        ?int $memberIndex,
+        string $memberName
+    ): bool {
+        $query = self::query()
+            ->where('resident_request_id', $residentRequestId)
+            ->where('is_active', true)
+            ->where(function ($identityQuery) use ($memberSource, $memberIndex, $memberName): void {
+                $identityQuery
+                    ->whereRaw('LOWER(TRIM(member_name)) = ?', [mb_strtolower(trim($memberName))]);
+
+                if ($memberIndex !== null && $memberSource !== null) {
+                    $identityQuery->orWhere(function ($indexedQuery) use ($memberSource, $memberIndex): void {
+                        $indexedQuery
+                            ->where('member_source', $memberSource)
+                            ->where('member_index', $memberIndex);
+                    });
+                }
+            });
+
+        return $query->exists();
+    }
+
     public function isPregnant(): bool
     {
         return $this->member_type === self::TYPE_PREGNANT;

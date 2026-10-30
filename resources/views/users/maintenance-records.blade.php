@@ -248,9 +248,10 @@
                                                             </div>
                                                         @endif
                                                         @if ($bpAssessment)
-                                                            <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 dark:border-amber-800/50 dark:bg-amber-900/20">
-                                                                <p class="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">{{ $bpAssessment['label'] }}</p>
-                                                                <p class="mt-0.5 text-xs md:text-sm text-amber-900 dark:text-amber-100">{{ $bpAssessment['recommendation'] }}</p>
+                                                            <div class="rounded-xl border px-3 py-2.5" style="border-color: {{ $bpAssessment['color'] }}66; background-color: {{ $bpAssessment['color'] }}12;">
+                                                                <p class="text-[10px] font-semibold uppercase tracking-wide" style="color: {{ $bpAssessment['color'] }}">{{ $bpAssessment['label'] }}</p>
+                                                                <p class="mt-0.5 text-xs md:text-sm" style="color: {{ $bpAssessment['color'] }}">{{ $bpAssessment['explanation'] }}</p>
+                                                                <p class="mt-1 text-xs md:text-sm" style="color: {{ $bpAssessment['color'] }}">{{ $bpAssessment['recommendation'] }}</p>
                                                             </div>
                                                         @endif
                                                     </div>
