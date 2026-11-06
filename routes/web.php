@@ -729,7 +729,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
 
         $announcements = $verificationStatus === 'accepted' && $barangay
             ? Event::query()
-                ->activeAnnouncements()
+                ->visibleToResidents()
                 ->where('barangay_id', $barangay->id)
                 ->visibleToPurok($residentRequest?->purok_id ? (int) $residentRequest->purok_id : null)
                 ->whereNull('disabled_at')
@@ -789,7 +789,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
 
         $announcements = $barangay
             ? Event::query()
-                ->visibleToResidents()
+                ->activeAnnouncements()
                     ->where('barangay_id', $barangay->id)
                 ->visibleToPurok($residentRequest->purok_id ? (int) $residentRequest->purok_id : null)
                     ->whereNull('disabled_at')
@@ -836,7 +836,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             || ! $stillExists
             || (int) $announcement->barangay_id !== (int) $barangay->id
             || $announcement->disabled_at
-            || $announcement->isHiddenFromResidents()
+            || $announcement->isExpired()
         ) {
             return redirect()
                 ->route('users.announcements')
@@ -2630,19 +2630,153 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
     })->name('barangay-captain.events');
 
     Route::get('/barangay-captain/posts', function () {
-        return redirect()->route('dashboard');
+        if (Auth::user()->role !== User::ROLE_BRG_CAPTAIN) {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        Event::purgeExpired();
+
+        $posts = $assignedBarangay
+            ? Event::query()
+                ->staffAnnouncements()
+                ->where('barangay_id', $assignedBarangay->id)
+                ->with('createdBy')
+                ->orderByDesc('event_date')
+                ->orderByDesc('end_time')
+                ->get()
+            : collect();
+
+        return view('barangay_captain.posts', compact('assignedBarangay', 'posts'));
     })->name('barangay-captain.posts');
 
-    Route::post('/barangay-captain/posts', function () {
-        return redirect()->route('dashboard');
+    Route::post('/barangay-captain/posts', function (Request $request) {
+        if (Auth::user()->role !== User::ROLE_BRG_CAPTAIN) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        $assignedBarangay = Barangay::query()
+            ->where('captain_user_id', Auth::id())
+            ->first();
+
+        if (! $assignedBarangay) {
+            return response()->json(['error' => 'No assigned barangay'], 404);
+        }
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:'.SafeInput::TITLE_MAX],
+            'description' => ['nullable', 'string', 'max:'.SafeInput::DESCRIPTION_MAX],
+            'event_date' => ['required', 'date', 'after_or_equal:today'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i'],
+            'location' => ['nullable', 'string', 'max:'.SafeInput::TITLE_MAX],
+        ]);
+
+        $data['title'] = SafeInput::plainText($data['title']);
+        $data['description'] = filled($data['description'] ?? null)
+            ? SafeInput::plainText((string) $data['description'], true)
+            : null;
+        $data['location'] = filled($data['location'] ?? null)
+            ? SafeInput::plainText((string) $data['location'])
+            : null;
+
+        if ($data['title'] === '') {
+            return back()->withErrors(['title' => 'Please enter a valid title.'])->withInput();
+        }
+
+        $expiresAt = Carbon::parse($data['event_date'].' '.$data['end_time']);
+        if ($expiresAt->lte(now())) {
+            return back()->withErrors(['end_time' => 'Remove date and time must be in the future.'])->withInput();
+        }
+
+        Event::create([
+            'barangay_id' => $assignedBarangay->id,
+            'target_purok_ids' => null,
+            'created_by' => Auth::id(),
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'event_date' => $data['event_date'],
+            'start_time' => $data['start_time'] ?? null,
+            'end_time' => $data['end_time'],
+            'location' => $data['location'],
+            'category' => Event::CATEGORY_ANNOUNCEMENT,
+            'image_url' => null,
+        ]);
+
+        return redirect()->route('barangay-captain.posts')->with('status', 'Post created successfully.');
     })->name('barangay-captain.posts.store');
 
-    Route::put('/barangay-captain/posts/{post}', function () {
-        return redirect()->route('dashboard');
+    Route::put('/barangay-captain/posts/{post}', function (Request $request, Event $post) {
+        if (Auth::user()->role !== User::ROLE_BRG_CAPTAIN) {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()->where('captain_user_id', Auth::id())->first();
+        abort_unless(
+            $assignedBarangay
+                && (int) $post->barangay_id === (int) $assignedBarangay->id
+                && $post->canBeManagedBy(Auth::user()),
+            404
+        );
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:'.SafeInput::TITLE_MAX],
+            'description' => ['nullable', 'string', 'max:'.SafeInput::DESCRIPTION_MAX],
+            'event_date' => ['required', 'date', 'after_or_equal:today'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i'],
+            'location' => ['nullable', 'string', 'max:'.SafeInput::TITLE_MAX],
+        ]);
+
+        $data['title'] = SafeInput::plainText($data['title']);
+        $data['description'] = filled($data['description'] ?? null)
+            ? SafeInput::plainText((string) $data['description'], true)
+            : null;
+        $data['location'] = filled($data['location'] ?? null)
+            ? SafeInput::plainText((string) $data['location'])
+            : null;
+
+        if ($data['title'] === '') {
+            return back()->withErrors(['title' => 'Please enter a valid title.'])->withInput();
+        }
+
+        $expiresAt = Carbon::parse($data['event_date'].' '.$data['end_time']);
+        if ($expiresAt->lte(now())) {
+            return back()->withErrors(['end_time' => 'Remove date and time must be in the future.'])->withInput();
+        }
+
+        $post->update([
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'event_date' => $data['event_date'],
+            'start_time' => $data['start_time'] ?? null,
+            'end_time' => $data['end_time'],
+            'location' => $data['location'],
+            'category' => Event::CATEGORY_ANNOUNCEMENT,
+        ]);
+
+        return redirect()->route('barangay-captain.posts')->with('status', 'Post updated successfully.');
     })->name('barangay-captain.posts.update');
 
-    Route::delete('/barangay-captain/posts/{post}', function () {
-        return redirect()->route('dashboard');
+    Route::delete('/barangay-captain/posts/{post}', function (Event $post) {
+        if (Auth::user()->role !== User::ROLE_BRG_CAPTAIN) {
+            return redirect()->route('dashboard');
+        }
+
+        $assignedBarangay = Barangay::query()->where('captain_user_id', Auth::id())->first();
+        abort_unless(
+            $assignedBarangay
+                && (int) $post->barangay_id === (int) $assignedBarangay->id
+                && $post->canBeManagedBy(Auth::user()),
+            404
+        );
+
+        $post->delete();
+
+        return redirect()->route('barangay-captain.posts')->with('status', 'Post deleted successfully.');
     })->name('barangay-captain.posts.destroy');
 
     Route::post('/barangay-captain/events', function () {
@@ -2675,7 +2809,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             ? Event::query()
                 ->staffAnnouncements()
                 ->where('barangay_id', $assignedBarangay->id)
-                ->where('created_by', Auth::id())
+                ->with('createdBy')
                 ->orderByDesc('event_date')
                 ->orderByDesc('end_time')
                 ->get()
@@ -2821,7 +2955,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         abort_unless(
             $assignedBarangay
                 && $post->barangay_id === $assignedBarangay->id
-                && (int) $post->created_by === (int) Auth::id(),
+                && $post->canBeManagedBy(Auth::user()),
             404
         );
 
@@ -2844,7 +2978,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         abort_unless(
             $assignedBarangay
                 && $post->barangay_id === $assignedBarangay->id
-                && (int) $post->created_by === (int) Auth::id(),
+                && $post->canBeManagedBy(Auth::user()),
             404
         );
 
@@ -2902,7 +3036,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         abort_unless(
             $assignedBarangay
                 && $post->barangay_id === $assignedBarangay->id
-                && (int) $post->created_by === (int) Auth::id(),
+                && $post->canBeManagedBy(Auth::user()),
             404
         );
 
@@ -4486,8 +4620,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             ? Event::query()
                 ->staffAnnouncements()
                 ->where('barangay_id', $assignedBarangay->id)
-                ->where('created_by', Auth::id())
-                ->whereNull('target_purok_ids')
+                ->with('createdBy')
                 ->orderByDesc('event_date')
                 ->orderByDesc('end_time')
                 ->get()
@@ -4606,7 +4739,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         abort_unless(
             $assignedBarangay
                 && $post->barangay_id === $assignedBarangay->id
-                && (int) $post->created_by === (int) Auth::id(),
+                && $post->canBeManagedBy(Auth::user()),
             404
         );
 
@@ -4626,7 +4759,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         abort_unless(
             $assignedBarangay
                 && $post->barangay_id === $assignedBarangay->id
-                && (int) $post->created_by === (int) Auth::id(),
+                && $post->canBeManagedBy(Auth::user()),
             404
         );
 
@@ -4666,7 +4799,6 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'end_time' => $data['end_time'],
             'location' => $data['location'] ?? null,
             'category' => 'announcement',
-            'target_purok_ids' => null,
         ]);
 
         return redirect()->route('bhw-head.posts')->with('status', 'Post updated successfully.');
@@ -4682,7 +4814,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         abort_unless(
             $assignedBarangay
                 && $post->barangay_id === $assignedBarangay->id
-                && (int) $post->created_by === (int) Auth::id(),
+                && $post->canBeManagedBy(Auth::user()),
             404
         );
 

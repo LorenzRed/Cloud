@@ -198,6 +198,7 @@
                                             <span class="truncate">Posted {{ $post->created_at?->diffForHumans() }}</span>
                                         </div>
 
+                                        @if ($post->canBeManagedBy(Auth::user()))
                                         <div class="flex items-center gap-2 shrink-0">
                                             <button
                                                 type="button"
@@ -218,6 +219,7 @@
                                                 <span class="material-symbols-outlined text-[18px]">delete</span>
                                             </button>
                                         </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>

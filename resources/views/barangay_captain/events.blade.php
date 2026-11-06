@@ -149,6 +149,10 @@
                             <form id="announcementForm" class="space-y-3">
                                 <input id="announcementTitle" type="text" required placeholder="Announcement title" class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
                                 <textarea id="announcementMessage" required rows="3" placeholder="Announcement details" class="w-full rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3 py-2"></textarea>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <input id="announcementDate" type="date" required class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
+                                    <input id="announcementEndTime" type="time" required class="w-full h-10 rounded-lg bg-background-light dark:bg-background-dark border border-border-light dark:border-border-dark px-3">
+                                </div>
                                 <div class="flex items-center gap-2">
                                     <button type="submit" class="h-10 px-4 rounded-lg bg-primary text-white text-sm font-semibold">Post announcement</button>
                                 </div>
@@ -267,6 +271,34 @@ const announcementForm = document.getElementById('announcementForm');
             </div>
         `).join('');
     }
+
+    announcementForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const formData = new FormData();
+        formData.append('title', document.getElementById('announcementTitle').value.trim());
+        formData.append('description', document.getElementById('announcementMessage').value.trim());
+        formData.append('event_date', document.getElementById('announcementDate').value);
+        formData.append('end_time', document.getElementById('announcementEndTime').value);
+
+        const response = await fetch('{{ route('barangay-captain.posts.store') }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+            body: formData,
+        });
+
+        if (response.ok) {
+            window.location.href = '{{ route('barangay-captain.posts') }}';
+            return;
+        }
+
+        const result = await response.json().catch(() => ({}));
+        window.alert(result.message || 'Unable to post announcement.');
+    });
 
     eventForm.addEventListener('submit', (event) => {
         event.preventDefault();

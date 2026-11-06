@@ -12,8 +12,8 @@ Artisan::command('inspire', function () {
 
 Artisan::command('events:purge-expired', function () {
     $deleted = Event::purgeExpired();
-    $this->info("Expired announcements are kept in Posts (marked expired). Nothing deleted ({$deleted}).");
-})->purpose('No-op: expired announcements stay in Posts and are hidden from residents');
+    $this->info("Deleted {$deleted} expired announcement(s).");
+})->purpose('Delete announcements that reached their end time');
 
 Artisan::command('verification-ids:purge-expired', function () {
     $purged = ResidentRequest::purgeExpiredVerificationIds();

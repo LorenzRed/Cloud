@@ -58,6 +58,22 @@ class Event extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function canBeManagedBy(User $user): bool
+    {
+        if ((int) $this->created_by === (int) $user->id) {
+            return true;
+        }
+
+        $creatorRole = $this->createdBy?->role;
+
+        return match ($creatorRole) {
+            User::ROLE_BHW => in_array($user->role, [User::ROLE_BHW_HEAD, User::ROLE_BRG_CAPTAIN], true),
+            User::ROLE_BHW_HEAD => $user->role === User::ROLE_BRG_CAPTAIN,
+            User::ROLE_BRG_CAPTAIN => $user->role === User::ROLE_BHW_HEAD,
+            default => false,
+        };
+    }
+
     /**
      * Barangay-wide when target_purok_ids is null; otherwise limited to those puroks.
      */
@@ -106,20 +122,6 @@ class Event extends Model
         return $expiresAt->lte($now ?? now());
     }
 
-    /**
-     * Residents still see expired posts for 7 days after expiry, then they are hidden.
-     */
-    public function isHiddenFromResidents(?Carbon $now = null): bool
-    {
-        $expiresAt = $this->expiresAt();
-
-        if (! $expiresAt) {
-            return false;
-        }
-
-        return $expiresAt->lte(($now ?? now())->copy()->subDays(7));
-    }
-
     public function scopeActiveAnnouncements(Builder $query): Builder
     {
         $now = now();
@@ -142,32 +144,15 @@ class Event extends Model
     }
 
     /**
-     * Resident feed: active announcements plus those expired within the last 7 days.
+     * Resident feed: announcements that have not reached their end time.
      */
     public function scopeVisibleToResidents(Builder $query): Builder
     {
-        $cutoff = now()->subDays(7);
-
-        return $query
-            ->where('category', self::CATEGORY_ANNOUNCEMENT)
-            ->where(function (Builder $builder) use ($cutoff) {
-                $builder
-                    ->whereDate('event_date', '>', $cutoff->toDateString())
-                    ->orWhere(function (Builder $sameDay) use ($cutoff) {
-                        $sameDay
-                            ->whereDate('event_date', $cutoff->toDateString())
-                            ->where(function (Builder $timeCheck) use ($cutoff) {
-                                $timeCheck
-                                    ->whereNull('end_time')
-                                    ->orWhereTime('end_time', '>', $cutoff->format('H:i:s'));
-                            });
-                    });
-            });
+        return $query->activeAnnouncements();
     }
 
     /**
-     * Staff archive: all announcements for a barangay/creator, including expired.
-     * Expired rows stay in Posts and are marked expired — they are not deleted.
+     * Staff archive: all announcements for a barangay/creator.
      */
     public function scopeStaffAnnouncements(Builder $query): Builder
     {
@@ -182,12 +167,22 @@ class Event extends Model
         return $query->where('category', self::CATEGORY_IMMUNIZATION_CONSULTATION);
     }
 
-    /**
-     * No-op kept for route compatibility. Expired announcements are kept and
-     * marked expired in Posts; residents lose visibility 7 days after expiry.
-     */
     public static function purgeExpired(): int
     {
-        return 0;
+        $now = now();
+        $deleted = 0;
+
+        self::query()
+            ->where('category', self::CATEGORY_ANNOUNCEMENT)
+            ->whereDate('event_date', '<=', $now->toDateString())
+            ->chunkById(100, function ($events) use ($now, &$deleted): void {
+                foreach ($events as $event) {
+                    if ($event->isExpired($now) && $event->delete()) {
+                        $deleted++;
+                    }
+                }
+            });
+
+        return $deleted;
     }
 }
