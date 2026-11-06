@@ -8,6 +8,7 @@
     $hideChatAvatars = $hideChatAvatars ?? false;
     $myAvatarUrl = $myAvatarUrl ?? null;
     $peerAvatarUrl = $peerAvatarUrl ?? null;
+    $messagesUrl = $messagesUrl ?? null;
     $showMessengerIntro = $showMessengerIntro ?? $isUsersTheme;
     $unreadMessageIds = $unreadMessageIds ?? [];
     $theme = $theme ?? 'bhw';
@@ -121,7 +122,7 @@
     .rbhw-chat-message-row.is-emoji-only-row { align-items: center; }
     .rbhw-instant-react-bar {
         position: absolute;
-        bottom: calc(100% + 2px);
+        top: 50%;
         z-index: 50;
         display: flex;
         align-items: center;
@@ -134,7 +135,7 @@
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
-        transform: scale(0.88) translateY(2px);
+        transform: scale(0.88) translateY(-50%);
         transition: opacity 0.16s ease, transform 0.16s cubic-bezier(0.34, 1.4, 0.64, 1), visibility 0.16s;
         @if ($isUsersTheme)
         background: #fff;
@@ -146,8 +147,27 @@
         box-shadow: 0 4px 16px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.06);
         @endif
     }
-    .rbhw-instant-react-bar.is-outgoing { right: 0; left: auto; }
-    .rbhw-instant-react-bar.is-incoming { left: 0; right: auto; }
+    .rbhw-instant-react-bar.is-outgoing { right: calc(100% + 0.375rem); left: auto; }
+    .rbhw-instant-react-bar.is-incoming { left: calc(100% + 0.375rem); right: auto; }
+    .rbhw-message-bubble-wrap.has-bubble-timestamp .rbhw-instant-react-bar {
+        top: calc(50% + 0.75rem);
+    }
+    .rbhw-instant-react-bar:hover {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: scale(1) translateY(-50%);
+    }
+    .rbhw-message-bubble-wrap:has(.rbhw-instant-react-bar)::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 0.5rem;
+        pointer-events: auto;
+    }
+    .rbhw-message-bubble-wrap:has(.rbhw-instant-react-bar.is-outgoing)::after { right: 100%; }
+    .rbhw-message-bubble-wrap:has(.rbhw-instant-react-bar.is-incoming)::after { left: 100%; }
     .dark .rbhw-instant-react-bar {
         background: rgb(38 38 38);
         border-color: rgb(255 255 255 / 0.08);
@@ -159,11 +179,28 @@
             opacity: 1;
             visibility: visible;
             pointer-events: auto;
-            transform: scale(1) translateY(0);
+            transform: scale(1) translateY(-50%);
         }
     }
     @media (hover: none) {
-        .rbhw-instant-react-bar { display: none !important; }
+        .rbhw-instant-react-bar {
+            top: calc(100% + 0.375rem);
+            right: auto !important;
+            left: auto !important;
+            transform: scale(0.88) translateY(0);
+        }
+        .rbhw-instant-react-bar.is-outgoing { right: 0 !important; }
+        .rbhw-instant-react-bar.is-incoming { left: 0 !important; }
+        .rbhw-message-bubble-wrap.has-bubble-timestamp .rbhw-instant-react-bar {
+            top: calc(100% + 0.375rem);
+        }
+        .rbhw-message-bubble-wrap.is-actions-open .rbhw-instant-react-bar {
+            display: flex !important;
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: scale(1) translateY(0);
+        }
     }
     .rbhw-instant-react-divider {
         width: 1px;
@@ -194,11 +231,11 @@
     .dark .rbhw-instant-more-btn:hover { background: rgb(255 255 255 / 0.08); }
     .rbhw-message-more-menu {
         position: absolute;
-        top: calc(100% + 6px);
+        bottom: calc(100% + 6px);
         right: 0;
         z-index: 60;
-        min-width: 10.5rem;
-        border-radius: 0.75rem;
+        min-width: 10rem;
+        border-radius: 0.875rem;
         overflow: hidden;
         box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
         @if ($isUsersTheme)
@@ -209,6 +246,18 @@
         border: 1px solid #EAEAEA;
         @endif
     }
+    .rbhw-message-more-menu::after {
+        content: "";
+        position: absolute;
+        bottom: -0.4rem;
+        right: 1.1rem;
+        width: 0.75rem;
+        height: 0.75rem;
+        background: #fff;
+        border-right: 1px solid rgb(0 0 0 / 0.06);
+        border-bottom: 1px solid rgb(0 0 0 / 0.06);
+        transform: rotate(45deg);
+    }
     .dark .rbhw-message-more-menu {
         background: rgb(38 38 38);
         border-color: rgb(255 255 255 / 0.08);
@@ -218,8 +267,8 @@
         display: block;
         width: 100%;
         text-align: left;
-        padding: 0.625rem 0.875rem;
-        font-size: 0.8125rem;
+        padding: 0.7rem 1rem;
+        font-size: 0.875rem;
         font-weight: 500;
         border: 0;
         background: transparent;
@@ -259,25 +308,25 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-wrap: wrap;
-        gap: 0.25rem;
-        padding: 0.25rem 0 0.75rem;
+        flex-wrap: nowrap;
+        gap: 0;
+        padding: 0.125rem 0 0.5rem;
     }
     .rbhw-message-sheet-emoji {
-        width: 2.75rem;
-        height: 2.75rem;
+        width: 2.25rem;
+        height: 2.25rem;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border: 0;
         border-radius: 9999px;
         background: transparent;
-        font-size: 1.625rem;
+        font-size: 1.3rem;
         line-height: 1;
         cursor: pointer;
         transition: transform 0.12s ease, background 0.12s ease;
     }
-    .rbhw-message-sheet-emoji:active { transform: scale(1.15); background: rgb(0 0 0 / 0.05); }
+    .rbhw-message-sheet-emoji:active { transform: scale(1.08); background: rgb(0 0 0 / 0.05); }
     .rbhw-message-sheet-action {
         display: flex;
         align-items: center;
@@ -317,6 +366,23 @@
     }
     .rbhw-instant-react-btn:hover { transform: scale(1.28); }
     .rbhw-instant-react-btn:active { transform: scale(1.1); }
+    .rbhw-instant-emoji-btn {
+        width: 2.125rem;
+        height: 2.125rem;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 9999px;
+        background: transparent;
+        color: rgb(74 74 74 / 0.75);
+        cursor: pointer;
+        transition: background 0.12s ease, transform 0.12s ease;
+    }
+    .rbhw-instant-emoji-btn:hover { background: rgb(0 0 0 / 0.05); transform: scale(1.08); }
+    .dark .rbhw-instant-emoji-btn { color: rgb(255 255 255 / 0.75); }
+    .dark .rbhw-instant-emoji-btn:hover { background: rgb(255 255 255 / 0.08); }
     .rbhw-reaction-pill {
         display: inline-flex;
         align-items: center;
@@ -372,6 +438,28 @@
     .rbhw-bubble-unsent { background: rgb(244 244 244); border-color: rgb(234 234 234); color: rgb(74 74 74 / 0.55); }
     .dark .rbhw-bubble-unsent { background: rgb(44 44 44); border-color: rgb(61 61 61); color: rgb(224 224 224 / 0.55); }
     @endif
+    .rbhw-jump-latest {
+        position: absolute;
+        left: 50%;
+        bottom: 0.75rem;
+        z-index: 30;
+        width: 3.25rem;
+        height: 3.25rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 9999px;
+        background: #fff;
+        color: #4A90E2;
+        box-shadow: 0 3px 12px rgb(0 0 0 / 0.18);
+        cursor: pointer;
+        transform: translateX(-50%);
+        transition: opacity 0.16s ease, transform 0.16s ease;
+    }
+    .rbhw-jump-latest:hover { transform: translateX(-50%) translateY(-2px); }
+    .dark .rbhw-jump-latest { background: rgb(44 44 44); color: #8ab8f0; box-shadow: 0 3px 14px rgb(0 0 0 / 0.45); }
+    .rbhw-jump-latest.hidden { display: none !important; }
     .rbhw-toast-enter { animation: rbhwToastIn 0.2s ease-out; }
     .rbhw-toast-exit { animation: rbhwToastOut 0.18s ease-in forwards; }
     @keyframes rbhwToastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
@@ -389,6 +477,7 @@
     .dark .rbhw-unread-divider-text { color: rgb(224 224 224 / 0.55); }
     @endif
     .rbhw-chat-message-row.is-being-edited { opacity: 0.45; pointer-events: none; }
+    .rbhw-chat-message-row.has-latest-status > .rbhw-chat-avatar { margin-bottom: 1.25rem; }
     .rbhw-composer-edit-bar { border-left: 3px solid; }
     @if ($isUsersTheme)
     .rbhw-composer-edit-bar { border-left-color: #19e66b; background: rgb(242 251 246); }
@@ -475,7 +564,12 @@
     }
 </style>
 
-<div id="{{ $chatMessagesId }}" class="rbhw-chat-scroll chat-bg flex-1 min-h-0 overflow-y-auto px-4 md:px-6 pt-10 pb-5 md:pt-12 md:pb-6 space-y-3 md:space-y-4"></div>
+<div class="relative flex-1 min-h-0">
+    <div id="{{ $chatMessagesId }}" class="rbhw-chat-scroll chat-bg h-full min-h-0 overflow-y-auto px-4 md:px-6 pt-10 pb-5 md:pt-12 md:pb-6 space-y-3 md:space-y-4"></div>
+    <button type="button" id="{{ $chatFormId }}JumpLatest" class="rbhw-jump-latest hidden" aria-label="View latest messages" title="View latest messages">
+        <span class="material-symbols-outlined">south</span>
+    </button>
+</div>
 
 <div class="shrink-0 border-t {{ $isUsersTheme ? 'border-[#e7f3ec] dark:border-gray-700' : 'border-border-light dark:border-border-dark' }} p-4">
     @if ($showQuickReplies)
@@ -576,13 +670,12 @@
     const myInitials = @json($myInitials);
     const peerInitials = @json($peerInitials);
     const peerName = @json($peerName);
-    const myLabel = @json($myLabel ?? 'You');
-    const peerLabel = @json($peerLabel ?? $peerName);
     const theme = @json($theme);
     const hidePeerAvatar = @json($hidePeerAvatar);
     const hideChatAvatars = @json($hideChatAvatars);
     const myAvatarUrl = @json($myAvatarUrl);
     const peerAvatarUrl = @json($peerAvatarUrl);
+    const messagesUrl = @json($messagesUrl);
     const showMessengerIntro = @json($showMessengerIntro);
     const unreadMessageIds = new Set(@json($unreadMessageIds));
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -590,6 +683,7 @@
     const emptySubtitle = @json($emptySubtitle ?? 'Send a message to start the conversation.');
     const editWindowMinutes = @json(\App\Support\ResidentBhwChat::MESSAGE_EDIT_MINUTES);
     const editWindowMs = editWindowMinutes * 60 * 1000;
+    const messageTimeGroupGapMs = 5 * 60 * 1000;
 
     const chatMessages = document.getElementById(@json($chatMessagesId));
     const chatForm = document.getElementById(@json($chatFormId));
@@ -628,18 +722,23 @@
     const messageSheetBackdrop = document.getElementById(@json($chatFormId) + 'MessageSheetBackdrop');
     const messageSheetEmojis = document.getElementById(@json($chatFormId) + 'MessageSheetEmojis');
     const messageSheetActions = document.getElementById(@json($chatFormId) + 'MessageSheetActions');
+    const jumpLatestBtn = document.getElementById(@json($chatFormId) + 'JumpLatest');
     const defaultComposerPlaceholder = chatInput?.getAttribute('placeholder') || 'Write a message...';
 
     let selectedFile = null;
     let editingMessageId = null;
+    let selectedMessageId = null;
     let openMessageMenuId = null;
     let openMessageSheetId = null;
     let shouldScrollToUnread = false;
     let editExpiryTimer = null;
     let previewObjectUrl = null;
     let longPressTimer = null;
+    const reactionRequestQueues = new Map();
+    const pendingReactionKeys = new Set();
     let longPressStartX = 0;
     let longPressStartY = 0;
+    let ignoreNextTouchClick = false;
     let cameraStream = null;
     let cameraFacingMode = 'environment';
     let capturedCameraBlob = null;
@@ -657,29 +756,27 @@
         ? 'rounded-2xl rounded-bl-md border border-[#d0e7d9] dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm text-[#0e1b13] dark:text-gray-200 leading-relaxed'
         : 'rounded-2xl rounded-bl-md border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-2.5 text-sm text-text-light dark:text-text-dark leading-relaxed';
     const metaClass = isUsers ? 'text-[10px] text-[#4e976b] dark:text-gray-500' : 'text-[10px] text-text-light/45 dark:text-text-dark/45';
-    const labelClass = isUsers ? 'text-[11px] font-semibold text-[#4e976b] dark:text-gray-400 mb-1' : 'text-[11px] font-semibold text-text-light/50 dark:text-text-dark/50 mb-1';
 
     function buildAvatarHtml(initials, imageUrl, outgoing, muted = false) {
-        if (isUsers || hideChatAvatars) return '';
+        if (hideChatAvatars) return '';
         const sizeClass = 'w-9 h-9';
         const mutedClass = muted ? ' opacity-40' : '';
         if (imageUrl) {
-            return `<img src="${escapeHtml(imageUrl)}" alt="" class="${sizeClass} rounded-full object-cover shrink-0 shadow-sm${mutedClass}" loading="lazy" />`;
+            return `<img src="${escapeHtml(imageUrl)}" alt="" class="rbhw-chat-avatar ${sizeClass} rounded-full object-cover shrink-0 shadow-sm${mutedClass}" loading="lazy" />`;
         }
         if (outgoing) {
-            return `<div class="${sizeClass} rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm${mutedClass}">${escapeHtml(initials)}</div>`;
+            return `<div class="rbhw-chat-avatar ${sizeClass} rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-sm${mutedClass}">${escapeHtml(initials)}</div>`;
         }
         if (isUsers) {
-            return `<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-xs font-bold text-[#1f7f4e]${mutedClass}">${escapeHtml(initials)}</div>`;
+            return `<div class="rbhw-chat-avatar w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 text-xs font-bold text-[#1f7f4e]${mutedClass}">${escapeHtml(initials)}</div>`;
         }
-        return `<div class="${sizeClass} rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold shrink-0${mutedClass}">${escapeHtml(initials)}</div>`;
+        return `<div class="rbhw-chat-avatar ${sizeClass} rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-bold shrink-0${mutedClass}">${escapeHtml(initials)}</div>`;
     }
 
     const myAvatar = buildAvatarHtml(myInitials, myAvatarUrl, true);
     const peerAvatar = hideChatAvatars || (isUsers && hidePeerAvatar)
         ? ''
         : buildAvatarHtml(peerInitials, peerAvatarUrl, false);
-    const showMessageLabels = !hideChatAvatars;
 
     function messageActionUrl(id) {
         return messageActionUrlTemplate.replace('__MSGID__', String(id));
@@ -710,22 +807,41 @@
             edited_at: entry.edited_at || null,
             unsent: Boolean(entry.unsent),
             unsent_at: entry.unsent_at || null,
+            removed_for_you: Boolean(entry.removed_for_you),
             attachment_url: entry.attachment_url || null,
             attachment_name: entry.attachment_name || null,
             is_image: Boolean(entry.is_image),
             can_edit: Boolean(entry.can_edit),
             created_at_ms: entry.created_at_ms ?? null,
+            created_at_iso: entry.created_at_iso || null,
+            read: Boolean(entry.read),
             reactions: entry.reactions ?? { summary: [], my_emoji: null },
         };
     }
 
+    function formatRelativeTime(entry) {
+        const timestamp = entry?.created_at_ms || (entry?.created_at_iso ? Date.parse(entry.created_at_iso) : NaN);
+        if (!Number.isFinite(timestamp)) return entry?.sent_at || '';
+
+        const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+        if (seconds < 10) return 'Just now';
+        if (seconds < 60) return `${seconds}s`;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h`;
+        const days = Math.floor(hours / 24);
+        if (days < 7) return `${days}d`;
+        return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    }
+
     function canEditMessage(entry) {
-        if (!entry?.is_mine || entry.unsent) return false;
+        if (!entry?.is_mine || entry.unsent || entry.can_edit !== true) return false;
         if (entry.is_image && entry.attachment_url) return false;
         if (entry.created_at_ms) {
             return Date.now() - entry.created_at_ms < editWindowMs;
         }
-        return entry.can_edit === true;
+        return false;
     }
 
     function clearEditExpiryTimer() {
@@ -886,9 +1002,82 @@
         document.body.style.overflow = '';
     }
 
-    function renderMessageMeta(entry) {
-        const edited = entry.edited_at ? ' · Edited' : '';
-        return `${escapeHtml(entry.sent_at || '')}${edited}`;
+    function renderLatestStatus(entry, outgoing) {
+        const relativeTime = formatStatusAge(entry);
+        const label = outgoing
+            ? `${entry.read ? 'Delivered' : 'Sent'} ${relativeTime}`
+            : `Delivered ${relativeTime}`;
+        const alignment = outgoing ? 'text-right' : 'text-left';
+        return `<p class="message-meta ${metaClass} mt-1.5 ${alignment}">${escapeHtml(label)}</p>`;
+    }
+
+    function formatStatusAge(entry) {
+        const timestamp = entry?.created_at_ms || (entry?.created_at_iso ? Date.parse(entry.created_at_iso) : NaN);
+        if (!Number.isFinite(timestamp)) return entry?.sent_at || '';
+        const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+        if (seconds < 10) return 'just now';
+        if (seconds < 60) return `${seconds} seconds ago`;
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+        const days = Math.floor(hours / 24);
+        return `${days} day${days === 1 ? '' : 's'} ago`;
+    }
+
+    function renderLatestCenterTime(entry) {
+        const timestamp = entry?.created_at_ms || (entry?.created_at_iso ? Date.parse(entry.created_at_iso) : NaN);
+        if (!Number.isFinite(timestamp)) return '';
+        return `<div class="rbhw-message-time-detail w-full text-center px-2 py-1 text-[11px] text-text-light/55 dark:text-text-dark/55">${escapeHtml(new Date(timestamp).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }))}</div>`;
+    }
+
+    function formatConversationTimeLabel(entry) {
+        const timestamp = entry?.created_at_ms || (entry?.created_at_iso ? Date.parse(entry.created_at_iso) : NaN);
+        if (!Number.isFinite(timestamp)) return entry?.sent_at || '';
+        const date = new Date(timestamp);
+        const today = new Date();
+        const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        const isToday = date.toDateString() === today.toDateString();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const isYesterday = date.toDateString() === yesterday.toDateString();
+        const label = isToday
+            ? time
+            : `${isYesterday ? 'Yesterday' : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · ${time}`;
+        return label;
+    }
+
+    function renderConversationTime(entry) {
+        const label = formatConversationTimeLabel(entry);
+        if (!label) return '';
+        return `<div class="rbhw-message-time-detail w-full text-center px-2 py-1.5 text-[11px] text-text-light/55 dark:text-text-dark/55">${escapeHtml(label)}</div>`;
+    }
+
+    function startsMessageTimeGroup(entry, previousEntry) {
+        if (!previousEntry) return true;
+        const timestamp = entry?.created_at_ms || (entry?.created_at_iso ? Date.parse(entry.created_at_iso) : NaN);
+        const previousTimestamp = previousEntry?.created_at_ms || (previousEntry?.created_at_iso ? Date.parse(previousEntry.created_at_iso) : NaN);
+        if (!Number.isFinite(timestamp) || !Number.isFinite(previousTimestamp)) return false;
+        return timestamp - previousTimestamp >= messageTimeGroupGapMs
+            || new Date(timestamp).toDateString() !== new Date(previousTimestamp).toDateString();
+    }
+
+    function renderDetailedTimestamp(entry) {
+        const timestamp = entry?.created_at_ms || (entry?.created_at_iso ? Date.parse(entry.created_at_iso) : NaN);
+        if (!Number.isFinite(timestamp)) return '';
+        const date = new Date(timestamp);
+        const time = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        const today = new Date();
+        const isToday = date.toDateString() === today.toDateString();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const isYesterday = date.toDateString() === yesterday.toDateString();
+        const label = isToday
+            ? time
+            : `${isYesterday
+                ? 'Yesterday'
+                : date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} · ${time}`;
+        return `<div class="rbhw-message-time-detail w-full text-center px-2 py-2 text-[11px] text-text-light/55 dark:text-text-dark/55">${label}</div>`;
     }
 
     function closeInstantReactBars() {
@@ -914,38 +1103,20 @@
         return chatHistory.find((item) => Number(item.id) === Number(messageId)) || null;
     }
 
-    function renderMoreMenu(entry) {
-        if (!entry?.is_mine) return '';
-        const editBtn = canEditMessage(entry)
-            ? `<button type="button" class="message-edit-btn">Edit</button>`
-            : '';
-        return `
-            <div class="relative shrink-0">
-                <button type="button" class="rbhw-instant-more-btn message-more-toggle" title="More options" aria-label="More options">
-                    <span class="material-symbols-outlined text-[18px]">more_horiz</span>
-                </button>
-                <div class="rbhw-message-more-menu hidden">
-                    ${editBtn}
-                    <button type="button" class="unsend-everyone-btn">Unsend for everyone</button>
-                    <button type="button" class="remove-you-btn">Remove for you</button>
-                </div>
-            </div>`;
+    function confirmUnsend() {
+        return window.confirm('Unsend this message for everyone?');
     }
 
     function renderInstantReactBar(entry, outgoing) {
-        if (!messageReactionUrlTemplate || entry.unsent) return '';
+        if (!messageReactionUrlTemplate || entry.unsent || entry.removed_for_you) return '';
         const sideClass = outgoing ? 'is-outgoing' : 'is-incoming';
-        const choices = REACTION_EMOJIS.map((emoji) =>
-            `<button type="button" class="rbhw-instant-react-btn" data-emoji="${escapeHtml(emoji)}" aria-label="React ${escapeHtml(emoji)}">${emoji}</button>`
-        ).join('');
-        const moreMenu = renderMoreMenu(entry);
-        const divider = moreMenu ? '<div class="rbhw-instant-react-divider" aria-hidden="true"></div>' : '';
-        return `<div class="rbhw-instant-react-bar ${sideClass}" role="toolbar" aria-label="React to message">${choices}${divider}${moreMenu}</div>`;
+        const emojiButton = '<button type="button" class="rbhw-instant-emoji-btn" aria-label="React to message" title="React to message"><span class="material-symbols-outlined text-[20px]">sentiment_satisfied</span></button>';
+        return `<div class="rbhw-instant-react-bar ${sideClass}" role="toolbar" aria-label="Message actions">${emojiButton}</div>`;
     }
 
     function openMessageActionSheet(messageId) {
         const entry = getMessageEntry(messageId);
-        if (!entry || entry.unsent || !messageSheet) return;
+        if (!entry || entry.unsent || entry.removed_for_you || !messageSheet) return;
         closeAllMessageMenus();
         openMessageSheetId = Number(messageId);
 
@@ -963,7 +1134,7 @@
             if (entry.is_mine) {
                 actions.push(`<button type="button" class="rbhw-message-sheet-action unsend-everyone-btn" data-message-id="${entry.id}"><span class="material-symbols-outlined">undo</span>Unsend for everyone</button>`);
             }
-            actions.push(`<button type="button" class="rbhw-message-sheet-action remove-you-btn${entry.is_mine ? ' is-danger' : ''}" data-message-id="${entry.id}"><span class="material-symbols-outlined">${entry.is_mine ? 'delete' : 'visibility_off'}</span>${entry.is_mine ? 'Remove for you' : 'Hide for you'}</button>`);
+            actions.push(`<button type="button" class="rbhw-message-sheet-action remove-you-btn${entry.is_mine ? ' is-danger' : ''}" data-message-id="${entry.id}"><span class="material-symbols-outlined">delete</span>Remove for you</button>`);
             messageSheetActions.innerHTML = actions.join('');
         }
 
@@ -978,7 +1149,7 @@
     }
 
     function renderMessageReactions(entry, outgoing) {
-        if (entry.unsent || !entry.reactions?.summary?.length) return '';
+        if (entry.unsent || entry.removed_for_you || !entry.reactions?.summary?.length) return '';
         const sideClass = outgoing ? 'is-outgoing' : 'is-incoming';
         const pills = entry.reactions.summary.map((reaction) => {
             const mine = reaction.reacted_by_me ? ' is-mine' : '';
@@ -988,24 +1159,30 @@
         return `<div class="rbhw-message-reactions ${sideClass}">${pills}</div>`;
     }
 
-    function renderMessageBubbleBlock(entry, outgoing) {
+    function renderMessageBubbleBlock(entry, outgoing, showTimestamp = false) {
+        const timestamp = '';
         if (entry.unsent) {
             const bubbleClass = bubbleClassForEntry(outgoing ? outgoingBubble : incomingBubble, entry, outgoing);
-            return `<div class="rbhw-message-bubble-wrap"><div class="${bubbleClass}">${renderMessageBody(entry, outgoing)}</div></div>`;
+            return `<div class="rbhw-message-bubble-wrap${showTimestamp ? ' has-bubble-timestamp' : ''}">${timestamp}<div class="${bubbleClass}">${renderMessageBody(entry, outgoing)}</div></div>`;
         }
         const bubbleClass = bubbleClassForEntry(outgoing ? outgoingBubble : incomingBubble, entry, outgoing);
         const emojiOnly = isEmojiOnlyMessage(entry);
         return `
-            <div class="rbhw-message-bubble-wrap${emojiOnly ? ' is-emoji-only' : ''}">
+            <div class="rbhw-message-bubble-wrap${emojiOnly ? ' is-emoji-only' : ''}${showTimestamp ? ' has-bubble-timestamp' : ''}">
                 ${renderInstantReactBar(entry, outgoing)}
-                <div class="${bubbleClass}">${renderMessageBody(entry, outgoing)}</div>
+                ${timestamp}<div class="${bubbleClass}">${renderMessageBody(entry, outgoing)}</div>
                 ${renderMessageReactions(entry, outgoing)}
             </div>`;
     }
 
     async function toggleReaction(messageId, emoji) {
         if (!messageReactionUrlTemplate || !messageId || !emoji) return;
-        try {
+        const queueKey = String(messageId);
+        const requestKey = `${queueKey}:${emoji}`;
+        if (pendingReactionKeys.has(requestKey)) return;
+        pendingReactionKeys.add(requestKey);
+        const previousRequest = reactionRequestQueues.get(queueKey) || Promise.resolve();
+        const currentRequest = previousRequest.catch(() => {}).then(async () => {
             const response = await fetch(messageReactionUrl(messageId), {
                 method: 'POST',
                 headers: {
@@ -1029,8 +1206,17 @@
             closeInstantReactBars();
             closeMessageActionSheet();
             renderMessages();
+        });
+        reactionRequestQueues.set(queueKey, currentRequest);
+        try {
+            await currentRequest;
         } catch {
             showToast('Unable to react right now.', 'error');
+        } finally {
+            pendingReactionKeys.delete(requestKey);
+            if (reactionRequestQueues.get(queueKey) === currentRequest) {
+                reactionRequestQueues.delete(queueKey);
+            }
         }
     }
 
@@ -1310,45 +1496,50 @@
         }
     }
 
-    function renderOutgoingRow(entry) {
+    function renderOutgoingRow(entry, showTimestamp = false) {
+        if (entry.removed_for_you) {
+            return `
+                <div class="max-w-[min(85%,560px)] w-full">
+                    <div class="rbhw-bubble-unsent rounded-2xl rounded-br-md px-4 py-2.5 text-sm flex items-center gap-2 ml-auto w-fit">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                        You removed a message
+                    </div>
+                </div>
+                ${buildAvatarHtml(myInitials, myAvatarUrl, true, true)}`;
+        }
         if (entry.unsent) {
             return `
                 <div class="max-w-[min(85%,560px)] w-full">
-                    ${showMessageLabels && !isUsers ? `<p class="${labelClass} text-right">${escapeHtml(myLabel)}</p>` : ''}
                     <div class="rbhw-bubble-unsent rounded-2xl rounded-br-md px-4 py-2.5 text-sm flex items-center gap-2 ml-auto w-fit">
                         <span class="material-symbols-outlined text-base">block</span>
                         You unsent a message
                     </div>
-                    <p class="message-meta ${metaClass} mt-1.5 text-right">${escapeHtml(entry.unsent_at || entry.sent_at || '')}</p>
                 </div>
                 ${buildAvatarHtml(myInitials, myAvatarUrl, true, true)}`;
         }
         return `
             <div class="max-w-[min(85%,560px)] w-full">
-                ${showMessageLabels && !isUsers ? `<p class="${labelClass} text-right">${escapeHtml(myLabel)}</p>` : ''}
                 <div class="rbhw-message-lane is-outgoing flex w-full justify-end">
-                    ${renderMessageBubbleBlock(entry, true)}
+                    ${renderMessageBubbleBlock(entry, true, false)}
                 </div>
-                <p class="message-meta ${metaClass} mt-1.5 text-right">${renderMessageMeta(entry)}</p>
+                ${showTimestamp ? renderLatestStatus(entry, true) : ''}
             </div>
             ${myAvatar}`;
     }
 
-    function renderIncomingRow(entry) {
-        const body = entry.unsent
+    function renderIncomingRow(entry, showTimestamp = false) {
+        const body = entry.removed_for_you
+            ? `<div class="rbhw-bubble-unsent rounded-2xl rounded-bl-md px-4 py-2.5 text-sm flex items-center gap-2"><span class="material-symbols-outlined text-base">delete</span>You removed a message</div>`
+            : entry.unsent
             ? `<div class="rbhw-bubble-unsent rounded-2xl rounded-bl-md px-4 py-2.5 text-sm flex items-center gap-2"><span class="material-symbols-outlined text-base">block</span>Message was unsent</div>`
-            : renderMessageBubbleBlock(entry, false);
-        const meta = entry.unsent
-            ? escapeHtml(entry.unsent_at || entry.sent_at || '')
-            : renderMessageMeta(entry);
+            : renderMessageBubbleBlock(entry, false, false);
         return `
             ${peerAvatar}
             <div class="max-w-[min(85%,560px)] w-full">
-                ${showMessageLabels && !isUsers ? `<p class="${labelClass}">${escapeHtml(peerLabel)}</p>` : ''}
                 <div class="rbhw-message-lane is-incoming flex w-full justify-start">
                     ${body}
                 </div>
-                <p class="message-meta ${metaClass} mt-1">${meta}</p>
+                ${showTimestamp ? renderLatestStatus(entry, false) : ''}
             </div>`;
     }
 
@@ -1373,10 +1564,23 @@
         });
         chatMessages.querySelectorAll('.rbhw-chat-image').forEach((img) => {
             if (!img.complete) {
-                img.addEventListener('load', apply, { once: true });
-                img.addEventListener('error', apply, { once: true });
+                img.addEventListener('load', () => {
+                    apply();
+                    updateJumpLatestButton();
+                }, { once: true });
+                img.addEventListener('error', () => {
+                    apply();
+                    updateJumpLatestButton();
+                }, { once: true });
             }
         });
+        updateJumpLatestButton();
+    }
+
+    function updateJumpLatestButton() {
+        if (!chatMessages || !jumpLatestBtn) return;
+        const distanceFromBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight;
+        jumpLatestBtn.classList.toggle('hidden', distanceFromBottom <= 48);
     }
 
     function scrollToUnreadDivider() {
@@ -1535,7 +1739,8 @@
         chatMessages.appendChild(introRow);
     }
 
-    function renderMessages() {
+    function renderMessages(keepScrollPosition = false) {
+        const previousScrollTop = chatMessages?.scrollTop || 0;
         closeAllMessageMenus();
         closeMessageActionSheet();
         chatMessages.innerHTML = '';
@@ -1555,8 +1760,11 @@
 
         let unreadDividerInserted = false;
 
+        const latestMessageId = chatHistory.length ? chatHistory[chatHistory.length - 1].id : null;
+        let previousEntry = null;
         chatHistory.forEach((rawEntry) => {
             const entry = normalizeMessage(rawEntry);
+            const isLatestMessage = entry.id === latestMessageId;
             if (!unreadDividerInserted && unreadMessageIds.has(Number(entry.id))) {
                 const dividerRow = document.createElement('div');
                 dividerRow.className = 'rbhw-unread-divider-row w-full flex justify-center';
@@ -1567,19 +1775,43 @@
 
             const row = document.createElement('div');
             row.className = 'rbhw-chat-message-row group flex items-end gap-2 md:gap-2.5 ' + (entry.is_mine ? 'justify-end' : 'justify-start');
+            if (isLatestMessage && selectedMessageId === null && !entry.unsent && !entry.removed_for_you) {
+                row.classList.add('has-latest-status');
+            }
             if (entry.unsent) row.classList.add('is-unsent');
+            if (entry.removed_for_you) row.classList.add('is-removed');
             if (isEmojiOnlyMessage(entry)) row.classList.add('is-emoji-only-row');
             if (editingMessageId === entry.id) row.classList.add('is-being-edited');
             row.dataset.messageId = String(entry.id);
-            row.innerHTML = entry.is_mine ? renderOutgoingRow(entry) : renderIncomingRow(entry);
+            if (Number(entry.id) === Number(selectedMessageId)) {
+                const timestampRow = document.createElement('div');
+                timestampRow.className = 'w-full flex justify-center';
+                timestampRow.innerHTML = renderDetailedTimestamp(entry);
+                chatMessages.appendChild(timestampRow);
+            } else if (startsMessageTimeGroup(entry, previousEntry)) {
+                const timestampRow = document.createElement('div');
+                timestampRow.className = 'w-full flex justify-center';
+                timestampRow.innerHTML = renderConversationTime(entry);
+                chatMessages.appendChild(timestampRow);
+            }
+            const showLatestTimestamp = isLatestMessage && selectedMessageId === null;
+            row.innerHTML = entry.is_mine
+                ? renderOutgoingRow(entry, showLatestTimestamp)
+                : renderIncomingRow(entry, showLatestTimestamp);
+            if (Number(selectedMessageId) === Number(entry.id)) {
+                row.querySelector('.rbhw-message-bubble-wrap')?.classList.add('is-actions-open');
+            }
             chatMessages.appendChild(row);
+            previousEntry = entry;
         });
 
         if (shouldScrollToUnread) {
             shouldScrollToUnread = false;
             requestAnimationFrame(() => requestAnimationFrame(() => scrollToUnreadDivider()));
-        } else if (!editingMessageId) {
+        } else if (!editingMessageId && !keepScrollPosition) {
             scrollChatToBottom();
+        } else if (keepScrollPosition && chatMessages) {
+            chatMessages.scrollTop = previousScrollTop;
         }
     }
 
@@ -1597,9 +1829,30 @@
             const index = chatHistory.findIndex(item => item.id === messageId);
             if (index !== -1) {
                 if (scope === 'everyone') {
-                    chatHistory[index] = normalizeMessage({ ...chatHistory[index], message: '', unsent: true, unsent_at: data.unsent_at || '', attachment_url: null, attachment_name: null, is_image: false, edited_at: null });
+                    chatHistory[index] = {
+                        ...chatHistory[index],
+                        message: '',
+                        body: '',
+                        unsent: true,
+                        unsent_at: data.unsent_at || new Date().toISOString(),
+                        attachment_url: null,
+                        attachment_name: null,
+                        is_image: false,
+                        can_edit: false,
+                        reactions: { summary: [], my_emoji: null },
+                    };
                 } else {
-                    chatHistory.splice(index, 1);
+                    chatHistory[index] = {
+                        ...chatHistory[index],
+                        message: '',
+                        body: '',
+                        removed_for_you: true,
+                        attachment_url: null,
+                        attachment_name: null,
+                        is_image: false,
+                        can_edit: false,
+                        reactions: { summary: [], my_emoji: null },
+                    };
                 }
             }
             if (editingMessageId === messageId) cancelEditing();
@@ -1612,8 +1865,48 @@
     }
 
     renderMessages();
+    window.requestAnimationFrame(updateJumpLatestButton);
+    window.setTimeout(updateJumpLatestButton, 250);
+    chatMessages?.addEventListener('scroll', updateJumpLatestButton, { passive: true });
+    jumpLatestBtn?.addEventListener('click', () => {
+        chatMessages?.scrollTo({ top: chatMessages.scrollHeight, behavior: 'smooth' });
+        updateJumpLatestButton();
+    });
     updateComposerEditState();
     resetComposerHeight();
+    const refreshRelativeTimes = () => {
+        const latestEntry = chatHistory.length ? normalizeMessage(chatHistory[chatHistory.length - 1]) : null;
+        const latestRow = latestEntry
+            ? chatMessages?.querySelector(`[data-message-id="${CSS.escape(String(latestEntry.id))}"]`)
+            : null;
+        const status = latestRow?.querySelector('.message-meta');
+        if (latestEntry && status) {
+            status.outerHTML = latestEntry.is_mine
+                ? renderLatestStatus(latestEntry, true)
+                : renderLatestStatus(latestEntry, false);
+        }
+    };
+    window.setInterval(refreshRelativeTimes, 30000);
+
+    async function refreshMessages() {
+        if (!messagesUrl || document.hidden) return;
+        try {
+            const response = await fetch(messagesUrl, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            const incoming = Array.isArray(data.messages) ? data.messages.map(normalizeMessage) : [];
+            if (JSON.stringify(incoming) === JSON.stringify(chatHistory)) return;
+            const wasNearBottom = chatMessages && chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 120;
+            chatHistory.splice(0, chatHistory.length, ...incoming);
+            renderMessages(!wasNearBottom);
+        } catch {
+            // Polling is best effort; sending and page navigation remain available.
+        }
+    }
+    if (messagesUrl) window.setInterval(refreshMessages, 3000);
     window.addEventListener('load', () => {
         resetComposerHeight();
         scrollChatToBottom();
@@ -1769,6 +2062,7 @@
         }
         if (unsendEveryoneBtn && messageId) {
             closeMessageActionSheet();
+            if (!confirmUnsend()) return;
             await removeMessage(messageId, 'everyone');
             return;
         }
@@ -1782,7 +2076,7 @@
         if (!isTouchDevice) return;
         const bubbleWrap = event.target.closest('.rbhw-message-bubble-wrap');
         const row = event.target.closest('.rbhw-chat-message-row');
-        if (bubbleWrap && row && !row.classList.contains('is-unsent')) {
+        if (bubbleWrap && row && !row.classList.contains('is-unsent') && !row.classList.contains('is-removed')) {
             event.preventDefault();
         }
     });
@@ -1791,7 +2085,7 @@
         if (!isTouchDevice) return;
         const bubbleWrap = event.target.closest('.rbhw-message-bubble-wrap');
         const row = event.target.closest('.rbhw-chat-message-row');
-        if (!bubbleWrap || !row || row.classList.contains('is-unsent')) return;
+        if (!bubbleWrap || !row || row.classList.contains('is-unsent') || row.classList.contains('is-removed')) return;
         if (event.target.closest('.rbhw-reaction-pill') || event.target.closest('.rbhw-chat-image-btn')) return;
 
         const touch = event.changedTouches[0];
@@ -1802,7 +2096,9 @@
         longPressTimer = setTimeout(() => {
             longPressTimer = null;
             if (navigator.vibrate) navigator.vibrate(10);
-            openMessageActionSheet(messageId);
+            ignoreNextTouchClick = true;
+            selectedMessageId = Number(selectedMessageId) === messageId ? null : messageId;
+            renderMessages(true);
         }, LONG_PRESS_MS);
     }, { passive: true });
 
@@ -1827,9 +2123,10 @@
 
         const row = event.target.closest('.rbhw-chat-message-row');
         const bubbleWrap = event.target.closest('.rbhw-message-bubble-wrap');
+        const messageBody = event.target.closest('.message-body');
         const instantReact = event.target.closest('.rbhw-instant-react-btn');
+        const instantEmoji = event.target.closest('.rbhw-instant-emoji-btn');
         const reactionPill = event.target.closest('.rbhw-reaction-pill');
-        const moreToggle = event.target.closest('.message-more-toggle');
         const editBtn = event.target.closest('.message-edit-btn');
         const unsendEveryoneBtn = event.target.closest('.unsend-everyone-btn');
         const removeYouBtn = event.target.closest('.remove-you-btn');
@@ -1839,29 +2136,20 @@
             await toggleReaction(Number(row.dataset.messageId), instantReact.dataset.emoji || '');
             return;
         }
+        if (instantEmoji && row) {
+            event.stopPropagation();
+            openMessageActionSheet(Number(row.dataset.messageId));
+            return;
+        }
         if (reactionPill && row) {
             event.stopPropagation();
             await toggleReaction(Number(row.dataset.messageId), reactionPill.dataset.emoji || '');
             return;
         }
-        if (moreToggle && row && bubbleWrap) {
-            event.stopPropagation();
-            const messageId = Number(row.dataset.messageId);
-            const menu = bubbleWrap.querySelector('.rbhw-message-more-menu');
-            if (!menu) return;
-            if (openMessageMenuId === messageId) {
-                closeAllMessageMenus();
-                return;
-            }
-            closeAllMessageMenus();
-            openMessageMenuId = messageId;
-            bubbleWrap.classList.add('is-actions-open');
-            menu.classList.remove('hidden');
-            return;
-        }
         if (unsendEveryoneBtn && row) {
             event.stopPropagation();
             closeAllMessageMenus();
+            if (!confirmUnsend()) return;
             await removeMessage(Number(row.dataset.messageId), 'everyone');
             return;
         }
@@ -1875,11 +2163,21 @@
             event.stopPropagation();
             closeAllMessageMenus();
             startEditing(Number(row.dataset.messageId));
+            return;
+        }
+        if (ignoreNextTouchClick) {
+            ignoreNextTouchClick = false;
+            return;
+        }
+        if (!isTouchDevice && row && messageBody && !event.target.closest('button, a, input, textarea')) {
+            const messageId = Number(row.dataset.messageId);
+            selectedMessageId = Number(selectedMessageId) === messageId ? null : messageId;
+            renderMessages(true);
         }
     });
 
     document.addEventListener('click', (event) => {
-        if (!event.target.closest('.message-more-toggle') && !event.target.closest('.rbhw-message-more-menu')) {
+        if (!event.target.closest('.rbhw-message-more-menu')) {
             closeAllMessageMenus();
         }
         if (openMessageSheetId && messageSheet && !messageSheet.contains(event.target)) {

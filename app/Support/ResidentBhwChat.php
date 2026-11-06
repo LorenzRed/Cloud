@@ -94,10 +94,6 @@ class ResidentBhwChat
         return ResidentBhwMessage::query()
             ->where('resident_user_id', $resident->id)
             ->where('bhw_user_id', $bhw->id)
-            ->where(function (Builder $query) use ($viewerId) {
-                $query->whereNull('hidden_for_sender_at')
-                    ->orWhere('sender_id', '!=', $viewerId);
-            })
             ->orderBy('created_at');
     }
 
@@ -177,6 +173,9 @@ class ResidentBhwChat
     public static function formatMessage(ResidentBhwMessage $message, int $viewerId): array
     {
         $isUnsent = $message->unsent_at !== null;
+        $isRemovedForViewer = (int) $message->sender_id === $viewerId
+            ? $message->hidden_for_sender_at !== null
+            : $message->hidden_for_recipient_at !== null;
         $isImage = ! $isUnsent && $message->attachment_path
             ? (bool) preg_match('/\.(jpe?g|png|gif|webp)$/i', $message->attachment_path)
             : false;
@@ -186,9 +185,12 @@ class ResidentBhwChat
             'message' => $isUnsent ? '' : $message->message,
             'body' => $isUnsent ? '' : $message->message,
             'sent_at' => $message->created_at?->format('M d, Y h:i A'),
+            'created_at_iso' => $message->created_at?->toIso8601String(),
+            'read' => $message->read_at !== null,
             'edited_at' => $message->edited_at?->format('M d, Y h:i A'),
             'unsent' => $isUnsent,
             'unsent_at' => $message->unsent_at?->format('M d, Y h:i A'),
+            'removed_for_you' => $isRemovedForViewer,
             'attachment_url' => ! $isUnsent && $message->attachment_path
                 ? route('resident-bhw.message.attachment', $message)
                 : null,
@@ -242,6 +244,12 @@ class ResidentBhwChat
     {
         return self::canAccessMessage($viewer, $message)
             && (int) $message->sender_id === (int) $viewer->id
+            && $message->unsent_at === null;
+    }
+
+    public static function canRemoveForYou(User $viewer, ResidentBhwMessage $message): bool
+    {
+        return self::canAccessMessage($viewer, $message)
             && $message->unsent_at === null;
     }
 
@@ -303,7 +311,10 @@ class ResidentBhwChat
         }
 
         if ($scope === 'you') {
-            $message->update(['hidden_for_sender_at' => now()]);
+            $hiddenColumn = (int) $message->sender_id === $viewerId
+                ? 'hidden_for_sender_at'
+                : 'hidden_for_recipient_at';
+            $message->update([$hiddenColumn => now()]);
 
             return ['id' => $message->id, 'scope' => 'you'];
         }

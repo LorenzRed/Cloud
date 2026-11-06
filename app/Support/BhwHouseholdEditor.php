@@ -178,6 +178,7 @@ class BhwHouseholdEditor
         $fullName = trim(implode(' ', array_filter([$firstName, $middleSegment, $lastName])));
         $birthdate = trim((string) ($payload['spouse_birthdate'] ?? ''));
         $parentRole = trim((string) ($payload['spouse_parent_role'] ?? ''));
+        $yearsOfResidency = $payload['spouse_years_of_residency'] ?? null;
         $placeOfBirth = trim((string) ($payload['spouse_place_of_birth'] ?? ''));
         $educationalAttainment = trim((string) ($payload['spouse_educational_attainment'] ?? ''));
 
@@ -193,16 +194,15 @@ class BhwHouseholdEditor
             ]);
         }
 
-        if (! in_array($parentRole, ResidentRequest::SPOUSE_PARENT_ROLES, true)) {
+        if (! in_array($parentRole, ['Husband', 'Wife'], true)) {
             throw ValidationException::withMessages([
-                'spouse_parent_role' => 'Please select the spouse guardian role.',
+                'spouse_parent_role' => 'Please select Husband or Wife.',
             ]);
         }
 
-        $residentRole = trim((string) ($resident->parent_role ?? ''));
-        if ($residentRole !== '' && $parentRole === $residentRole) {
+        if ($yearsOfResidency !== null && $yearsOfResidency !== '' && ((int) $yearsOfResidency < 0 || (int) $yearsOfResidency > 150)) {
             throw ValidationException::withMessages([
-                'spouse_parent_role' => 'Spouse guardian role must be different from the resident.',
+                'spouse_years_of_residency' => 'Years of residency must be between 0 and 150.',
             ]);
         }
 
@@ -218,7 +218,6 @@ class BhwHouseholdEditor
             ]);
         }
 
-        $gender = ResidentRequest::genderFromParentRole($parentRole) ?? 'Male';
         $oldName = trim((string) ($resident->spouse_full_name ?? ''));
         $details = [
             'first_name' => $firstName,
@@ -227,7 +226,8 @@ class BhwHouseholdEditor
             'full_name' => $fullName,
             'birthdate' => $birthdate,
             'parent_role' => $parentRole,
-            'gender' => $gender,
+            'gender' => $parentRole === 'Wife' ? 'Female' : 'Male',
+            'years_of_residency' => $yearsOfResidency !== null && $yearsOfResidency !== '' ? (int) $yearsOfResidency : null,
             'place_of_birth' => $placeOfBirth,
             'educational_attainment' => $educationalAttainment,
         ];
@@ -285,6 +285,7 @@ class BhwHouseholdEditor
         $placeOfBirth = trim((string) ($payload['place_of_birth'] ?? ''));
         $gender = ucfirst(strtolower(trim((string) ($payload['gender'] ?? ''))));
         $relationship = trim((string) ($payload['relationship'] ?? ''));
+        $yearsOfResidency = $payload['years_of_residency'] ?? null;
         $currentlyStudying = in_array($payload['currently_studying'] ?? '', ['yes', 'no', 'working', 'not_studying', 'not_working', 'infant'], true)
             ? (string) $payload['currently_studying']
             : '';
@@ -307,6 +308,7 @@ class BhwHouseholdEditor
         if ($currentlyStudying === '') {
             throw ValidationException::withMessages(['currently_studying' => 'Please select studying status.']);
         }
+        self::validateYearsOfResidency($yearsOfResidency);
 
         try {
             if (Carbon::parse($birthdate)->startOfDay()->gt(now()->startOfDay())) {
@@ -326,6 +328,7 @@ class BhwHouseholdEditor
                 'age_in_months' => PersonAge::ageInWholeMonths($birthdate),
                 'gender' => $gender,
                 'relationship' => $relationship,
+                'years_of_residency' => self::normalizedYearsOfResidency($yearsOfResidency),
                 'currently_studying' => 'infant',
                 'school' => null,
                 'educational_attainment' => null,
@@ -346,6 +349,7 @@ class BhwHouseholdEditor
                 'age_in_months' => PersonAge::ageInWholeMonths($birthdate),
                 'gender' => $gender,
                 'relationship' => $relationship,
+                'years_of_residency' => self::normalizedYearsOfResidency($yearsOfResidency),
                 'currently_studying' => 'yes',
                 'school' => $school,
                 'educational_attainment' => null,
@@ -361,6 +365,7 @@ class BhwHouseholdEditor
                 'age_in_months' => PersonAge::ageInWholeMonths($birthdate),
                 'gender' => $gender,
                 'relationship' => $relationship,
+                'years_of_residency' => self::normalizedYearsOfResidency($yearsOfResidency),
                 'currently_studying' => $currentlyStudying,
                 'school' => null,
                 'educational_attainment' => null,
@@ -384,6 +389,7 @@ class BhwHouseholdEditor
             'age_in_months' => PersonAge::ageInWholeMonths($birthdate),
             'gender' => $gender,
             'relationship' => $relationship,
+            'years_of_residency' => self::normalizedYearsOfResidency($yearsOfResidency),
             'currently_studying' => 'working',
             'school' => null,
             'educational_attainment' => $educationalAttainment,
@@ -401,6 +407,7 @@ class BhwHouseholdEditor
         $birthdate = trim((string) ($payload['birthdate'] ?? ''));
         $gender = ucfirst(strtolower(trim((string) ($payload['gender'] ?? ''))));
         $relationship = trim((string) ($payload['relationship'] ?? ''));
+        $yearsOfResidency = $payload['years_of_residency'] ?? null;
         $placeOfBirth = trim((string) ($payload['place_of_birth'] ?? ''));
         $educationalAttainment = trim((string) ($payload['educational_attainment'] ?? ''));
         $civilStatus = trim((string) ($payload['civil_status'] ?? ''));
@@ -427,6 +434,7 @@ class BhwHouseholdEditor
         if ($educationalAttainment === '' || ! in_array($educationalAttainment, ResidentRequest::EDUCATIONAL_ATTAINMENTS, true)) {
             throw ValidationException::withMessages(['educational_attainment' => 'Please select educational attainment.']);
         }
+        self::validateYearsOfResidency($yearsOfResidency);
 
         $age = PersonAge::ageInYears($birthdate);
         if ($age === null) {
@@ -441,6 +449,7 @@ class BhwHouseholdEditor
             'age_in_years' => $age,
             'gender' => $gender,
             'relationship' => $relationship,
+            'years_of_residency' => self::normalizedYearsOfResidency($yearsOfResidency),
             'place_of_birth' => $placeOfBirth,
             'educational_attainment' => $educationalAttainment,
             'civil_status' => $civilStatus,
@@ -448,6 +457,20 @@ class BhwHouseholdEditor
             'is_elderly' => $age >= 60,
             'source' => 'other',
         ];
+    }
+
+    private static function validateYearsOfResidency(mixed $yearsOfResidency): void
+    {
+        if ($yearsOfResidency !== null && $yearsOfResidency !== '' && ((int) $yearsOfResidency < 0 || (int) $yearsOfResidency > 150)) {
+            throw ValidationException::withMessages([
+                'years_of_residency' => 'Years of residency must be between 0 and 150.',
+            ]);
+        }
+    }
+
+    private static function normalizedYearsOfResidency(mixed $yearsOfResidency): ?int
+    {
+        return $yearsOfResidency !== null && $yearsOfResidency !== '' ? (int) $yearsOfResidency : null;
     }
 
     /**

@@ -1912,11 +1912,7 @@
         ?: ($spouseDetails['full_name'] ?? '')
     ));
 
-    $spouseRoleLabel = match ($parentRoleLabel) {
-        'Father', 'Grandfather' => 'Wife',
-        'Mother', 'Grandmother' => 'Husband',
-        default => 'Spouse',
-    };
+    $spouseRoleLabel = 'Spouse';
 
     $spouseParentRoleLabel = trim((string) ($spouseDetails['parent_role'] ?? ''));
     $spouseGenderLabel = filled($spouseDetails['gender'] ?? null)
@@ -1927,10 +1923,12 @@
         : '';
     $spousePlaceOfBirthLabel = trim((string) ($spouseDetails['place_of_birth'] ?? ''));
     $spouseEducationalAttainmentLabel = trim((string) ($spouseDetails['educational_attainment'] ?? ''));
+    $spouseYearsOfResidency = $spouseDetails['years_of_residency'] ?? null;
     $spouseMetaParts = array_values(array_filter([
         $spouseParentRoleLabel !== '' ? $spouseParentRoleLabel : null,
         $spouseGenderLabel !== '' ? $spouseGenderLabel : null,
         $spouseBirthdateLabel !== '' ? $spouseBirthdateLabel : null,
+        $spouseYearsOfResidency !== null && $spouseYearsOfResidency !== '' ? $spouseYearsOfResidency.' yrs resident' : null,
         $spousePlaceOfBirthLabel !== '' ? $spousePlaceOfBirthLabel : null,
         $spouseEducationalAttainmentLabel !== '' ? $spouseEducationalAttainmentLabel : null,
     ]));
@@ -1963,12 +1961,14 @@
             $school = trim((string) ($child['school'] ?? ''));
             $attainment = trim((string) ($child['educational_attainment'] ?? ''));
             $occupation = trim((string) ($child['occupation'] ?? ''));
+            $yearsOfResidency = $child['years_of_residency'] ?? null;
 
             $metaParts = array_values(array_filter([
                 $relationship !== '' ? $relationship : null,
                 $gender !== '' ? $gender : null,
                 $birthdateLabel,
                 $ageLabel,
+                $yearsOfResidency !== null && $yearsOfResidency !== '' ? $yearsOfResidency.' yrs resident' : null,
                 $studying,
                 ($child['currently_studying'] ?? '') === 'yes' ? ($school !== '' ? $school : null) : null,
                 in_array(($child['currently_studying'] ?? ''), ['no', 'working'], true) && $attainment !== '' ? $attainment : null,
@@ -1983,6 +1983,7 @@
                 'place_of_birth' => trim((string) ($child['place_of_birth'] ?? '')),
                 'gender' => $gender,
                 'relationship' => $relationship,
+                'years_of_residency' => $yearsOfResidency,
                 'currently_studying' => (string) ($child['currently_studying'] ?? ''),
                 'school' => $school,
                 'educational_attainment' => $attainment,
@@ -2014,12 +2015,14 @@
             $placeOfBirth = trim((string) ($senior['place_of_birth'] ?? ''));
             $educationalAttainment = trim((string) ($senior['educational_attainment'] ?? ''));
             $occupation = trim((string) ($senior['occupation'] ?? ''));
+            $yearsOfResidency = $senior['years_of_residency'] ?? null;
 
             $metaParts = array_values(array_filter([
                 $relationship !== '' ? $relationship : null,
                 $gender !== '' ? $gender : null,
                 $birthdateLabel,
                 $ageLabel,
+                $yearsOfResidency !== null && $yearsOfResidency !== '' ? $yearsOfResidency.' yrs resident' : null,
                 'Senior citizen',
                 $placeOfBirth !== '' ? $placeOfBirth : null,
                 $educationalAttainment !== '' ? $educationalAttainment : null,
@@ -2038,6 +2041,7 @@
                 'place_of_birth' => $placeOfBirth,
                 'gender' => $gender,
                 'relationship' => $relationship,
+                'years_of_residency' => $yearsOfResidency,
                 'civil_status' => trim((string) ($senior['civil_status'] ?? '')),
                 'educational_attainment' => $educationalAttainment,
                 'occupation' => $occupation,
@@ -2551,7 +2555,8 @@
                                                                     data-last-name="{{ $spouseEditLast }}"
                                                                     data-middle-initial="{{ $spouseDetails['middle_initial'] ?? '' }}"
                                                                     data-birthdate="{{ $spouseDetails['birthdate'] ?? '' }}"
-                                                                    data-parent-role="{{ $spouseDetails['parent_role'] ?? '' }}"
+                                                                    data-parent-role="{{ $spouseDetails['parent_role'] ?? 'Husband' }}"
+                                                                    data-years-of-residency="{{ $spouseDetails['years_of_residency'] ?? '' }}"
                                                                     data-place-of-birth="{{ $spouseDetails['place_of_birth'] ?? '' }}"
                                                                     data-educational-attainment="{{ $spouseDetails['educational_attainment'] ?? '' }}"
                                                                 >
@@ -2591,6 +2596,7 @@
                                                                         data-place-of-birth="{{ $child['place_of_birth'] }}"
                                                                         data-gender="{{ $child['gender'] }}"
                                                                         data-relationship="{{ $child['relationship'] }}"
+                                                                        data-years-of-residency="{{ $child['years_of_residency'] ?? '' }}"
                                                                         data-currently-studying="{{ $child['currently_studying'] }}"
                                                                         data-school="{{ $child['school'] }}"
                                                                         data-educational-attainment="{{ $child['educational_attainment'] }}"
@@ -2635,6 +2641,7 @@
                                                                         data-birthdate="{{ $senior['birthdate'] }}"
                                                                         data-gender="{{ $senior['gender'] }}"
                                                                         data-relationship="{{ $senior['relationship'] }}"
+                                                                        data-years-of-residency="{{ $senior['years_of_residency'] ?? '' }}"
                                                                         data-place-of-birth="{{ $senior['place_of_birth'] }}"
                                                                         data-civil-status="{{ $senior['civil_status'] }}"
                                                                         data-educational-attainment="{{ $senior['educational_attainment'] }}"
@@ -2866,6 +2873,10 @@
                                                             </select>
                                                         </div>
                                                     </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_child_years">Years of residency</label>
+                                                        <input id="family_child_years" name="years_of_residency" type="number" min="0" max="150" step="1" placeholder="Enter years" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                    </div>
                                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                         <div>
                                                             <label class="block text-sm font-semibold mb-1.5" for="family_child_relationship">Relationship</label>
@@ -2959,6 +2970,10 @@
                                                         </select>
                                                     </div>
                                                     <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_senior_years">Years of residency</label>
+                                                        <input id="family_senior_years" name="years_of_residency" type="number" min="0" max="150" step="1" placeholder="Enter years" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
+                                                    </div>
+                                                    <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_senior_pob">Place of Birth</label>
                                                         <input id="family_senior_pob" name="place_of_birth" required placeholder="Enter full address" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
@@ -3029,13 +3044,15 @@
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <label class="block text-sm font-semibold mb-1.5" for="family_spouse_role">Guardian Role</label>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_spouse_role">Relationship</label>
                                                         <select id="family_spouse_role" name="spouse_parent_role" required class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm">
-                                                            <option value="">Select</option>
-                                                            @foreach (\App\Models\ResidentRequest::SPOUSE_PARENT_ROLES as $role)
-                                                                <option value="{{ $role }}">{{ $role }}</option>
-                                                            @endforeach
+                                                            <option value="Husband">Husband</option>
+                                                            <option value="Wife">Wife</option>
                                                         </select>
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-sm font-semibold mb-1.5" for="family_spouse_years">Years of residency</label>
+                                                        <input id="family_spouse_years" name="spouse_years_of_residency" type="number" min="0" max="150" step="1" placeholder="Enter years" class="w-full h-11 rounded-xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-3 text-sm" />
                                                     </div>
                                                     <div>
                                                         <label class="block text-sm font-semibold mb-1.5" for="family_spouse_pob">Place of Birth</label>
@@ -5022,6 +5039,7 @@
             document.getElementById('family_child_full_name').value = button.dataset.fullName || '';
             document.getElementById('family_child_birthdate').value = button.dataset.birthdate || '';
             document.getElementById('family_child_pob').value = button.dataset.placeOfBirth || '';
+            document.getElementById('family_child_years').value = button.dataset.yearsOfResidency || '';
             document.getElementById('family_child_gender').value = button.dataset.gender || '';
             document.getElementById('family_child_relationship').value = button.dataset.relationship || '';
             const childStatus = button.dataset.currentlyStudying || 'infant';
@@ -5045,6 +5063,7 @@
             document.getElementById('family_senior_birthdate').value = button.dataset.birthdate || '';
             document.getElementById('family_senior_gender').value = button.dataset.gender || '';
             document.getElementById('family_senior_relationship').value = button.dataset.relationship || '';
+            document.getElementById('family_senior_years').value = button.dataset.yearsOfResidency || '';
             document.getElementById('family_senior_pob').value = button.dataset.placeOfBirth || '';
             document.getElementById('family_senior_civil').value = button.dataset.civilStatus || '';
             document.getElementById('family_senior_edu').value = button.dataset.educationalAttainment || '';
@@ -5062,7 +5081,8 @@
             document.getElementById('family_spouse_last').value = button.dataset.lastName || '';
             document.getElementById('family_spouse_mi').value = button.dataset.middleInitial || '';
             document.getElementById('family_spouse_birthdate').value = button.dataset.birthdate || '';
-            document.getElementById('family_spouse_role').value = button.dataset.parentRole || '';
+            document.getElementById('family_spouse_role').value = button.dataset.parentRole || 'Husband';
+            document.getElementById('family_spouse_years').value = button.dataset.yearsOfResidency || '';
             document.getElementById('family_spouse_pob').value = button.dataset.placeOfBirth || '';
             document.getElementById('family_spouse_edu').value = button.dataset.educationalAttainment || '';
             openFamilyModal(familySpouseModal);

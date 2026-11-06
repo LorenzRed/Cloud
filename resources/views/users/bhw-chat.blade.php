@@ -233,7 +233,11 @@
                     </a>
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                         <div class="h-10 w-10 lg:h-11 lg:w-11 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center shrink-0 ring-2 ring-white dark:ring-gray-900 shadow-sm">
-                            <span class="material-symbols-outlined text-[#1f7f4e] dark:text-primary text-[22px] lg:text-[24px]">local_hospital</span>
+                            @if ($bhw->profile_picture_path)
+                                <img src="{{ route('profile.picture', ['user' => $bhw->id, 'v' => optional($bhw->updated_at)->timestamp]) }}" alt="Barangay Health Worker profile picture" class="h-full w-full rounded-full object-cover" />
+                            @else
+                                <span class="material-symbols-outlined text-[#1f7f4e] dark:text-primary text-[22px] lg:text-[24px]">local_hospital</span>
+                            @endif
                         </div>
                         <div class="min-w-0">
                             <p class="font-bold text-[15px] lg:text-base leading-tight truncate text-[#0e1b13] dark:text-white">Barangay Health Worker</p>
@@ -248,6 +252,7 @@
                 <div class="users-messenger-chat-body flex flex-col flex-1 min-h-0">
                     @include('partials.resident-bhw-chat', [
                         'messages' => $messages,
+                        'messagesUrl' => route('users.profile.bhw-chat.messages'),
                         'messageStoreUrl' => route('users.profile.bhw-chat.message'),
                         'messageActionUrl' => fn ($id) => route('users.profile.bhw-chat.message.update', ['residentBhwMessage' => $id]),
                         'messageReactionUrl' => fn ($id) => route('users.profile.bhw-chat.message.reaction', ['residentBhwMessage' => $id]),
@@ -256,7 +261,12 @@
                         'peerName' => 'Barangay Health Worker',
                         'peerLabel' => 'Barangay Health Worker',
                         'theme' => 'users',
-                        'hidePeerAvatar' => true,
+                        'myAvatarUrl' => $user->profile_picture_path
+                            ? route('profile.picture', ['user' => $user->id, 'v' => optional($user->updated_at)->timestamp])
+                            : null,
+                        'peerAvatarUrl' => $bhw->profile_picture_path
+                            ? route('profile.picture', ['user' => $bhw->id, 'v' => optional($bhw->updated_at)->timestamp])
+                            : null,
                         'unreadMessageIds' => $unreadBhwMessageIds ?? [],
                         'showMessengerIntro' => true,
                         'composerPlaceholder' => 'Aa',

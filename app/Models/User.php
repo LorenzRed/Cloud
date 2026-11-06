@@ -281,6 +281,18 @@ class User extends Authenticatable implements CanResetPasswordContract
         ]);
     }
 
+    public function deleteBhwAccount(): void
+    {
+        if ($this->role === self::ROLE_BHW_HEAD) {
+            self::query()
+                ->where('managed_by_user_id', $this->id)
+                ->update(['managed_by_user_id' => null]);
+        }
+
+        $this->assignedPuroks()->detach();
+        $this->delete();
+    }
+
     public function householdPurokLabel(): ?string
     {
         $household = trim((string) ($this->household_no ?? ''));

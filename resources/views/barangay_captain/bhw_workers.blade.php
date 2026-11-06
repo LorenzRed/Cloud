@@ -283,7 +283,7 @@
                                         <span class="material-symbols-outlined text-base">lock_reset</span>
                                     </button>
                                     <button type="button" class="open-kick-modal-btn inline-flex items-center justify-center rounded-xl h-11 w-11 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300"
-                                        data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}" title="Remove permission">
+                                        data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}" title="Delete BHW account">
                                         <span class="material-symbols-outlined text-base">person_remove</span>
                                     </button>
                                 </div>
@@ -356,7 +356,7 @@
                                                     <span class="material-symbols-outlined text-xs">lock_reset</span>
                                                 </button>
                                                 <button type="button" class="open-kick-modal-btn inline-flex items-center justify-center rounded h-8 px-2 border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/70 transition"
-                                                    data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}" title="Remove BHW permission">
+                                                    data-worker-id="{{ $worker->id }}" data-worker-name="{{ $worker->name }}" title="Delete BHW account">
                                                     <span class="material-symbols-outlined text-xs">person_remove</span>
                                                 </button>
                                             </div>
@@ -554,15 +554,15 @@
 <div id="kickModal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
     <div class="w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-card-light dark:bg-card-dark border border-border-light dark:border-border-dark shadow-2xl">
         <div class="flex items-center justify-between border-b border-border-light dark:border-border-dark px-6 py-4">
-            <div><h2 class="text-xl font-bold text-red-600 dark:text-red-300"><span class="material-symbols-outlined align-text-bottom mr-2">person_remove</span> Remove Permission</h2><p id="kickModalSubtitle" class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">This action cannot be undone.</p></div>
+            <div><h2 class="text-xl font-bold text-red-600 dark:text-red-300"><span class="material-symbols-outlined align-text-bottom mr-2">delete_forever</span> Delete BHW Account</h2><p id="kickModalSubtitle" class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">This action cannot be undone.</p></div>
             <button type="button" id="closeKickModalBtn" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark"><span class="material-symbols-outlined">close</span></button>
         </div>
         <form method="POST" action="{{ route('barangay-captain.bhw-workers.kick') }}" class="space-y-4 px-6 py-5">
             @csrf
             <input type="hidden" name="worker_id" id="kickWorkerId" value="" />
-            <p class="text-sm leading-6 text-text-light/80 dark:text-text-dark/80">Remove BHW permission from <span id="kickWorkerName" class="font-semibold text-text-light dark:text-text-dark"></span>? They will become a regular user and lose all BHW privileges.</p>
+            <p class="text-sm leading-6 text-text-light/80 dark:text-text-dark/80">Permanently delete the BHW account for <span id="kickWorkerName" class="font-semibold text-text-light dark:text-text-dark"></span>? The account, assignments, and chat history will be deleted.</p>
             <div class="flex items-center justify-end gap-3 pt-2">
-                <button type="submit" class="rounded-lg h-9 px-3 bg-red-100 text-red-700 text-xs border border-red-300 hover:bg-red-200">Confirm</button>
+                <button type="submit" class="rounded-lg h-9 px-3 bg-red-600 text-white text-xs border border-red-700 hover:bg-red-700">Delete account</button>
                 <button type="button" id="cancelKickModalBtn" class="rounded-lg h-11 px-4 bg-gray-600 text-white text-sm font-semibold hover:bg-gray-700">Cancel</button>
             </div>
         </form>

@@ -553,6 +553,10 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 User::ROLE_LGU,
             ], true);
 
+        if (! $canView && $viewer->role === User::ROLE_USERS && $user->role === User::ROLE_BHW) {
+            $canView = ResidentBhwChat::canChat($viewer, $user);
+        }
+
         if (! $canView) {
             abort(403);
         }
@@ -1171,6 +1175,19 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         ]);
     })->name('users.profile.bhw-chat');
 
+    Route::get('/users/profile/bhw-chat/messages', function () {
+        if (Auth::user()->role !== 'users') {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $user = User::query()->with(['purok', 'residentRequest.purok'])->findOrFail(Auth::id());
+        $bhw = ResidentBhwChat::assignedBhwForResident($user);
+
+        return response()->json([
+            'messages' => $bhw ? ResidentBhwChat::threadMessages($user, $bhw, $user->id)->values() : [],
+        ]);
+    })->name('users.profile.bhw-chat.messages');
+
     Route::post('/users/profile/bhw-chat/message', function (Request $request) {
         if (Auth::user()->role !== 'users') {
             return response()->json(['message' => 'Forbidden'], 403);
@@ -1218,11 +1235,14 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        if (! ResidentBhwChat::canModifyMessage(Auth::user(), $residentBhwMessage)) {
+        if (! ResidentBhwChat::canRemoveForYou(Auth::user(), $residentBhwMessage)) {
             return response()->json(['message' => 'Unable to remove this message.'], 403);
         }
 
         $data = $request->validate(['scope' => ['required', 'in:everyone,you']]);
+        if ($data['scope'] === 'everyone' && ! ResidentBhwChat::canModifyMessage(Auth::user(), $residentBhwMessage)) {
+            return response()->json(['message' => 'Unable to unsend this message for everyone.'], 403);
+        }
         $result = ResidentBhwChat::unsendMessage($residentBhwMessage, $data['scope'], Auth::id());
 
         return response()->json(['ok' => true, ...$result]);
@@ -3223,24 +3243,11 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 ]);
         }
 
-        if ($worker->role === User::ROLE_BHW_HEAD) {
-            User::query()
-                ->where('managed_by_user_id', $worker->id)
-                ->update(['managed_by_user_id' => null]);
-        }
-
-        $worker->assignedPuroks()->detach();
-        $worker->update([
-            'role' => 'users',
-            'barangay' => null,
-            'purok_id' => null,
-            'household_no' => null,
-            'managed_by_user_id' => null,
-        ]);
+        $worker->deleteBhwAccount();
 
         return redirect()
             ->route('barangay-captain.bhw-workers')
-            ->with('status', 'Worker account role removed successfully.');
+            ->with('status', 'BHW account deleted successfully.');
     })->name('barangay-captain.bhw-workers.kick');
 
     Route::post('/barangay-captain/bhw-workers/password', function (Request $request) {
@@ -4211,18 +4218,11 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 ->withErrors(['worker_id' => 'Unable to update this account.']);
         }
 
-        $worker->assignedPuroks()->detach();
-        $worker->update([
-            'role' => User::ROLE_USERS,
-            'barangay' => null,
-            'purok_id' => null,
-            'household_no' => null,
-            'managed_by_user_id' => null,
-        ]);
+        $worker->deleteBhwAccount();
 
         return redirect()
             ->route('bhw-head.bhw-workers')
-            ->with('status', 'BHW account role removed successfully.');
+            ->with('status', 'BHW account deleted successfully.');
     })->name('bhw-head.bhw-workers.kick');
 
     Route::post('/bhw-head/bhw-workers/password', function (Request $request) {
@@ -4951,6 +4951,19 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         ]);
     })->name('bhw.requests.chat');
 
+    Route::get('/bhw/requests/{residentRequest}/chat/messages', function (ResidentRequest $residentRequest) {
+        if (Auth::user()->role !== 'BHW'
+            || $residentRequest->status !== 'pending'
+            || ! $residentRequest->isAccessibleByBhw(Auth::user())
+            || ! $residentRequest->user) {
+            return response()->json(['message' => 'Unable to access this chat.'], 403);
+        }
+
+        return response()->json([
+            'messages' => ResidentBhwChat::threadMessages($residentRequest->user, Auth::user(), Auth::id())->values(),
+        ]);
+    })->name('bhw.requests.chat.messages');
+
     Route::get('/bhw/residents/{residentRequest}/profile', function (ResidentRequest $residentRequest) {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');
@@ -5163,6 +5176,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'gender' => ['nullable', 'string', Rule::in(['Male', 'Female', 'male', 'female'])],
             'relationship' => ['nullable', 'string', 'max:50'],
             'currently_studying' => ['nullable', 'string', Rule::in(['yes', 'no', 'working', 'not_studying', 'not_working', 'infant'])],
+            'years_of_residency' => ['nullable', 'integer', 'min:0', 'max:150'],
             'school' => ['nullable', 'string', 'max:255'],
             'educational_attainment' => ['nullable', 'string', 'max:100'],
             'occupation' => ['nullable', 'string', 'max:255'],
@@ -5172,7 +5186,8 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'spouse_last_name' => ['nullable', 'string', 'max:100'],
             'spouse_middle_initial' => ['nullable', 'string', 'max:5'],
             'spouse_birthdate' => ['nullable', 'date', 'before_or_equal:today'],
-            'spouse_parent_role' => ['nullable', 'string', Rule::in(ResidentRequest::SPOUSE_PARENT_ROLES)],
+            'spouse_parent_role' => ['nullable', 'string', Rule::in(['Husband', 'Wife'])],
+            'spouse_years_of_residency' => ['nullable', 'integer', 'min:0', 'max:150'],
             'spouse_place_of_birth' => ['nullable', 'string', 'max:255'],
             'spouse_educational_attainment' => ['nullable', 'string', 'max:100'],
         ]);
@@ -5219,6 +5234,19 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'unreadBhwMessageIds' => $unreadBhwMessageIds,
         ]);
     })->name('bhw.residents.chat');
+
+    Route::get('/bhw/residents/{residentRequest}/chat/messages', function (ResidentRequest $residentRequest) {
+        if (Auth::user()->role !== 'BHW'
+            || $residentRequest->status !== 'accepted'
+            || ! $residentRequest->isAccessibleByBhw(Auth::user())
+            || ! $residentRequest->user) {
+            return response()->json(['message' => 'Unable to access this chat.'], 403);
+        }
+
+        return response()->json([
+            'messages' => ResidentBhwChat::threadMessages($residentRequest->user, Auth::user(), Auth::id())->values(),
+        ]);
+    })->name('bhw.residents.chat.messages');
 
     Route::post('/bhw/residents/{residentRequest}/chat/message', function (Request $request, ResidentRequest $residentRequest) {
         if (Auth::user()->role !== 'BHW') {
@@ -5271,11 +5299,14 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         if ($residentRequest->status !== 'accepted'
             || ! $residentRequest->isAccessibleByBhw(Auth::user())
             || (int) $residentBhwMessage->resident_user_id !== (int) $residentRequest->user_id
-            || ! ResidentBhwChat::canModifyMessage(Auth::user(), $residentBhwMessage)) {
+            || ! ResidentBhwChat::canRemoveForYou(Auth::user(), $residentBhwMessage)) {
             return response()->json(['message' => 'Unable to remove this message.'], 403);
         }
 
         $data = $request->validate(['scope' => ['required', 'in:everyone,you']]);
+        if ($data['scope'] === 'everyone' && ! ResidentBhwChat::canModifyMessage(Auth::user(), $residentBhwMessage)) {
+            return response()->json(['message' => 'Unable to unsend this message for everyone.'], 403);
+        }
         $result = ResidentBhwChat::unsendMessage($residentBhwMessage, $data['scope'], Auth::id());
 
         return response()->json(['ok' => true, ...$result]);
@@ -5897,13 +5928,13 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 'message' => ($residentRequest->status === 'pending'
                     && $residentRequest->isAccessibleByBhw(Auth::user())
                     && (int) $residentBhwMessage->resident_user_id === (int) $residentRequest->user_id
-                    && ResidentBhwChat::canModifyMessage(Auth::user(), $residentBhwMessage))
+                    && ResidentBhwChat::canRemoveForYou(Auth::user(), $residentBhwMessage))
                     ? 'You can only edit messages within '.ResidentBhwChat::MESSAGE_EDIT_MINUTES.' minutes of sending.'
                     : 'Unable to edit this message.',
             ], ($residentRequest->status === 'pending'
                 && $residentRequest->isAccessibleByBhw(Auth::user())
                 && (int) $residentBhwMessage->resident_user_id === (int) $residentRequest->user_id
-                && ResidentBhwChat::canModifyMessage(Auth::user(), $residentBhwMessage)) ? 422 : 403);
+                && ResidentBhwChat::canRemoveForYou(Auth::user(), $residentBhwMessage)) ? 422 : 403);
         }
 
         $data = $request->validate(['message' => SafeInput::chatMessageRules(true)]);
@@ -5923,11 +5954,14 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         if ($residentRequest->status !== 'pending'
             || ! $residentRequest->isAccessibleByBhw(Auth::user())
             || (int) $residentBhwMessage->resident_user_id !== (int) $residentRequest->user_id
-            || ! ResidentBhwChat::canModifyMessage(Auth::user(), $residentBhwMessage)) {
+            || ! ResidentBhwChat::canRemoveForYou(Auth::user(), $residentBhwMessage)) {
             return response()->json(['message' => 'Unable to remove this message.'], 403);
         }
 
         $data = $request->validate(['scope' => ['required', 'in:everyone,you']]);
+        if ($data['scope'] === 'everyone' && ! ResidentBhwChat::canModifyMessage(Auth::user(), $residentBhwMessage)) {
+            return response()->json(['message' => 'Unable to unsend this message for everyone.'], 403);
+        }
         $result = ResidentBhwChat::unsendMessage($residentBhwMessage, $data['scope'], Auth::id());
 
         return response()->json(['ok' => true, ...$result]);

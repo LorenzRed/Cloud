@@ -73,6 +73,7 @@
             <div class="bhw-messenger-chat-body flex flex-col flex-1 min-h-0">
                 @include('partials.resident-bhw-chat', [
                     'messages' => $messages,
+                    'messagesUrl' => route('bhw.requests.chat.messages', $residentRequest),
                     'messageStoreUrl' => route('bhw.requests.message', $residentRequest),
                     'messageActionUrl' => fn ($id) => route('bhw.requests.message.update', [$residentRequest, $id]),
                     'messageReactionUrl' => fn ($id) => route('bhw.requests.message.reaction', [$residentRequest, $id]),

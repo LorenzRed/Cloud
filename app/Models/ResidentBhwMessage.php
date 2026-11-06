@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property \Illuminate\Support\Carbon|null $edited_at
  * @property \Illuminate\Support\Carbon|null $unsent_at
  * @property \Illuminate\Support\Carbon|null $hidden_for_sender_at
+ * @property \Illuminate\Support\Carbon|null $hidden_for_recipient_at
  */
 class ResidentBhwMessage extends Model
 {
@@ -30,6 +31,7 @@ class ResidentBhwMessage extends Model
         'edited_at',
         'unsent_at',
         'hidden_for_sender_at',
+        'hidden_for_recipient_at',
     ];
 
     protected function casts(): array
@@ -39,6 +41,7 @@ class ResidentBhwMessage extends Model
             'edited_at' => 'datetime',
             'unsent_at' => 'datetime',
             'hidden_for_sender_at' => 'datetime',
+            'hidden_for_recipient_at' => 'datetime',
         ];
     }
 
