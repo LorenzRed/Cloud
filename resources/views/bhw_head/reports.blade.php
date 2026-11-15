@@ -314,7 +314,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.0/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@5.0.2/dist/jspdf.plugin.autotable.min.js"></script>
-<script src="{{ asset('js/captain-report-downloads.js') }}"></script>
+@include('partials.report-download-script')
 <script>
     const reportPayload = @json($report);
     initCaptainReportDownloads({
