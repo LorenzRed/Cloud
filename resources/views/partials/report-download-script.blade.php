@@ -7,8 +7,13 @@
     $pdfSealData = is_file($pdfSealPath)
         ? 'data:image/png;base64,'.base64_encode(file_get_contents($pdfSealPath))
         : null;
+    $pdfRightSealPath = public_path('logo/oriental-mindoro-seal.png');
+    $pdfRightSealData = is_file($pdfRightSealPath)
+        ? 'data:image/png;base64,'.base64_encode(file_get_contents($pdfRightSealPath))
+        : null;
 @endphp
 window.reportPdfSeal = @json($pdfSealData);
+window.reportPdfRightSeal = @json($pdfRightSealData);
 @verbatim
 /* Export the same authorized, filtered payload used to render the report. */
 function initCaptainReportDownloads({ report, tab, period, barangay, filenamePrefix = 'barangay-captain', title = tab === 'bns' ? 'Child monitoring' : 'Community health', scope = document, statusId = 'reportDownloadStatus' }) {
@@ -66,28 +71,32 @@ function initCaptainReportDownloads({ report, tab, period, barangay, filenamePre
                     }
                     const doc = new window.jspdf.jsPDF();
                     const pageWidth = doc.internal.pageSize.getWidth();
-                    if (window.reportPdfSeal) {
-                        const seal = doc.getImageProperties(window.reportPdfSeal);
-                        const scale = Math.min(30 / seal.width, 30 / seal.height);
-                        doc.addImage(window.reportPdfSeal, 'PNG', 14, 10,
-                            seal.width * scale, seal.height * scale);
-                    }
-                    const headingX = 50;
-                    const headingWidth = pageWidth - headingX - 14;
-                    doc.setFont('helvetica', 'normal');
+                    const drawSeal = (data, centerX) => {
+                        if (!data) return;
+                        const seal = doc.getImageProperties(data);
+                        const scale = Math.min(31 / seal.width, 29 / seal.height);
+                        const width = seal.width * scale;
+                        const height = seal.height * scale;
+                        doc.addImage(data, 'PNG', centerX - width / 2, 14 + (29 - height) / 2, width, height);
+                    };
+                    drawSeal(window.reportPdfSeal, 35);
+                    drawSeal(window.reportPdfRightSeal, pageWidth - 35);
+                    const headingX = pageWidth / 2;
+                    doc.setTextColor(115, 115, 115);
+                    doc.setFont('times', 'normal');
                     doc.setFontSize(10);
-                    doc.text('Republic of the Philippines', headingX, 15);
-                    doc.text('Province of Oriental Mindoro', headingX, 21);
-                    doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(13);
-                    doc.text('MUNICIPALITY OF VICTORIA', headingX, 28);
-                    doc.setFont('helvetica', 'normal');
+                    doc.text('Republika ng Pilipinas', headingX, 19, { align: 'center' });
+                    doc.text('LALAWIGAN NG ORIENTAL MINDORO', headingX, 23.5, { align: 'center' });
+                    doc.text('Bayan ng Victoria', headingX, 28, { align: 'center' });
+                    doc.text('BARANGAY MACATOC', headingX, 32.5, { align: 'center' });
+                    doc.setFont('times', 'bold');
                     doc.setFontSize(11);
-                    const barangayLines = doc.splitTextToSize(String(barangay), headingWidth);
-                    doc.text(barangayLines, headingX, 35);
-                    const dividerY = Math.max(44, 39 + barangayLines.length * 5);
-                    doc.setDrawColor(35, 112, 65);
+                    doc.text('TANGGAPAN NG SANGGUNIANG BARANGAY', headingX, 38, { align: 'center' });
+                    const dividerY = 44;
+                    doc.setDrawColor(100, 100, 100);
+                    doc.setLineWidth(0.2);
                     doc.line(14, dividerY, pageWidth - 14, dividerY);
+                    doc.setTextColor(0, 0, 0);
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(14);
                     const titleLines = doc.splitTextToSize(title, pageWidth - 28);
