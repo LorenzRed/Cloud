@@ -3108,13 +3108,12 @@
                                         </div>
                                     @endif
                                     <div id="transactionStatusScroll" class="profile-tab-toolbar {{ session('status') ? 'pt-12' : '' }}">
-                                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3 min-w-0">
                                             <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Transaction Record</h4>
-                                            <button type="button" id="toggleMedicalHistoryForm" class="inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-wide whitespace-nowrap shrink-0">
-                                            <span class="material-symbols-outlined text-base">add</span>
-                                                <span>Add Transaction</span>
-                                        </button>
+                                            @include('bhw.partials.profile-download-buttons', ['downloadId' => 'transactionDownloads', 'downloadLabel' => 'transactions', 'addButtonId' => 'toggleMedicalHistoryForm', 'addButtonLabel' => 'Add Transaction'])
                                     </div>
+
+
 
                                     @if ($errors->any())
                                             <div class="mt-3 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200">
@@ -3440,16 +3439,15 @@
 
                                 <div id="maintenance" class="tab-content min-w-0">
                                     <div id="maintenanceScroll" class="profile-tab-toolbar relative">
-                                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3 min-w-0">
                                                     <div>
                                                 <h4 class="text-base sm:text-lg font-bold text-text-light dark:text-text-dark">Household Maintenance</h4>
                                                 <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Monitor pregnant family members and seniors with health issues.</p>
                                                     </div>
-                                            <button type="button" id="toggleMonitoringCaseForm" class="inline-flex items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary text-white text-sm font-bold leading-normal tracking-wide whitespace-nowrap shrink-0">
-                                                <span class="material-symbols-outlined text-base">add</span>
-                                                <span>Add Monitoring</span>
-                                                    </button>
+                                            @include('bhw.partials.profile-download-buttons', ['downloadId' => 'maintenanceDownloads', 'downloadLabel' => 'monitoring cases and visits', 'addButtonId' => 'toggleMonitoringCaseForm', 'addButtonLabel' => 'Add Monitoring'])
                                                 </div>
+
+
 
                                         @if (session('status') && (request('tab') === 'maintenance' || str_contains(session('status'), 'monitoring')))
                                             <div id="maintenanceStatusToast" class="fixed left-1/2 top-4 z-[80] flex w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 items-start gap-3 rounded-xl border border-green-300 bg-green-50 px-4 py-3.5 text-sm text-green-800 shadow-xl ring-1 ring-black/5 transition-opacity duration-300 dark:border-green-700 dark:bg-green-900/90 dark:text-green-100" role="status">
@@ -5212,5 +5210,6 @@
         }
     });
 </script>
+@include('bhw.partials.profile-downloads')
 </body>
 </html>

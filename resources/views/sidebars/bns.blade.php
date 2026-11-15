@@ -44,7 +44,7 @@
                 @endif
                 <div class="flex flex-col">
                     <h1 class="text-base font-semibold text-text-light dark:text-text-dark">{{ Auth::user()->name }}</h1>
-                    <p class="text-sm text-primary/80 dark:text-primary/90">Barangay Nutrition Scheme</p>
+                    <p class="text-sm text-primary/80 dark:text-primary/90">Barangay Nutrition Scholar</p>
                 </div>
             </div>
             <a class="{{ $isDashboard ? $activeLinkClass : $inactiveLinkClass }}" href="{{ route('bns.main') }}">

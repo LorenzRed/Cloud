@@ -91,7 +91,7 @@
                     ];
                 @endphp
 
-                <header class="hidden lg:flex flex-wrap justify-between items-start gap-4 mb-6">
+                <header class="flex flex-wrap justify-between items-start gap-4 mb-6">
                     <div class="min-w-0">
                         <h1 class="text-2xl sm:text-3xl font-bold">Barangay Health Reports</h1>
                         <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">
@@ -110,7 +110,17 @@
                             </p>
                         @endif
                     </div>
+                <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:justify-end sm:shrink-0">
+                    <button type="button" data-report-download="pdf" class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                        <span class="material-symbols-outlined text-lg" aria-hidden="true">picture_as_pdf</span> Download PDF
+                    </button>
+                    <button type="button" data-report-download="csv" class="inline-flex items-center justify-center gap-2 rounded-lg border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark px-4 py-2.5 text-sm font-semibold hover:text-primary">
+                        <span class="material-symbols-outlined text-lg" aria-hidden="true">download</span> Download CSV
+                    </button>
+                </div>
                 </header>
+                <p id="reportDownloadStatus" role="status" class="text-sm mb-4"></p>
+
 
                 <div class="bg-card-light dark:bg-card-dark rounded-xl border border-border-light dark:border-border-dark p-2 mb-4 w-full">
                     <div class="grid grid-cols-2 gap-2">
@@ -145,6 +155,8 @@
                         @endforeach
                     </div>
                 </div>
+
+
 
                 @if ($reportTab === 'bns')
                     @include('barangay_captain.partials.bns-report-content')
@@ -334,10 +346,19 @@
     @include('partials.captain-mobile-nav')
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/jspdf@4.2.0/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@5.0.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script src="{{ asset('js/captain-report-downloads.js') }}"></script>
 <script>
     const reportPayload = @json($report);
     const bnsReportPayload = @json($bnsReport);
     const reportTab = @json($reportTab);
+    initCaptainReportDownloads({
+        report: reportTab === 'bns' ? bnsReportPayload : reportPayload,
+        tab: reportTab,
+        period: @json($activePeriod),
+        barangay: @json($assignedBarangay->name ?? 'Unassigned barangay'),
+    });
 
     function initBhwCharts() {
         if (typeof Chart === 'undefined') return;
