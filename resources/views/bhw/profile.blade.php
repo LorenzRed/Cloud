@@ -1906,11 +1906,7 @@
         $spouseDetails = [];
     }
 
-    $spouseName = trim((string) (
-        $resident->spouse_full_name
-        ?: ($residentUser?->spouse_full_name ?? '')
-        ?: ($spouseDetails['full_name'] ?? '')
-    ));
+    $spouseName = $resident->holderSpouseName();
 
     $spouseRoleLabel = 'Spouse';
 
@@ -2381,7 +2377,7 @@
                             <div class="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-border-light dark:border-border-dark bg-card-light dark:bg-card-dark shadow-xl" role="dialog" aria-modal="true" aria-labelledby="removeResidentModalTitle">
                                 <div class="flex items-start justify-between gap-3 border-b border-border-light dark:border-border-dark px-4 py-4">
                                     <div class="min-w-0">
-                                        <h5 id="removeResidentModalTitle" class="text-lg font-bold text-red-600 dark:text-red-300">Remove Resident Account</h5>
+                                        <h5 id="removeResidentModalTitle" class="text-lg font-bold text-red-600 dark:text-red-300">Remove Resident from Household</h5>
                                         <p class="text-sm text-text-light/70 dark:text-text-dark/70 mt-1">Are you sure you want to remove {{ $residentName }} from your assigned purok?</p>
                                     </div>
                                     <button type="button" id="closeRemoveResidentModal" class="p-2 rounded-lg hover:bg-background-light dark:hover:bg-background-dark" aria-label="Close">
@@ -2391,7 +2387,10 @@
                                 <form method="POST" action="{{ route('bhw.residents.destroy', $resident) }}" class="px-4 py-4 space-y-4">
                                     @csrf
                                     @method('DELETE')
-                                    <p class="text-xs text-text-light/60 dark:text-text-dark/60">This action cannot be undone and will remove the resident account and records.</p>
+                                    <p class="text-xs text-text-light/60 dark:text-text-dark/60">
+                                        <span id="holderRemovalExplanation">{{ $spouseName !== '' ? $spouseName.' (spouse) will become the family holder.' : 'No spouse is listed. The resident account will be removed from the active list.' }}</span>
+                                        The removed information will be kept in the LGU Deletion Log, where an LGU user can restore it.
+                                    </p>
                                     <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                                         <button type="button" id="cancelRemoveResidentModal" class="h-11 px-4 rounded-xl border border-border-light dark:border-border-dark text-sm font-semibold">Cancel</button>
                                         <button type="submit" class="h-11 px-4 rounded-xl bg-red-600 text-white text-sm font-bold">Remove resident</button>
@@ -2429,8 +2428,8 @@
                                                             <button type="button" id="openEditResidentDetailsModal" class="inline-flex items-center justify-center rounded-lg p-1.5 text-primary hover:bg-primary/10" title="Edit resident information" aria-label="Edit resident information">
                                                                 <span class="material-symbols-outlined text-base">edit</span>
                                                             </button>
-                                                            <button type="button" id="openRemoveResidentModal" class="inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" title="Delete resident account" aria-label="Delete resident account">
-                                                                <span class="material-symbols-outlined text-base">delete</span>
+                                                            <button type="button" id="openRemoveResidentModal" class="inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" title="{{ $spouseName !== '' ? 'Kick resident and transfer holder to spouse' : 'Delete resident account' }}" aria-label="{{ $spouseName !== '' ? 'Kick resident and transfer holder to spouse' : 'Delete resident account' }}" data-holder-state-url="{{ route('bhw.residents.holder-state', $resident) }}">
+                                                                <span class="material-symbols-outlined text-base">{{ $spouseName !== '' ? 'person_remove' : 'delete' }}</span>
                                                             </button>
                                                         </div>
                                                     </div>
@@ -2567,7 +2566,7 @@
                                                                     data-member-name="{{ $spouseName }}"
                                                                     data-member-label="spouse"
                                                                 >
-                                                                    <span class="material-symbols-outlined text-base">delete</span>
+                                                                    <span class="material-symbols-outlined text-base">person_remove</span>
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -2611,7 +2610,7 @@
                                                                         data-member-name="{{ $child['full_name'] }}"
                                                                         data-member-label="child"
                                                                     >
-                                                                        <span class="material-symbols-outlined text-base">delete</span>
+                                                                        <span class="material-symbols-outlined text-base">person_remove</span>
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -2656,7 +2655,7 @@
                                                                         data-member-name="{{ $senior['full_name'] }}"
                                                                         data-member-label="other family member"
                                                                     >
-                                                                        <span class="material-symbols-outlined text-base">delete</span>
+                                                                        <span class="material-symbols-outlined text-base">person_remove</span>
                                                                     </button>
                                                                 </div>
                                                                 @endif
@@ -4893,7 +4892,39 @@
         document.body.classList.remove('overflow-hidden');
     }
 
-    document.getElementById('openRemoveResidentModal')?.addEventListener('click', () => openFamilyModal(removeResidentModal));
+    const removeHolderButton = document.getElementById('openRemoveResidentModal');
+    let checkingHolderState = false;
+    async function refreshHolderState() {
+        if (!removeHolderButton || document.hidden || checkingHolderState) return;
+        checkingHolderState = true;
+        try {
+            const response = await fetch(removeHolderButton.dataset.holderStateUrl, {
+                headers: {'Accept': 'application/json'}, cache: 'no-store',
+            });
+            if (!response.ok) return;
+            const state = await response.json();
+            const spouseName = String(state.spouse_name || '').trim();
+            removeHolderButton.querySelector('.material-symbols-outlined').textContent = spouseName ? 'person_remove' : 'delete';
+            const label = spouseName ? 'Kick resident and transfer holder to spouse' : 'Delete resident account';
+            removeHolderButton.title = label;
+            removeHolderButton.setAttribute('aria-label', label);
+            document.getElementById('holderRemovalExplanation').textContent = spouseName
+                ? `${spouseName} (spouse) will become the family holder.`
+                : 'No spouse is listed. The resident account will be removed from the active list.';
+        } catch (_) {
+            // Keep the last rendered state if the connection is unavailable.
+        } finally {
+            checkingHolderState = false;
+        }
+    }
+    removeHolderButton?.addEventListener('click', () => {
+        refreshHolderState();
+        openFamilyModal(removeResidentModal);
+    });
+    window.addEventListener('focus', refreshHolderState);
+    window.addEventListener('pageshow', refreshHolderState);
+    document.addEventListener('visibilitychange', refreshHolderState);
+    window.setInterval(refreshHolderState, 10000);
     document.getElementById('closeRemoveResidentModal')?.addEventListener('click', () => closeFamilyModal(removeResidentModal));
     document.getElementById('cancelRemoveResidentModal')?.addEventListener('click', () => closeFamilyModal(removeResidentModal));
     removeResidentModal?.addEventListener('click', (event) => {

@@ -35,17 +35,23 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web(append: [
+            \App\Http\Middleware\LogSystemActivity::class,
             \App\Http\Middleware\SanitizeUserInput::class,
             \App\Http\Middleware\PreventDuplicateRequests::class,
             \App\Http\Middleware\UsersStaleWhileRevalidate::class,
         ]);
 
         $middleware->api(append: [
+            \App\Http\Middleware\LogSystemActivity::class,
             \App\Http\Middleware\SanitizeUserInput::class,
             \App\Http\Middleware\PreventDuplicateRequests::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->report(function (\Throwable $exception) {
+            \App\Support\SystemErrorRecorder::record($exception,
+                app()->bound('request') && request()->route() ? request() : null);
+        });
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException $e, Request $request) {
             $path = trim($request->path(), '/');
 

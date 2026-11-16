@@ -43,7 +43,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable implements CanResetPasswordContract
 {
     /** @use HasFactory<UserFactory> */
-    use CanResetPassword, HasApiTokens, HasFactory, Notifiable;
+    use CanResetPassword, HasApiTokens, HasFactory, Notifiable, \Illuminate\Database\Eloquent\SoftDeletes;
 
     public const ROLE_USERS = 'users';
 

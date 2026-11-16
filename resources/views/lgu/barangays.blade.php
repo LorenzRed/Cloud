@@ -83,13 +83,14 @@
             },
         }
     </script>
+    @include('partials.lgu-responsive-styles')
 </head>
-<body class="font-display bg-background-light dark:bg-background-dark">
+<body class="lgu-layout font-display bg-background-light dark:bg-background-dark">
     <div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
         <div class="flex h-full w-full">
             @include('sidebars.lgu')
 
-            <main class="flex-1 flex flex-col h-screen">
+            <main class="lgu-barangays-main flex-1 flex flex-col h-screen">
                 <div class="flex-1 overflow-y-auto p-4 md:p-8">
                     <div class="flex flex-wrap justify-between gap-4 items-center mb-6">
                         <div class="flex flex-col gap-1">
@@ -1770,5 +1771,6 @@
             });
         }
     </script>
+@include('partials.lgu-mobile-nav')
 </body>
 </html>

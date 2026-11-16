@@ -65,7 +65,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class ResidentRequest extends Model
 {
-    use HasFactory;
+    use HasFactory, \Illuminate\Database\Eloquent\SoftDeletes;
 
     public const ID_TYPE_NATIONAL_ID = 'national_id';
 
@@ -231,6 +231,25 @@ class ResidentRequest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function holderSpouseDetails(): array
+    {
+        $details = $this->spouse_details;
+        if (! is_array($details) || $details === []) {
+            $details = $this->user?->spouse_details;
+        }
+        return is_array($details) ? $details : [];
+    }
+
+    public function holderSpouseName(): string
+    {
+        foreach ([$this->spouse_full_name, $this->user?->spouse_full_name, $this->holderSpouseDetails()['full_name'] ?? null] as $name) {
+            if (trim((string) $name) !== '') {
+                return trim((string) $name);
+            }
+        }
+        return '';
     }
 
     public function purok(): BelongsTo

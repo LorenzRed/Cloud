@@ -2395,11 +2395,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         return redirect()->route('lgu.barangays')->with('status', 'Barangay deleted successfully.');
     })->name('lgu.barangays.destroy');
 
-    Route::get('/lgu/reports', function () {
-        return Auth::user()->role === 'LGU'
-            ? view('lgu.reports')
-            : redirect()->route('dashboard');
-    })->name('lgu.reports');
+    Route::get('/lgu/reports', [\App\Http\Controllers\SystemErrorReportController::class, 'index'])->name('lgu.reports');
 
     Route::get('/lgu/officials', function () {
         return Auth::user()->role === 'LGU'
@@ -4988,6 +4984,20 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             ->with('status', 'Password updated successfully. Other devices were signed out.');
     })->name('bhw-head.settings.password');
 
+    Route::get('/lgu/system-logs', [\App\Http\Controllers\SystemLogController::class, 'index'])->name('lgu.system-logs');
+
+    Route::get('/lgu/deletion-log', function () {
+        abort_unless(Auth::user()->role === User::ROLE_LGU, 403);
+        return view('lgu.deletion-log', [
+            'logs' => \App\Models\ResidentDeletionLog::query()->orderByDesc('id')->paginate(20),
+        ]);
+    })->name('lgu.deletion-log');
+
+    Route::post('/lgu/deletion-log/{log}/restore', function (\App\Models\ResidentDeletionLog $log) {
+        \App\Support\ResidentDeletionArchive::restore($log, Auth::user());
+        return redirect()->route('lgu.deletion-log')->with('status', 'Record restored to its original household.');
+    })->name('lgu.deletion-log.restore');
+
     Route::get('/bhw', function () {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');
@@ -5143,6 +5153,15 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
         ]);
     })->name('bhw.residents.profile');
 
+    Route::get('/bhw/residents/{residentRequest}/holder-state', function (ResidentRequest $residentRequest) {
+        abort_unless(Auth::user()->role === User::ROLE_BHW
+            && $residentRequest->isAccessibleByBhw(Auth::user())
+            && $residentRequest->status === 'accepted', 403);
+
+        return response()->json(['spouse_name' => $residentRequest->holderSpouseName()])
+            ->header('Cache-Control', 'no-store, private');
+    })->name('bhw.residents.holder-state');
+
     Route::delete('/bhw/residents/{residentRequest}', function (ResidentRequest $residentRequest) {
         if (Auth::user()->role !== 'BHW') {
             return redirect()->route('dashboard');
@@ -5156,68 +5175,69 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             return redirect()->route('bhw.residents')->with('status', 'Only accepted resident accounts can be removed.');
         }
 
-        $residentUser = $residentRequest->user;
-        $spouseDetails = $residentRequest->spouse_details;
-        $spouseDetails = is_array($spouseDetails) ? $spouseDetails : [];
-        $spouseName = trim((string) ($residentRequest->spouse_full_name ?: ($spouseDetails['full_name'] ?? '')));
+        return \App\Support\ResidentDeletionArchive::capture($residentRequest, Auth::user(), 'remove_resident', [], function () use ($residentRequest) {
+            $residentUser = $residentRequest->user;
+            $spouseDetails = $residentRequest->holderSpouseDetails();
+            $spouseName = $residentRequest->holderSpouseName();
 
-        if ($spouseName !== '') {
-            $spouseBirthdate = trim((string) ($spouseDetails['birthdate'] ?? ''));
-            $spouseParentRole = trim((string) ($spouseDetails['parent_role'] ?? ''));
-            $spouseGender = trim((string) ($spouseDetails['gender'] ?? ''))
-                ?: (ResidentRequest::genderFromParentRole($spouseParentRole) ?? 'Male');
-            $spouseAge = $spouseBirthdate !== '' ? Carbon::parse($spouseBirthdate)->age : null;
-            $spousePlaceOfBirth = trim((string) ($spouseDetails['place_of_birth'] ?? ''));
-            $spouseEducationalAttainment = trim((string) ($spouseDetails['educational_attainment'] ?? ''));
+            if ($spouseName !== '') {
+                $spouseBirthdate = trim((string) ($spouseDetails['birthdate'] ?? ''));
+                $spouseParentRole = trim((string) ($spouseDetails['parent_role'] ?? ''));
+                $spouseGender = trim((string) ($spouseDetails['gender'] ?? ''))
+                    ?: (ResidentRequest::genderFromParentRole($spouseParentRole) ?? 'Male');
+                $spouseAge = $spouseBirthdate !== '' ? Carbon::parse($spouseBirthdate)->age : null;
+                $spousePlaceOfBirth = trim((string) ($spouseDetails['place_of_birth'] ?? ''));
+                $spouseEducationalAttainment = trim((string) ($spouseDetails['educational_attainment'] ?? ''));
 
-            DB::transaction(function () use (
-                $residentRequest,
-                $residentUser,
-                $spouseName,
-                $spouseBirthdate,
-                $spouseParentRole,
-                $spouseGender,
-                $spouseAge,
-                $spousePlaceOfBirth,
-                $spouseEducationalAttainment
-            ) {
-                $residentRequest->update([
-                    'full_name' => $spouseName,
-                    'parent_role' => $spouseParentRole !== '' ? $spouseParentRole : ResidentRequest::PARENT_ROLE_SELF,
-                    'age' => $spouseAge,
-                    'contact' => null,
-                    'place_of_birth' => $spousePlaceOfBirth !== '' ? $spousePlaceOfBirth : null,
-                    'educational_attainment' => $spouseEducationalAttainment !== '' ? $spouseEducationalAttainment : null,
-                    'spouse_full_name' => null,
-                    'spouse_details' => null,
-                ]);
-
-                if ($residentUser) {
-                    $residentUser->update([
-                        'name' => $spouseName,
+                DB::transaction(function () use (
+                    $residentRequest,
+                    $residentUser,
+                    $spouseName,
+                    $spouseBirthdate,
+                    $spouseParentRole,
+                    $spouseGender,
+                    $spouseAge,
+                    $spousePlaceOfBirth,
+                    $spouseEducationalAttainment
+                ) {
+                    $residentRequest->update([
                         'full_name' => $spouseName,
-                        'gender' => $spouseGender,
                         'parent_role' => $spouseParentRole !== '' ? $spouseParentRole : ResidentRequest::PARENT_ROLE_SELF,
-                        'date_of_birth' => $spouseBirthdate !== '' ? Carbon::parse($spouseBirthdate) : null,
                         'age' => $spouseAge,
-                        'contact_number' => null,
+                        'contact' => null,
                         'place_of_birth' => $spousePlaceOfBirth !== '' ? $spousePlaceOfBirth : null,
                         'educational_attainment' => $spouseEducationalAttainment !== '' ? $spouseEducationalAttainment : null,
                         'spouse_full_name' => null,
                         'spouse_details' => null,
                     ]);
-                }
-            });
 
-            return redirect()
-                ->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'overview'])
-                ->with('status', 'Resident removed. The spouse is now the family holder.');
-        }
+                    if ($residentUser) {
+                        $residentUser->update([
+                            'name' => $spouseName,
+                            'full_name' => $spouseName,
+                            'gender' => $spouseGender,
+                            'parent_role' => $spouseParentRole !== '' ? $spouseParentRole : ResidentRequest::PARENT_ROLE_SELF,
+                            'date_of_birth' => $spouseBirthdate !== '' ? Carbon::parse($spouseBirthdate) : null,
+                            'age' => $spouseAge,
+                            'contact_number' => null,
+                            'place_of_birth' => $spousePlaceOfBirth !== '' ? $spousePlaceOfBirth : null,
+                            'educational_attainment' => $spouseEducationalAttainment !== '' ? $spouseEducationalAttainment : null,
+                            'spouse_full_name' => null,
+                            'spouse_details' => null,
+                        ]);
+                    }
+                });
 
-        $residentRequest->delete();
-        $residentUser?->delete();
+                return redirect()
+                    ->route('bhw.residents.profile', ['residentRequest' => $residentRequest, 'tab' => 'overview'])
+                    ->with('status', 'Resident removed. The spouse is now the family holder.');
+            }
 
-        return redirect()->route('bhw.residents')->with('status', 'Resident account removed.');
+            $residentRequest->delete();
+            $residentUser?->delete();
+
+            return redirect()->route('bhw.residents')->with('status', 'Resident account removed.');
+        });
     })->name('bhw.residents.destroy');
 
     Route::post('/bhw/residents/{residentRequest}/personal-details', function (Request $request, ResidentRequest $residentRequest) {
@@ -5327,7 +5347,10 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'spouse_educational_attainment' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $message = BhwHouseholdEditor::apply($residentRequest, (string) $data['household_action'], $data);
+        $apply = fn () => BhwHouseholdEditor::apply($residentRequest, (string) $data['household_action'], $data);
+        $message = str_starts_with($data['household_action'], 'remove_')
+            ? \App\Support\ResidentDeletionArchive::capture($residentRequest, Auth::user(), $data['household_action'], $data, $apply)
+            : $apply();
         $returnTab = $data['household_action'] === 'remove_spouse'
             ? 'overview'
             : ($data['return_tab'] ?? 'family');

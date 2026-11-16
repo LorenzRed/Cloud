@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -12,7 +11,9 @@ return new class extends Migration
             return;
         }
 
-        DB::statement('ALTER TABLE household_monitoring_visits MODIFY bmi_value DECIMAL(5,1) NULL');
+        Schema::table('household_monitoring_visits', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->decimal('bmi_value', 5, 1)->nullable()->change();
+        });
     }
 
     public function down(): void
@@ -21,6 +22,8 @@ return new class extends Migration
             return;
         }
 
-        DB::statement('ALTER TABLE household_monitoring_visits MODIFY bmi_value DECIMAL(4,1) NULL');
+        Schema::table('household_monitoring_visits', function (\Illuminate\Database\Schema\Blueprint $table) {
+            $table->decimal('bmi_value', 4, 1)->nullable()->change();
+        });
     }
 };

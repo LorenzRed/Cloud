@@ -48,6 +48,7 @@ class AuthTokenController extends Controller
         AuthRateLimit::clearLoginFailures($email, $ip);
 
         $pair = $this->tokens->issuePair($user, $request);
+        $request->attributes->set('activity_actor', $user);
 
         return response()->json([
             'message' => 'Logged in.',
@@ -66,6 +67,7 @@ class AuthTokenController extends Controller
         ]);
 
         $pair = $this->tokens->refresh($data['refresh_token'], $request);
+        $request->attributes->set('activity_actor', $pair['user']);
 
         return response()->json([
             'message' => 'Token refreshed.',

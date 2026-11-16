@@ -45,13 +45,17 @@
                 <span class="material-symbols-outlined {{ request()->routeIs('lgu.barangays') ? $activeTextClass : $inactiveTextClass }}" style="font-variation-settings: 'FILL' {{ request()->routeIs('lgu.barangays') ? 1 : 0 }};">location_city</span>
                 <p class="{{ request()->routeIs('lgu.barangays') ? $activeTextClass : $inactiveTextClass }} text-sm font-medium leading-normal">Barangays</p>
             </a>
-            <a class="{{ $navBaseClass }} {{ request()->routeIs('lgu.officials') ? $activeClass : $inactiveClass }}" href="{{ route('lgu.officials') }}">
-                <span class="material-symbols-outlined {{ request()->routeIs('lgu.officials') ? $activeTextClass : $inactiveTextClass }}">domain</span>
-                <p class="{{ request()->routeIs('lgu.officials') ? $activeTextClass : $inactiveTextClass }} text-sm font-medium leading-normal">Officials</p>
+            <a class="{{ $navBaseClass }} {{ request()->routeIs('lgu.system-logs') ? $activeClass : $inactiveClass }}" href="{{ route('lgu.system-logs') }}">
+                <span class="material-symbols-outlined {{ request()->routeIs('lgu.system-logs') ? $activeTextClass : $inactiveTextClass }}">history</span>
+                <p class="text-sm font-medium">System Logs</p>
+            </a>
+            <a class="{{ $navBaseClass }} {{ request()->routeIs('lgu.deletion-log*') ? $activeClass : $inactiveClass }}" href="{{ route('lgu.deletion-log') }}">
+                <span class="material-symbols-outlined">restore_from_trash</span>
+                <p class="text-sm font-medium">Deletion Log</p>
             </a>
             <a class="{{ $navBaseClass }} {{ request()->routeIs('lgu.reports') ? $activeClass : $inactiveClass }}" href="{{ route('lgu.reports') }}">
                 <span class="material-symbols-outlined {{ request()->routeIs('lgu.reports') ? $activeTextClass : $inactiveTextClass }}">bar_chart</span>
-                <p class="{{ request()->routeIs('lgu.reports') ? $activeTextClass : $inactiveTextClass }} text-sm font-medium leading-normal">Reports</p>
+                <p class="{{ request()->routeIs('lgu.reports') ? $activeTextClass : $inactiveTextClass }} text-sm font-medium leading-normal">System Error Reports</p>
             </a>
         </div>
         <div class="flex flex-col gap-4 mt-6 pt-4 border-t border-border-light dark:border-border-dark">

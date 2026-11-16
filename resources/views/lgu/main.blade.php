@@ -124,17 +124,12 @@
         },
     }
 </script>
+    @include('partials.lgu-responsive-styles')
 </head>
-<body class="font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
+<body class="lgu-layout font-display bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark">
 @include('partials.app-flash')
 <div class="main-container">
-    <div class="md:hidden fixed top-4 left-4 z-50">
-        <button id="menuToggle" class="p-2 rounded-md bg-card-light dark:bg-card-dark shadow-md">
-            <span class="material-symbols-outlined">menu</span>
-        </button>
-    </div>
-    
-    <div id="overlay" class=""></div>
+
     
     @include('sidebars.lgu')
     
@@ -157,20 +152,7 @@
     </main>
 </div>
 
-<script>
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('overlay');
-    
-    menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-    });
-    
-    overlay.addEventListener('click', () => {
-        sidebar.classList.remove('active');
-        overlay.classList.remove('active');
-    });
-</script>
+
+@include('partials.lgu-mobile-nav')
 </body>
 </html>
