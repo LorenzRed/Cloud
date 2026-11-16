@@ -2107,13 +2107,8 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             ])->withInput();
         }
 
-        $existingRequest = ResidentRequest::query()->where('user_id', Auth::id())->first();
-
-        foreach (['id_front_path', 'id_back_path'] as $pathColumn) {
-            $oldPath = $existingRequest?->{$pathColumn};
-
-            PrivateStorage::delete($oldPath);
-        }
+        $existingRequest = ResidentRequest::withTrashed()->where('user_id', Auth::id())->first();
+        $oldIdPaths = [$existingRequest?->id_front_path, $existingRequest?->id_back_path];
 
         $storageFolder = 'verification-ids/'.Auth::id();
         $idFrontPath = PrivateStorage::store($request->file('id_photo_front'), $storageFolder);
@@ -2124,9 +2119,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             ? trim((string) ($data['id_other_label'] ?? ''))
             : null;
 
-        $submittedRequest = ResidentRequest::withTrashed()->updateOrCreate(
-            ['user_id' => Auth::id()],
-            [
+        $verificationData = [
                 'full_name' => $fullName,
                 'parent_role' => $parentRole,
                 'barangay' => $submittedBarangay,
@@ -2147,12 +2140,8 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 'id_front_path' => $idFrontPath,
                 'id_back_path' => $idBackPath,
                 'reviewed_at' => null,
-            ]
-        );
-
-        User::query()
-            ->whereKey(Auth::id())
-            ->update([
+            ];
+        $userData = [
                 'name' => $fullName,
                 'full_name' => $fullName,
                 'gender' => $normalizedGender,
@@ -2168,10 +2157,31 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 'barangay' => $submittedBarangay ?: null,
                 'purok_id' => $resolvedPurok?->id,
                 'household_no' => $resolvedPurok?->name,
-            ]);
+            ];
 
-        if ($submittedRequest->trashed()) {
-            $submittedRequest->restore();
+        try {
+            DB::transaction(function () use ($verificationData, $userData) {
+                $resident = ResidentRequest::withTrashed()->where('user_id', Auth::id())->lockForUpdate()->first();
+                User::query()->whereKey(Auth::id())->lockForUpdate()->firstOrFail();
+                if ($resident && ! $resident->trashed() && in_array($resident->status, ['accepted', 'pending'], true)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'verification' => 'Your registration is already active or pending review. Refresh your home page to see its current status.',
+                    ]);
+                }
+                $resident ??= new ResidentRequest(['user_id' => Auth::id()]);
+                $resident->fill($verificationData)->save();
+                if ($resident->trashed()) {
+                    $resident->restore();
+                }
+                User::query()->whereKey(Auth::id())->update($userData);
+            });
+        } catch (\Throwable $exception) {
+            PrivateStorage::delete($idFrontPath);
+            PrivateStorage::delete($idBackPath);
+            throw $exception;
+        }
+        foreach ($oldIdPaths as $oldIdPath) {
+            PrivateStorage::delete($oldIdPath);
         }
 
         return redirect()

@@ -41,10 +41,16 @@
                                 <span class="font-medium text-green-700">Restored</span>
                                 <p class="text-xs">By {{ $log->restored_by_name }}<br>{{ $log->restored_at->timezone('Asia/Manila')->format('M d, Y h:i:s A') }}</p>
                             @else
-                                <form method="POST" action="{{ route('lgu.deletion-log.restore', $log) }}" onsubmit="return confirm('Restore this record to its original household?')">
-                                    @csrf
-                                    <button type="submit" class="rounded-lg bg-primary px-4 py-2 font-semibold text-white">Restore</button>
-                                </form>
+                                @php($restoreBlockReason = \App\Support\ResidentDeletionArchive::restoreBlockReason($log))
+                                @if ($restoreBlockReason)
+                                    <span class="font-semibold text-amber-700">Restore unavailable</span>
+                                    <p class="mt-1 text-xs text-gray-500">{{ $restoreBlockReason }}</p>
+                                @else
+                                    <form method="POST" action="{{ route('lgu.deletion-log.restore', $log) }}" onsubmit="return confirm('Restore this record to its original household?')">
+                                        @csrf
+                                        <button type="submit" class="rounded-lg bg-primary px-4 py-2 font-semibold text-white">Restore</button>
+                                    </form>
+                                @endif
                             @endif
                         </td>
                     </tr>

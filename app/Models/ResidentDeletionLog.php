@@ -12,6 +12,6 @@ class ResidentDeletionLog extends Model
 
     protected function casts(): array
     {
-        return ['changes' => 'encrypted:array', 'deleted_at' => 'datetime', 'restored_at' => 'datetime'];
+        return ['changes' => 'encrypted:array', 'context' => 'encrypted:array', 'deleted_at' => 'datetime', 'restored_at' => 'datetime'];
     }
 }

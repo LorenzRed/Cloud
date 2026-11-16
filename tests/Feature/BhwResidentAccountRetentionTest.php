@@ -99,7 +99,7 @@ class BhwResidentAccountRetentionTest extends TestCase
         $resident = ResidentRequest::create(['user_id' => $user->id, 'full_name' => 'Old Name', 'age' => 30,
             'contact' => '09123456789', 'barangay' => $barangay->name, 'status' => 'accepted', 'reviewed_at' => now()]);
         $resident->delete();
-        $this->actingAs($user)->post(route('users.verification.submit'), [
+        $submission = [
             'first_name' => 'Updated', 'last_name' => 'Resident', 'location_mode' => 'manual',
             'barangay' => $barangay->name, 'purok' => $purok->name, 'contact' => '09123456789',
             'birthdate_display' => '1995-01-01', 'parent_role' => 'Self', 'gender_display' => 'Female',
@@ -107,7 +107,9 @@ class BhwResidentAccountRetentionTest extends TestCase
             'privacy_consent' => '1', 'location_consent' => '1', 'id_type' => ResidentRequest::ID_TYPE_NATIONAL_ID,
             'id_photo_front' => UploadedFile::fake()->image('front.jpg'),
             'id_photo_back' => UploadedFile::fake()->image('back.jpg'),
-        ])->assertSessionHasNoErrors()->assertRedirect(route('users.verification').'#goHomeLink');
+        ];
+        $this->actingAs($user)->post(route('users.verification.submit'), $submission)
+            ->assertSessionHasNoErrors()->assertRedirect(route('users.verification').'#goHomeLink');
         $this->assertSame(1, ResidentRequest::withTrashed()->where('user_id', $user->id)->count());
         $resubmitted = ResidentRequest::findOrFail($resident->id);
         $this->assertSame('pending', $resubmitted->status);
@@ -115,5 +117,18 @@ class BhwResidentAccountRetentionTest extends TestCase
         $this->assertSame($purok->id, $resubmitted->purok_id);
         $this->assertNull($resubmitted->reviewed_at);
         $this->get(route('users.main'))->assertOk()->assertViewHas('verificationStatus', 'pending')->assertDontSee('Verify again');
+
+        // An old form must not overwrite a registration that was approved/restored meanwhile.
+        $resubmitted->update(['status' => 'accepted']);
+        $this->withoutMiddleware(\App\Http\Middleware\PreventDuplicateRequests::class);
+        $submission['first_name'] = 'Stale';
+        $submission['id_photo_front'] = UploadedFile::fake()->image('stale-front.jpg');
+        $submission['id_photo_back'] = UploadedFile::fake()->image('stale-back.jpg');
+        $this->post(route('users.verification.submit'), $submission)->assertSessionHasErrors('verification');
+        $this->assertSame('accepted', $resubmitted->fresh()->status);
+        $this->assertSame('Updated Resident', $resubmitted->fresh()->full_name);
+        Storage::disk('local')->assertExists($resubmitted->id_front_path);
+        Storage::disk('local')->assertExists($resubmitted->id_back_path);
+        $this->assertCount(2, Storage::disk('local')->allFiles());
     }
 }

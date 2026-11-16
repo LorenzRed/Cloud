@@ -15,7 +15,9 @@ class ResidentDeletionArchive
         return DB::transaction(function () use ($resident, $actor, $action, $payload, $remove) {
             ResidentRequest::query()->lockForUpdate()->findOrFail($resident->id);
             $resident->refresh();
+            User::withTrashed()->whereKey($resident->user_id)->lockForUpdate()->first();
             $before = self::snapshot($resident);
+            $context = ['user_id' => $resident->user_id, 'purok_id' => $resident->purok_id, 'barangay' => $resident->barangay];
             $memberName = match ($action) {
                 'remove_child' => $resident->household_children[$payload['member_index'] ?? -1]['full_name'] ?? 'Child',
                 'remove_senior' => $resident->otherFamilyMembers()[$payload['member_index'] ?? -1]['full_name'] ?? 'Family member',
@@ -48,6 +50,7 @@ class ResidentDeletionArchive
                     'deleted_by_name' => $actor->full_name ?: $actor->name,
                     'deleted_at' => now(),
                     'changes' => $changes,
+                    'context' => $context,
                 ]);
             }
             return $result;
@@ -71,6 +74,9 @@ class ResidentDeletionArchive
             if ($log->restored_at) {
                 throw ValidationException::withMessages(['restore' => 'This record has already been restored.']);
             }
+            if ($reason = self::restoreBlockReason($log, true)) {
+                throw ValidationException::withMessages(['restore' => $reason]);
+            }
             foreach ($log->changes as $change) {
                 $row = DB::table($change['table'])->where('id', $change['id'])->lockForUpdate()->first();
                 if (! $row || $row->{$change['field']} !== $change['after']) {
@@ -82,5 +88,40 @@ class ResidentDeletionArchive
             }
             $log->update(['restored_at' => now(), 'restored_by' => $actor->id, 'restored_by_name' => $actor->full_name ?: $actor->name]);
         });
+    }
+
+    public static function restoreBlockReason(ResidentDeletionLog $log, bool $lock = false): ?string
+    {
+        $resident = ResidentRequest::withTrashed()->whereKey($log->resident_request_id)
+            ->when($lock, fn ($query) => $query->lockForUpdate())->first();
+        if (! $resident) {
+            return 'The original household no longer exists. This record cannot be restored.';
+        }
+        $context = $log->context ?? [];
+        $userId = $context['user_id'] ?? $resident->user_id;
+        $purokId = array_key_exists('purok_id', $context) ? $context['purok_id'] : $resident->purok_id;
+        $barangay = array_key_exists('barangay', $context) ? $context['barangay'] : $resident->barangay;
+        $removedHousehold = false;
+        foreach ($log->changes as $change) {
+            if ($change['table'] === 'resident_requests' && $change['field'] === 'deleted_at' && $change['after'] !== null) {
+                $removedHousehold = true;
+            }
+            // Older archives predate context; their changed assignment still identifies the original purok.
+            if (! $context && $change['table'] === 'users' && $change['field'] === 'purok_id' && $change['before'] !== null) {
+                $purokId = $change['before'];
+            }
+        }
+        $user = User::withTrashed()->whereKey($userId)->when($lock, fn ($query) => $query->lockForUpdate())->first();
+        $differentLocation = fn ($record) => $record && (
+            ($record->purok_id !== null && (string) $record->purok_id !== (string) $purokId)
+            || (filled($record->barangay) && mb_strtolower(trim($record->barangay)) !== mb_strtolower(trim((string) $barangay)))
+        );
+        if ((string) $resident->user_id !== (string) $userId || $differentLocation($resident) || $differentLocation($user)) {
+            return 'Restore blocked: this resident has moved or submitted verification in another purok or barangay. Their current registration will be kept.';
+        }
+        if ($removedHousehold && ! $resident->trashed()) {
+            return 'Restore blocked: this resident has already submitted a new verification or has an active registration. Their current registration will be kept.';
+        }
+        return null;
     }
 }
