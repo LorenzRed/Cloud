@@ -635,7 +635,7 @@
 
     <div class="max-w-2xl mx-auto py-6 sm:py-10 px-4">
         <div class="bg-white rounded-xl shadow p-4 sm:p-6 md:p-8">
-            @if ($isRejectedResubmit ?? false)
+            @if (($isRejectedResubmit ?? false) || ($isRemovedResubmit ?? false))
                 <div class="mb-4">
                     <a href="{{ route('users.main') }}" class="inline-flex items-center gap-1.5 text-sm font-semibold text-blue-600 hover:text-blue-700 hover:underline">
                         <span class="material-symbols-outlined text-[18px]">arrow_back</span>
@@ -643,7 +643,7 @@
                     </a>
                 </div>
             @endif
-            <h1 class="text-xl sm:text-2xl font-bold text-gray-900">{{ ($isRejectedResubmit ?? false) ? 'Resubmit Verification' : 'Resident Verification' }}</h1>
+            <h1 class="text-xl sm:text-2xl font-bold text-gray-900">{{ ($isRemovedResubmit ?? false) ? 'Update Your Verification' : (($isRejectedResubmit ?? false) ? 'Resubmit Verification' : 'Resident Verification') }}</h1>
             <p class="text-sm text-gray-600 mt-2">One account represents your whole household. Complete the <span class="font-semibold">Guardian</span>, then your <span class="font-semibold">husband or wife</span> (if applicable), children, and any <span class="font-semibold">other family living in the house</span>.</p>
 
             @if ($errors->any())
@@ -660,6 +660,13 @@
                 <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
                     <p class="font-semibold">Your previous request was not approved.</p>
                     <p class="mt-1 text-amber-800/90">Review each field below, update anything that needs fixing, capture new ID photos if needed, then send your request again.</p>
+                </div>
+            @endif
+
+            @if ($isRemovedResubmit ?? false)
+                <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    <p class="font-semibold">Your purok registration was removed.</p>
+                    <p class="mt-1">Your account is still active. Review your saved details, update your location and household information, then upload new ID photos and submit for BHW review.</p>
                 </div>
             @endif
 
@@ -984,7 +991,7 @@
             </form>
 
             <div id="verificationFooterLinks" class="mt-6 pt-4 border-t border-gray-200 text-center">
-                @if ($isRejectedResubmit ?? false)
+                @if (($isRejectedResubmit ?? false) || ($isRemovedResubmit ?? false))
                     <div id="backToHomeLink" @class(['hidden' => $requestSent ?? false])>
                         <a href="{{ route('users.main') }}" class="text-blue-600 hover:underline text-sm font-medium">Back to home</a>
                     </div>

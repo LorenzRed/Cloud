@@ -149,18 +149,21 @@
         $statusLabel = match ($status) {
             'accepted' => 'Registered',
             'pending' => 'Registration Pending',
+            'removed' => 'Verification Required',
             'rejected' => 'Not Registered',
             default => 'Not Registered',
         };
         $statusIcon = match ($status) {
             'accepted' => 'check_circle',
             'pending' => 'schedule',
+            'removed' => 'how_to_reg',
             'rejected' => 'cancel',
             default => 'cancel',
         };
         $statusClass = match ($status) {
             'accepted' => 'text-green-700 dark:text-green-300',
             'pending' => 'text-yellow-700 dark:text-yellow-300',
+            'removed' => 'text-yellow-700 dark:text-yellow-300',
             'rejected' => 'text-red-700 dark:text-red-300',
             default => 'text-red-700 dark:text-red-300',
         };
@@ -269,6 +272,13 @@
             ->all();
 
         $registrationBanner = match ($status) {
+            'removed' => [
+                'tone' => 'amber',
+                'title' => 'Verify your residency again',
+                'message' => 'Your BHW removed your purok registration. Your account is still active. Update your verification details and submit them again for review.',
+                'action' => 'Verify again',
+                'route' => 'users.verification',
+            ],
             'rejected' => [
                 'tone' => 'red',
                 'title' => 'Registration not approved',

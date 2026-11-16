@@ -11,6 +11,7 @@ class UsersStaleWhileRevalidate
 {
     /** @var list<string> */
     private const NO_STORE_PATHS = [
+        'users',
         'users/verification',
         'users/profile/bhw-chat',
         'users/profile/chat-support',

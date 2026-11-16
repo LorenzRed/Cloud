@@ -85,7 +85,7 @@ class RegisterEmailOtp
         $email = mb_strtolower(trim($email));
 
         // Intentional UX exception: reveal taken emails so residents do not wait on OTP for an existing account.
-        if (User::query()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
+        if (User::withTrashed()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
             return [
                 'ok' => false,
                 'field' => 'email',

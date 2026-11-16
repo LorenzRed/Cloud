@@ -2388,7 +2388,7 @@
                                     @csrf
                                     @method('DELETE')
                                     <p class="text-xs text-text-light/60 dark:text-text-dark/60">
-                                        <span id="holderRemovalExplanation">{{ $spouseName !== '' ? $spouseName.' (spouse) will become the family holder.' : 'No spouse is listed. The resident account will be removed from the active list.' }}</span>
+                                        <span id="holderRemovalExplanation">{{ $spouseName !== '' ? $spouseName.' (spouse) will become the family holder.' : 'No spouse is listed. The resident will be removed from this purok. Their login account will remain active.' }}</span>
                                         The removed information will be kept in the LGU Deletion Log, where an LGU user can restore it.
                                     </p>
                                     <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
@@ -2428,7 +2428,7 @@
                                                             <button type="button" id="openEditResidentDetailsModal" class="inline-flex items-center justify-center rounded-lg p-1.5 text-primary hover:bg-primary/10" title="Edit resident information" aria-label="Edit resident information">
                                                                 <span class="material-symbols-outlined text-base">edit</span>
                                                             </button>
-                                                            <button type="button" id="openRemoveResidentModal" class="inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" title="{{ $spouseName !== '' ? 'Kick resident and transfer holder to spouse' : 'Delete resident account' }}" aria-label="{{ $spouseName !== '' ? 'Kick resident and transfer holder to spouse' : 'Delete resident account' }}" data-holder-state-url="{{ route('bhw.residents.holder-state', $resident) }}">
+                                                            <button type="button" id="openRemoveResidentModal" class="inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40" title="{{ $spouseName !== '' ? 'Kick resident and transfer holder to spouse' : 'Remove resident from purok' }}" aria-label="{{ $spouseName !== '' ? 'Kick resident and transfer holder to spouse' : 'Remove resident from purok' }}" data-holder-state-url="{{ route('bhw.residents.holder-state', $resident) }}">
                                                                 <span class="material-symbols-outlined text-base">{{ $spouseName !== '' ? 'person_remove' : 'delete' }}</span>
                                                             </button>
                                                         </div>
@@ -4905,12 +4905,12 @@
             const state = await response.json();
             const spouseName = String(state.spouse_name || '').trim();
             removeHolderButton.querySelector('.material-symbols-outlined').textContent = spouseName ? 'person_remove' : 'delete';
-            const label = spouseName ? 'Kick resident and transfer holder to spouse' : 'Delete resident account';
+            const label = spouseName ? 'Kick resident and transfer holder to spouse' : 'Remove resident from purok';
             removeHolderButton.title = label;
             removeHolderButton.setAttribute('aria-label', label);
             document.getElementById('holderRemovalExplanation').textContent = spouseName
                 ? `${spouseName} (spouse) will become the family holder.`
-                : 'No spouse is listed. The resident account will be removed from the active list.';
+                : 'No spouse is listed. The resident will be removed from this purok. Their login account will remain active.';
         } catch (_) {
             // Keep the last rendered state if the connection is unavailable.
         } finally {

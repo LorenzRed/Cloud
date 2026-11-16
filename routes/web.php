@@ -454,11 +454,18 @@ Route::middleware('guest')->group(function () {
                 ]);
         }
 
-        $emailTaken = User::query()->whereRaw('LOWER(email) = ?', [$email])->exists();
+        $emailTaken = User::withTrashed()->whereRaw('LOWER(email) = ?', [$email])->exists();
         $cacheKey = RegisterEmailOtp::otpCacheKey($email);
+        if ($emailTaken) {
+            Cache::forget($cacheKey);
+            $request->session()->forget(['register_email', 'register_email_verified']);
+
+            return redirect()->route('register')
+                ->withErrors(['email' => 'This email is already registered. Try logging in instead.']);
+        }
         $hash = Cache::get($cacheKey);
 
-        if ($emailTaken || ! $hash || ! Hash::check($request->input('otp'), $hash)) {
+        if (! $hash || ! Hash::check($request->input('otp'), $hash)) {
             RateLimiter::hit($otpThrottleKey, 900);
 
             if (RateLimiter::tooManyAttempts($otpThrottleKey, 5)) {
@@ -507,7 +514,7 @@ Route::middleware('guest')->group(function () {
                 ->withErrors(['email' => 'Verify your email first.']);
         }
 
-        if (User::query()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
+        if (User::withTrashed()->whereRaw('LOWER(email) = ?', [$email])->exists()) {
             $request->session()->forget(['register_email', 'register_email_verified']);
 
             return redirect()->route('register')
@@ -618,19 +625,19 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             return redirect()->route('dashboard');
         }
 
-        $hasRequest = ResidentRequest::where('user_id', Auth::id())->exists();
+        $hasRequest = ResidentRequest::withTrashed()->where('user_id', Auth::id())->exists();
 
         if (! $hasRequest) {
             return redirect()->route('users.verification');
         }
 
-        $residentRequest = ResidentRequest::query()
+        $residentRequest = ResidentRequest::withTrashed()
             ->with('purok')
             ->where('user_id', Auth::id())
             ->latest('created_at')
             ->first();
 
-        $verificationStatus = $residentRequest?->status ?? 'unverified';
+        $verificationStatus = $residentRequest?->trashed() ? 'removed' : ($residentRequest?->status ?? 'unverified');
         $user = Auth::user();
         $bhw = ResidentBhwChat::assignedBhwForResident($user);
         $unreadBhwChatCount = $bhw ? ResidentBhwChat::unreadCountForResident($user, $bhw) : 0;
@@ -1447,7 +1454,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             return redirect()->route('dashboard');
         }
 
-        $existingRequest = ResidentRequest::with('purok')->where('user_id', Auth::id())->first();
+        $existingRequest = ResidentRequest::withTrashed()->with('purok')->where('user_id', Auth::id())->first();
         $showSentState = session('request_sent_state', false);
         $barangayBoundaries = Barangay::query()
             ->whereNotNull('boundary_geojson')
@@ -1487,7 +1494,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             ])
             ->values();
 
-        if ($existingRequest && ! $showSentState && $existingRequest->status !== 'rejected') {
+        if ($existingRequest && ! $existingRequest->trashed() && ! $showSentState && $existingRequest->status !== 'rejected') {
             return redirect()->route('users.main');
         }
 
@@ -1497,6 +1504,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             'requestSent' => $requestSent,
             'residentRequest' => $existingRequest,
             'isRejectedResubmit' => $existingRequest?->status === 'rejected' && ! $requestSent,
+            'isRemovedResubmit' => ($existingRequest?->trashed() ?? false) && ! $requestSent,
             'barangayBoundaries' => $barangayBoundaries,
             'purokBoundaries' => $purokBoundaries,
             'barangayOptions' => $barangayOptions,
@@ -2116,7 +2124,7 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             ? trim((string) ($data['id_other_label'] ?? ''))
             : null;
 
-        ResidentRequest::updateOrCreate(
+        $submittedRequest = ResidentRequest::withTrashed()->updateOrCreate(
             ['user_id' => Auth::id()],
             [
                 'full_name' => $fullName,
@@ -2161,6 +2169,10 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
                 'purok_id' => $resolvedPurok?->id,
                 'household_no' => $resolvedPurok?->name,
             ]);
+
+        if ($submittedRequest->trashed()) {
+            $submittedRequest->restore();
+        }
 
         return redirect()
             ->route('users.verification')
@@ -5234,9 +5246,9 @@ Route::middleware(['auth', 'role.prefix'])->group(function () {
             }
 
             $residentRequest->delete();
-            $residentUser?->delete();
+            $residentUser?->update(['purok_id' => null, 'household_no' => null, 'family_number' => null]);
 
-            return redirect()->route('bhw.residents')->with('status', 'Resident account removed.');
+            return redirect()->route('bhw.residents')->with('status', 'Resident removed from the purok. Their login account is still active.');
         });
     })->name('bhw.residents.destroy');
 
