@@ -12,6 +12,7 @@ class SystemErrorReportController extends Controller
     public function index(Request $request)
     {
         abort_unless($request->user()->role === User::ROLE_LGU, 403);
+        \App\Support\SecurityLogRetention::purgeIfDue();
         $filters = $request->validate([
             'from' => ['nullable', 'date_format:Y-m-d'],
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
@@ -20,7 +21,7 @@ class SystemErrorReportController extends Controller
         $from = $filters['from'] ?? now('Asia/Manila')->subDays(29)->toDateString();
         $to = $filters['to'] ?? now('Asia/Manila')->toDateString();
         $request->merge(['from' => $from, 'to' => $to])->validate(['to' => ['after_or_equal:from']]);
-        $query = SystemError::query()->whereBetween('created_at', [
+        $query = SystemError::query()->where('created_at', '>=', now()->subDays(30))->whereBetween('created_at', [
             Carbon::parse($from, 'Asia/Manila')->startOfDay()->timezone(config('app.timezone')),
             Carbon::parse($to, 'Asia/Manila')->endOfDay()->timezone(config('app.timezone')),
         ]);

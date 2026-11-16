@@ -22,3 +22,10 @@ Artisan::command('verification-ids:purge-expired', function () {
 
 Schedule::command('events:purge-expired')->everyMinute();
 Schedule::command('verification-ids:purge-expired')->daily();
+
+Artisan::command('security-logs:purge-expired', function () {
+    $deleted = \App\Support\SecurityLogRetention::purge();
+    $this->info("Deleted {$deleted} login/error log entries older than 30 days.");
+})->purpose('Delete system login and error logs older than 30 days');
+
+Schedule::command('security-logs:purge-expired')->hourly()->withoutOverlapping();

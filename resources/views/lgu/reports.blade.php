@@ -153,7 +153,7 @@
                 @endif
             @endunless
         </section>
-        <p class="report-footnote"><strong>About this report:</strong> Causes describe the recorded error category. Use the matching server log entry for exact diagnosis. Recording starts when this feature is enabled. Sign-in failures and invalid form submissions appear in <a href="{{ route('lgu.system-logs') }}" style="color:var(--blue);font-weight:700">System Logs</a>.</p>
+        <p class="report-footnote"><strong>About this report:</strong> Causes describe the recorded error category. Use the matching server log entry for exact diagnosis. Error records are kept for 30 days. Login activity and failed login attempts appear in <a href="{{ route('lgu.system-logs') }}" style="color:var(--blue);font-weight:700">System Logs</a>.</p>
     </div></main>
 </div>
 <script>

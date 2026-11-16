@@ -12,6 +12,6 @@ class SystemActivityLog extends Model
 
     protected function casts(): array
     {
-        return ['targets' => 'array', 'created_at' => 'datetime'];
+        return ['targets' => 'array', 'attempted_email' => 'encrypted', 'created_at' => 'datetime'];
     }
 }

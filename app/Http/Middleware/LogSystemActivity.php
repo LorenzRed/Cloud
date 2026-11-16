@@ -3,8 +3,9 @@
 namespace App\Http\Middleware;
 
 use App\Models\SystemActivityLog;
+use App\Support\SecurityLogRetention;
+use App\Support\SystemErrorRecorder;
 use Closure;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -15,7 +16,6 @@ class LogSystemActivity
 {
     public function handle(Request $request, Closure $next): mixed
     {
-        $actor = $request->user();
         $initialErrors = $request->hasSession() ? $request->session()->get('errors') : null;
         $response = null;
         $failure = null;
@@ -25,48 +25,39 @@ class LogSystemActivity
             $failure = $exception;
             throw $exception;
         } finally {
-            if ($failure || ($response && $response->getStatusCode() >= 500)) {
-                \App\Support\SystemErrorRecorder::record($failure, $request,
-                    $response?->getStatusCode() ?? ($failure instanceof ValidationException ? 422 : 500));
+            $status = $failure instanceof ValidationException ? 422
+                : ($failure instanceof HttpExceptionInterface ? $failure->getStatusCode()
+                    : ($failure ? 500 : ($response?->getStatusCode() ?? 500)));
+            if ($status >= 500) {
+                SystemErrorRecorder::record($failure, $request, $status);
             }
             $routeName = $request->route()?->getName() ?? $request->route()?->uri();
-            // Background reads and the log viewer itself must not flood the audit history.
-            $shouldLog = ! $request->isMethodSafe()
-                || ($actor && ! $request->expectsJson() && ! $request->ajax()
-                    && ($failure || str_contains((string) $response?->headers->get('Content-Type'), 'text/html'))
-                    && ! str_starts_with((string) $routeName, 'lgu.system-logs')
-                    && ! str_ends_with((string) $routeName, '.holder-state'));
-            if ($shouldLog && $routeName) {
+            if ($request->isMethod('POST') && in_array($routeName, ['login.perform', 'api/auth/login'], true)) {
                 try {
-                    $actor ??= $request->user() ?? $request->attributes->get('activity_actor');
-                    $status = $failure instanceof ValidationException ? 422
-                        : ($failure instanceof HttpExceptionInterface ? $failure->getStatusCode()
-                            : ($failure ? 500 : ($response?->getStatusCode() ?? 500)));
-                    $hasErrors = $request->hasSession() && ! $request->isMethodSafe()
-                        && (($request->session()->has('errors') && $request->session()->get('errors') !== $initialErrors)
-                            || $request->session()->has('profile_update_error'));
-                    $targets = [];
-                    foreach ($request->route()->parameters() as $key => $value) {
-                        // Store record IDs only, never request bodies, tokens, medical data or messages.
-                        $id = $value instanceof Model ? $value->getKey() : $value;
-                        if (is_scalar($id) && ctype_digit((string) $id)) {
-                            $targets[$key] = (string) $id;
-                        }
-                    }
+                    $hasErrors = $request->hasSession() && $request->session()->has('errors')
+                        && $request->session()->get('errors') !== $initialErrors;
+                    $actor = $request->attributes->get('activity_actor') ?? $request->user();
+                    $successful = $actor && $status < 400 && ! $hasErrors;
+                    $email = $request->input('email');
                     SystemActivityLog::create([
-                        'user_id' => $actor?->id,
-                        'actor_name' => $actor?->full_name ?: ($actor?->name ?? 'Guest'),
-                        'actor_role' => $actor?->role,
-                        'action' => ucwords(str_replace(['.', '-', '_'], ' ', $routeName)),
+                        'user_id' => $successful ? $actor->id : null,
+                        'actor_name' => $successful ? ($actor->full_name ?: $actor->name) : 'Unverified login attempt',
+                        'actor_role' => $successful ? $actor->role : null,
+                        'action' => $successful ? 'Login successful' : 'Login unsuccessful',
+                        'event_type' => $successful ? 'login_success' : 'login_failed',
                         'route_name' => $routeName,
                         'method' => $request->method(),
-                        'targets' => $targets,
+                        'targets' => [],
+                        'ip_address' => $request->ip(),
+                        'attempted_email' => is_string($email) ? mb_substr(mb_strtolower(trim($email)), 0, 255) : null,
+                        'user_agent' => mb_substr((string) $request->userAgent(), 0, 255),
                         'status_code' => $status,
-                        'outcome' => $status >= 500 ? 'error' : (($status >= 400 || $hasErrors) ? 'rejected' : 'completed'),
+                        'outcome' => $successful ? 'completed' : ($status >= 500 ? 'error' : 'rejected'),
                         'created_at' => now(),
                     ]);
+                    SecurityLogRetention::purgeIfDue();
                 } catch (Throwable $loggingFailure) {
-                    Log::warning('Unable to save system activity log.', ['exception_type' => get_class($loggingFailure)]);
+                    Log::warning('Unable to save login monitoring entry.', ['exception_type' => get_class($loggingFailure)]);
                 }
             }
         }

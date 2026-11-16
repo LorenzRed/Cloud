@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\SystemError;
+use App\Models\SystemActivityLog;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -21,7 +22,7 @@ class SystemErrorRecorder
         try {
             [$category, $cause, $action] = self::classify($exception);
             $actor = $request?->user() ?? $request?->attributes->get('activity_actor');
-            SystemError::create([
+            $error = SystemError::create([
                 'category' => $category,
                 'exception_type' => $exception ? get_class($exception) : null,
                 'cause' => $cause,
@@ -37,6 +38,21 @@ class SystemErrorRecorder
                 'created_at' => now(),
             ]);
             $request?->attributes->set('system_error_recorded', true);
+            SystemActivityLog::create([
+                'event_type' => 'system_error',
+                'user_id' => $error->user_id,
+                'actor_name' => $error->actor_name,
+                'actor_role' => $error->actor_role,
+                'action' => $category.' error: '.$cause,
+                'route_name' => $error->route_name,
+                'method' => $error->method ?? 'SYSTEM',
+                'targets' => ['error' => (string) $error->id],
+                'ip_address' => $request?->ip(),
+                'status_code' => $status,
+                'outcome' => 'error',
+                'created_at' => $error->created_at,
+            ]);
+            SecurityLogRetention::purgeIfDue();
         } catch (Throwable) {
             // A database outage must not cause recursive reporting or replace the original error.
             error_log('System error report could not be saved. Check the application error log.');
