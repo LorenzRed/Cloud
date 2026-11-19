@@ -294,6 +294,7 @@
                 </div>
             </div>
         </div>
+        @include('partials.report-signature')
     </main>
 
     @include('partials.bns-mobile-nav')

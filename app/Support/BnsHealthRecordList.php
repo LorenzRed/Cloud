@@ -207,8 +207,9 @@ class BnsHealthRecordList
         ?string $title = null,
     ): StreamedResponse {
         $collection = $rows instanceof Collection ? $rows : collect($rows);
+        $signatureRows = ReportSignature::csvRows();
 
-        return Response::streamDownload(function () use ($collection, $headers, $keys, $title) {
+        return Response::streamDownload(function () use ($collection, $headers, $keys, $title, $signatureRows) {
             $handle = fopen('php://output', 'w');
             if ($handle === false) {
                 return;
@@ -229,6 +230,10 @@ class BnsHealthRecordList
                     $line[] = (string) ($row[$key] ?? '');
                 }
                 fputcsv($handle, $line);
+            }
+
+            foreach ($signatureRows as $row) {
+                fputcsv($handle, array_pad($row, count($headers), ''));
             }
 
             fclose($handle);

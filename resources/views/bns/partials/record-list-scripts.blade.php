@@ -16,6 +16,7 @@
     const csvTitle = @json($csvTitle ?? '');
     const csvHeaders = @json($csvHeaders ?? []);
     const csvKeys = @json($csvKeys ?? []);
+    const csvSignatureRows = @json(\App\Support\ReportSignature::csvRows());
     const hasDateFilter = @json($hasDateFilter ?? false);
 
     function setFiltersOpen(open) {
@@ -227,6 +228,10 @@
             return;
         }
 
+        csvSignatureRows.forEach((row) => {
+            const cells = Array.from({ length: csvHeaders.length }, (_, index) => row[index] ?? '');
+            lines.push(cells.map(escapeCsv).join(','));
+        });
         const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
